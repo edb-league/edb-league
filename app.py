@@ -16,7 +16,7 @@ from storage import Store
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
 
-st.set_page_config(page_title='XINXAS LEAGUE',page_icon='🎯',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initial_sidebar_state='expanded')
 
 CSS='''
 <style>
@@ -37,6 +37,38 @@ CSS='''
 .podium .detail {color:#95AAA6;font-size:12px;}
 .tag {color:#A8E64C;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#8DABA2;font-size:12px;}
+/* Navegação lateral em formato de menu, com a página atual sombreada. */
+[data-testid="stSidebar"] .stButton > button {
+    width:100%;
+    min-height:44px;
+    justify-content:flex-start;
+    text-align:left;
+    border:1px solid transparent;
+    border-radius:11px;
+    padding:.65rem .9rem;
+    color:#B9CCC6;
+    background:transparent;
+    font-weight:550;
+    transition:background-color .15s ease,border-color .15s ease;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background:#23312C;
+    border-color:#34483F;
+    color:#F1F8F3;
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"],
+[data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"] {
+    background:#263D32;
+    border-color:#466851;
+    color:#DFFFCC;
+    font-weight:750;
+    box-shadow:inset 4px 0 0 #B6F35D,0 2px 10px rgba(0,0,0,.16);
+}
+[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
+[data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"]:hover {
+    background:#2F4A3A;
+    color:#FFFFFF;
+}
 </style>'''
 st.markdown(CSS,unsafe_allow_html=True)
 
@@ -69,7 +101,7 @@ def player_label(nickname):
 def esc(value):return html.escape(str(value))
 
 def hero(title,subtitle):
-    st.markdown(f'<div class="hero"><span class="eyebrow">◆ XINXAS / CS2 • LEAGUE</span><h1>{esc(title)}</h1><p>{esc(subtitle)}</p></div>',unsafe_allow_html=True)
+    st.markdown(f'<div class="hero"><span class="eyebrow">◆ EDB LEAGUE / CS2</span><h1>{esc(title)}</h1><p>{esc(subtitle)}</p></div>',unsafe_allow_html=True)
 
 def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
@@ -94,9 +126,38 @@ def scoreboard_table(rows):
                  })
 
 
-st.sidebar.markdown('## 🎯 XINXAS LEAGUE')
+st.sidebar.markdown('## EDB LEAGUE')
 st.sidebar.caption('Uma temporada, várias formas de vencer.')
-page=st.sidebar.radio('Navegação',['Visão geral','Rankings','Jogadores','Partidas','Missões & XP','Administração'])
+
+# Cada botão é um destino: sem radio/checklist e com destaque para a seção ativa.
+# O clique atualiza o estado antes do rerun nativo do Streamlit.
+NAVIGATION = [
+    ('Visão geral', ':material/home:'),
+    ('Rankings', ':material/leaderboard:'),
+    ('Jogadores', ':material/groups:'),
+    ('Partidas', ':material/sports_esports:'),
+    ('Missões & XP', ':material/military_tech:'),
+    ('Administração', ':material/settings:')
+]
+NAV_PAGES = [item[0] for item in NAVIGATION]
+if st.session_state.get('edb_page') not in NAV_PAGES:
+    st.session_state['edb_page'] = NAV_PAGES[0]
+
+def open_page(destination):
+    st.session_state['edb_page'] = destination
+
+st.sidebar.markdown('**Navegação**')
+for index, (destination, nav_icon) in enumerate(NAVIGATION):
+    st.sidebar.button(
+        destination,
+        key=f'edb_nav_{index}',
+        icon=nav_icon,
+        type='primary' if st.session_state['edb_page'] == destination else 'secondary',
+        use_container_width=True,
+        on_click=open_page,
+        args=(destination,)
+    )
+page = st.session_state['edb_page']
 st.sidebar.divider()
 today=datetime.now(TZ).date()
 period=st.sidebar.selectbox('Período', ['Temporada inteira','Esta semana','Este mês'])
@@ -157,7 +218,7 @@ if page=='Visão geral':
     st.caption('O MVP e a Superação exigem pelo menos 2 partidas no período. Os valores serão recalibrados quando tivermos mais dados reais.')
 
 elif page=='Rankings':
-    hero('Rankings dos XINXAS','Três disputas: melhor desempenho, superação do próprio nível e presença.')
+    hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
     a,b,c=st.tabs(['🏆 Elite','⚡ Superação','🤝 Resenha'])
     with a:
         st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
@@ -203,7 +264,7 @@ elif page=='Jogadores':
                 'rounds':'Rounds','kpr':'KPR','adr':'ADR','won':'Vitória'}),hide_index=True,use_container_width=True)
 
 elif page=='Partidas':
-    hero('Histórico de partidas','Cada 5v5 vira parte da história dos XINXAS.')
+    hero('Histórico de partidas','Cada 5v5 vira parte da história da EDB LEAGUE.')
     if not all_matches:st.info('Ainda não há partidas registradas.')
     else:
         for match in sorted(all_matches,key=lambda m:m['played_at'],reverse=True):
