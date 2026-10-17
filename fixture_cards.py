@@ -171,5 +171,20 @@ CARD_CSS="""
  font-weight:700;line-height:1.6;
 }
 [data-testid="stExpander"] summary strong{color:#B6F35D;font-weight:850}
+.edb-score-team{
+ display:flex;justify-content:space-between;align-items:center;gap:12px;
+ padding:12px 14px;margin:15px 0 7px;border-radius:10px;
+ background:#1A2A25;border-left:4px solid #667B72;
+}
+.edb-team-win{background:#203528;border-left-color:#B6F35D}
+.edb-team-loss{background:#242729;border-left-color:#778A86}
+.edb-team-name{color:#F0F8EF;font-size:1rem;font-weight:800;overflow-wrap:anywhere}
+.edb-team-result{color:#BDD4C9;font-size:.73rem;font-weight:700;text-align:right}
+.edb-team-win .edb-team-result{color:#B6F35D}
+@media(max-width:520px){
+ .edb-score-team{padding:11px;gap:6px;align-items:flex-start}
+ .edb-team-result{font-size:.68rem;max-width:52%}
+}
+
 </style>
 """
