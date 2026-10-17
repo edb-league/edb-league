@@ -53,3 +53,18 @@ def test_stars_update_and_duplicate():
             pass
         else:assert False,'Deveria bloquear duplicação'
     finally:folder.cleanup()
+
+def test_automatic_identity_resolution_preserves_canonical_nick():
+    folder=tempfile.TemporaryDirectory()
+    try:
+        db=Store(db_file=Path(folder.name)/'test.db')
+        pid=db.save_player('Zbra',stars=2,steamid='STEAM_TEST_ID')
+        assert db.save_player('ChangedNick',stars=3,steamid='STEAM_TEST_ID') == pid
+        assert len(db.players())==1
+        record=db.players()[0]
+        assert record['nickname']=='Zbra' and record['stars']==2
+        db.save_match({'id':'historical','played_at':'2026-09-29','map_name':'Mirage','source':'SCOPE.GG','rounds_total':21,'notes':''},[
+            {'match_id':'historical','player_id':pid,'kills':13,'deaths':15,'assists':3,'damage':1350,'rounds':21,'won':True,'observed_nickname':'ChangedNick'}])
+        assert db.stats()[0]['observed_nickname']=='ChangedNick'
+    finally:
+        folder.cleanup()
