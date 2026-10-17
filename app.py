@@ -403,7 +403,7 @@ elif page=='Administração':
                                 sid=str(r.get('steamid') or '').strip() or None
                                 # Conserva estrelas de jogador já cadastrado.
                                 old=next((p for p in store.players() if (sid and p.get('steamid')==sid) or p['nickname'].casefold()==nick.casefold()),None)
-                                pid=store.save_player(nick,int(old['stars']) if old else 3,sid,old['id'] if old else None)
+                                pid=store.save_player(nick,int(old['stars']) if old else 3,sid)
                                 def integer(k,nullable=False):
                                     v=r.get(k)
                                     return None if nullable and (v is None or pd.isna(v)) else max(0,int(float(v))) if pd.notna(v) and str(v).strip() else (None if nullable else 0)
@@ -418,7 +418,7 @@ elif page=='Administração':
                                     'won':won,'headshots':integer('headshots'), 'plants':integer('plants'),
                                     'defuses':integer('defuses'),'rating':float_nullable('rating'),
                                     'kast':float_nullable('kast'),'open_kills':integer('open_kills',True),
-                                    'trade_kills':integer('trade_kills',True)})
+                                    'trade_kills':integer('trade_kills',True),'observed_nickname':nick})
                             store.save_match({'id':pending['fingerprint'],'played_at':str(when),
                                 'map_name':map_name,'source':pending['source'],'rounds_total':int(total),
                                 'notes':note},player_lines)
