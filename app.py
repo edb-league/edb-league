@@ -12,7 +12,7 @@ import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from storage import Store
-from fixture_cards import fixture_title, match_stat_coverage, CARD_CSS
+from fixture_cards import fixture_title, match_stat_coverage, basic_team_tables, CARD_CSS
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -220,7 +220,7 @@ if page=='Visão geral':
 
 elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
-    a,b,c=st.tabs(['🏆 Elite','⚡ Superação','🤝 Resenha'])
+    a,b,c=st.tabs(['Elite','Superação','Resenha'])
     with a:
         st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
         st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
@@ -284,14 +284,11 @@ elif page=='Partidas':
                     st.caption(
                         f"Estatísticas: {coverage['players']} jogadores · "
                         f"{coverage['kills']} kills · "
-                        f"Aim {coverage['aim']}/{coverage['players']} · "
-                        f"Granadas {coverage['grenades']}/{coverage['players']}"
+                        f"Mira {coverage['aim']}/{coverage['players']} · "
+                        f"Utilitárias {coverage['grenades']}/{coverage['players']}"
                     )
                 t=frame[frame['match_id']==match['id']]
                 if not t.empty:
-                    view=t[['nickname','kills','deaths','assists','damage','rounds','won','kpr','adr']].rename(columns={
-                        'nickname':'Jogador','kills':'K','deaths':'D','assists':'A','damage':'Dano','rounds':'Rounds',
-                        'won':'Vitória','kpr':'KPR','adr':'ADR'})
                     supplement=[x for x in all_scope_stats if x['match_id']==match['id']]
                     extra=pd.DataFrame(supplement)
                     if not extra.empty:
@@ -299,7 +296,33 @@ elif page=='Partidas':
                         # Nick da partida é histórico; perfil do jogador não muda.
                         nicks=t.set_index('player_id')['observed_nickname'].to_dict() if 'observed_nickname' in t else {}
                         extra['nickname']=extra.apply(lambda r:nicks.get(r['player_id']) or r['nickname'],axis=1)
-                    tab_main,tab_aim,tab_nades=st.tabs(['⚔️ Main','🎯 Aim','💨 Granadas'])
+                    st.markdown('#### Placar da partida')
+                    for team in basic_team_tables(match,t,supplement):
+                        result_label=('VITÓRIA' if team['won'] is True else
+                                      'DERROTA' if team['won'] is False else 'EQUIPE')
+                        state_class='edb-team-win' if team['won'] is True else 'edb-team-loss'
+                        st.markdown(
+                            f'<div class="edb-score-team {state_class}">'
+                            f'<span class="edb-team-name">{esc(team["name"])}</span>'
+                            f'<span class="edb-team-result">{result_label} · '
+                            f'{team["players"]} jogadores · {team["kills"]} kills</span>'
+                            '</div>',
+                            unsafe_allow_html=True
+                        )
+                        st.dataframe(
+                            team['table'],hide_index=True,use_container_width=True,
+                            column_config={
+                                'Jogador':st.column_config.TextColumn('Jogador',width='medium'),
+                                'K':st.column_config.NumberColumn('K',width='small'),
+                                'A':st.column_config.NumberColumn('A',width='small'),
+                                'D':st.column_config.NumberColumn('D',width='small'),
+                                'K/D':st.column_config.NumberColumn('K/D',format='%.2f',width='small'),
+                                'ADR':st.column_config.NumberColumn('ADR',format='%.1f',width='small'),
+                            }
+                        )
+                    st.divider()
+                    st.markdown('#### Estatísticas detalhadas')
+                    tab_main,tab_aim,tab_nades=st.tabs(['Geral','Mira','Utilitárias'])
                     with tab_main:
                         main_view=t[['nickname','kills','deaths','assists','damage','rounds','won','rating','kast','open_kills','trade_kills','player_id']].copy()
                         if 'observed_nickname' in t:
