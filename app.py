@@ -12,6 +12,7 @@ import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from storage import Store
+from fixture_cards import fixture_title, CARD_CSS
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -264,11 +265,12 @@ elif page=='Jogadores':
                 'rounds':'Rounds','kpr':'KPR','adr':'ADR','won':'Vitória'}),hide_index=True,use_container_width=True)
 
 elif page=='Partidas':
-    hero('Histórico de partidas','Cada 5v5 vira parte da história da EDB LEAGUE.')
+    hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
+    st.markdown(CARD_CSS, unsafe_allow_html=True)
     if not all_matches:st.info('Ainda não há partidas registradas.')
     else:
         for match in sorted(all_matches,key=lambda m:m['played_at'],reverse=True):
-            title=f"{match['played_at']}  •  {match.get('map_name') or 'Mapa não informado'}  •  {match.get('source')}"
+            title=fixture_title(match)
             with st.expander(title):
                 st.caption(f"ID: {match['id'][:20]}…  |  Rounds: {match.get('rounds_total') or '—'}")
                 t=frame[frame['match_id']==match['id']]
