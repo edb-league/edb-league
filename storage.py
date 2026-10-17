@@ -82,6 +82,9 @@ class Store:
     def players(self): return self._list('players')
     def matches(self): return self._list('matches')
     def stats(self): return self._list('player_stats')
+    def scope_stats(self):
+        """Dados extras do SCOPE.GG: mira, granadas e ADR oficial (somente online)."""
+        return self._list('player_scope_stats') if self.cloud else []
 
     def _upsert(self,table,row,conflict=None):
         if self.cloud:
