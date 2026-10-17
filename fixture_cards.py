@@ -27,6 +27,39 @@ def fixture_title(match):
     score=f"{a} : {b}" if confirmed else "— : —"
     return f"**{game}** · {day}    |    {left}    **{score}**    {right}"
 
+
+def match_stat_coverage(match_id, player_stats, scope_stats):
+    """Summarize already-saved stats, distinguishing present values from missing ones.
+
+    One row per player counts, and zero is a known value (not missing).
+    """
+    players = {
+        row["player_id"]: row for row in player_stats
+        if row.get("match_id") == match_id and row.get("player_id")
+    }
+    extras = {
+        row["player_id"]: row for row in scope_stats
+        if row.get("match_id") == match_id and row.get("player_id") in players
+    }
+
+    def covered(fields):
+        return sum(
+            any(row.get(field) is not None for field in fields)
+            for row in extras.values()
+        )
+
+    return {
+        "players": len(players),
+        "kills": sum(int(row.get("kills") or 0) for row in players.values()),
+        "aim": covered(("aim_accuracy_pct", "rifle_hs_pct",
+                        "pistol_hs_pct", "first_bullet_accuracy_pct",
+                        "time_to_kill_seconds", "damage_time_seconds")),
+        "grenades": covered(("flash_assists", "impactful_flash_assists",
+                             "enemies_flashed", "grenade_damage", "smokes_used",
+                             "enemies_damaged_fire", "enemies_damaged_he",
+                             "total_flash_duration_seconds")),
+    }
+
 CARD_CSS="""
 <style>
 [data-testid="stExpander"]{
