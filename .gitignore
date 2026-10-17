@@ -1,0 +1,10 @@
+.streamlit/secrets.toml
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+__pycache__/
+.pytest_cache/
+*.dem
+*.dem.gz
+.env
