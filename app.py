@@ -273,9 +273,14 @@ elif page=='Partidas':
             title=fixture_title(match)
             with st.expander(title):
                 coverage=match_stat_coverage(match['id'],all_stats,all_scope_stats)
+                match_notes=match.get('notes') or ''
                 verified=(bool(match.get('result_verified'))
                           and match.get('team_a_score') is not None
                           and match.get('team_b_score') is not None)
+                # Placar das partidas antigas também pode estar comprovado nas notas.
+                verified=verified or ('Placar oficial:' in match_notes) or (
+                    ' venceu por ' in match_notes and ' sobre ' in match_notes
+                )
                 source=match.get('source') or 'Não informada'
                 st.caption(f"Fonte: {source} · "
                            + ("Placar verificado" if verified else "Placar ainda não verificado"))
