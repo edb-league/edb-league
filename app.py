@@ -219,9 +219,14 @@ elif page=='Partidas':
                     extra=pd.DataFrame(supplement)
                     if not extra.empty:
                         extra=extra.merge(pd.DataFrame(all_players)[['id','nickname']].rename(columns={'id':'player_id'}),on='player_id',how='left')
+                        # Nick da partida é histórico; perfil do jogador não muda.
+                        nicks=t.set_index('player_id')['observed_nickname'].to_dict() if 'observed_nickname' in t else {}
+                        extra['nickname']=extra.apply(lambda r:nicks.get(r['player_id']) or r['nickname'],axis=1)
                     tab_main,tab_aim,tab_nades=st.tabs(['⚔️ Main','🎯 Aim','💨 Granadas'])
                     with tab_main:
                         main_view=t[['nickname','kills','deaths','assists','damage','rounds','won','rating','kast','open_kills','trade_kills','player_id']].copy()
+                        if 'observed_nickname' in t:
+                            main_view['nickname']=t['observed_nickname'].fillna(t['nickname']).values
                         if not extra.empty:
                             main_view=main_view.merge(extra[['player_id','adr_reported','adr_difference']],on='player_id',how='left')
                         else:
