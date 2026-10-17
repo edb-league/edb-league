@@ -52,6 +52,7 @@ store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
 all_players=store.players()
 all_matches=store.matches()
 all_stats=store.stats()
+all_scope_stats=store.scope_stats()
 frame=enrich(all_players,all_matches,all_stats)
 
 
@@ -203,7 +204,47 @@ elif page=='Partidas':
                     view=t[['nickname','kills','deaths','assists','damage','rounds','won','kpr','adr']].rename(columns={
                         'nickname':'Jogador','kills':'K','deaths':'D','assists':'A','damage':'Dano','rounds':'Rounds',
                         'won':'Vitória','kpr':'KPR','adr':'ADR'})
-                    st.dataframe(view,use_container_width=True,hide_index=True)
+                    supplement=[x for x in all_scope_stats if x['match_id']==match['id']]
+                    extra=pd.DataFrame(supplement)
+                    if not extra.empty:
+                        extra=extra.merge(pd.DataFrame(all_players)[['id','nickname']].rename(columns={'id':'player_id'}),on='player_id',how='left')
+                    tab_main,tab_aim,tab_nades=st.tabs(['⚔️ Main','🎯 Aim','💨 Granadas'])
+                    with tab_main:
+                        main_view=t[['nickname','kills','deaths','assists','damage','rounds','won','rating','kast','open_kills','trade_kills','player_id']].copy()
+                        if not extra.empty:
+                            main_view=main_view.merge(extra[['player_id','adr_reported','adr_difference']],on='player_id',how='left')
+                        else:
+                            main_view['adr_reported']=None
+                            main_view['adr_difference']=None
+                        main_view=main_view.drop(columns=['player_id']).rename(columns={
+                            'nickname':'Jogador','kills':'Kills','deaths':'Mortes','assists':'Assistências','damage':'Dano',
+                            'rounds':'Rounds','won':'Vitória','rating':'HLTV Rating','kast':'KAST (%)',
+                            'open_kills':'Open kills','trade_kills':'Trade kills',
+                            'adr_reported':'ADR (SCOPE)','adr_difference':'Dif. ADR'})
+                        st.dataframe(main_view,use_container_width=True,hide_index=True)
+                        st.caption('ADR da fonte SCOPE.GG, se informado. Rounds inferidos quando o placar não mostra o total.')
+                    with tab_aim:
+                        if extra.empty: st.info('Sem dados de mira desta partida.')
+                        else:
+                            aim=extra[['nickname','time_to_kill_seconds','damage_time_seconds','aim_accuracy_pct',
+                                       'rifle_hs_pct','pistol_hs_pct','first_bullet_accuracy_pct']].rename(columns={
+                                'nickname':'Jogador','time_to_kill_seconds':'Tempo p/ kill (s)',
+                                'damage_time_seconds':'Tempo de dano (s)','aim_accuracy_pct':'Precisão (%)',
+                                'rifle_hs_pct':'HS rifle (%)','pistol_hs_pct':'HS pistola (%)',
+                                'first_bullet_accuracy_pct':'Primeiro disparo (%)'})
+                            st.dataframe(aim,use_container_width=True,hide_index=True)
+                    with tab_nades:
+                        if extra.empty: st.info('Sem dados de granadas desta partida.')
+                        else:
+                            nades=extra[['nickname','flash_assists','impactful_flash_assists','enemies_flashed',
+                                         'total_flash_duration_seconds','grenade_damage','smokes_used',
+                                         'enemies_damaged_fire','enemies_damaged_he']].rename(columns={
+                                'nickname':'Jogador','flash_assists':'Flash assists',
+                                'impactful_flash_assists':'Flash assists úteis','enemies_flashed':'Inimigos cegados',
+                                'total_flash_duration_seconds':'Flash (s)','grenade_damage':'Dano de granada',
+                                'smokes_used':'Smokes','enemies_damaged_fire':'Inimigos atingidos por fogo',
+                                'enemies_damaged_he':'Inimigos atingidos por HE'})
+                            st.dataframe(nades,use_container_width=True,hide_index=True)
                 if match.get('notes'):st.caption(match['notes'])
 
 elif page=='Missões & XP':
