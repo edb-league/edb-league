@@ -50,3 +50,40 @@ def test_stat_coverage_handles_absent_scope_data():
     assert match_stat_coverage("missing",stats,[])=={
         "players":0,"kills":0,"aim":0,"grenades":0
     }
+
+
+
+def test_basic_team_tables_group_teams_and_keep_match_nicks():
+    import pandas as pd
+    from fixture_cards import basic_team_tables, match_team_names
+    match = {"id": "m1", "map_name": "Dust2", "played_at": "2026-10-14",
+             "notes": "Placar oficial: Team 1 13–11 Team 2."}
+    players = pd.DataFrame([
+        {"player_id": "a", "nickname": "Петэв", "observed_nickname": "pyetev",
+         "won": True, "kills": 25, "deaths": 14, "assists": 7,
+         "damage": 2000, "rounds": 24},
+        {"player_id": "b", "nickname": "Bot Bob", "observed_nickname": None,
+         "won": False, "kills": 11, "deaths": 20, "assists": 3,
+         "damage": None, "rounds": 24},
+    ])
+    source = [{"match_id": "m1", "player_id": "a", "adr_reported": 113},
+              {"match_id": "other", "player_id": "b", "adr_reported": 99}]
+    groups = basic_team_tables(match, players, source)
+    assert match_team_names(match) == ("Team 1", "Team 2")
+    assert len(groups) == 2
+    assert [g["name"] for g in groups] == ["Team 1", "Team 2"]
+    assert [g["kills"] for g in groups] == [25, 11]
+    assert groups[0]["table"].iloc[0]["Jogador"] == "pyetev"
+    assert groups[0]["table"].iloc[0]["ADR"] == 113
+    assert groups[0]["table"].iloc[0]["K/D"] == 1.79
+    assert pd.isna(groups[1]["table"].iloc[0]["ADR"])
+    assert groups[1]["table"].iloc[0]["Jogador"] == "Bot Bob"
+
+
+def test_basic_team_tables_unknown_score_uses_known_winner_only():
+    import pandas as pd
+    from fixture_cards import basic_team_tables, match_team_names
+    match={"id":"m2","map_name":"Anubis","rounds_total":21,
+           "notes":"Team 2 venceu; Team 1 perdeu."}
+    assert match_team_names(match) == ("Team 2", "Team 1")
+    assert basic_team_tables(match, pd.DataFrame(), []) == []
