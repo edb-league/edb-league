@@ -52,7 +52,10 @@ store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
 all_players=store.players()
 all_matches=store.matches()
 all_stats=store.stats()
-all_scope_stats=store.scope_stats()
+# Leitura compatível com instâncias Streamlit que ainda mantêm a classe Store
+# antiga na memória durante hot-reload do repositório.
+# _list já existia na primeira versão, e usa a chave somente no servidor.
+all_scope_stats=store._list('player_scope_stats') if store.cloud else []
 frame=enrich(all_players,all_matches,all_stats)
 
 
