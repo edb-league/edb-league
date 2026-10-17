@@ -95,36 +95,46 @@ class Store:
         with self._connect() as con: con.execute(sql,list(row.values()))
 
     def save_player(self, nickname, stars=3, steamid=None, player_id=None):
-        if not nickname.strip(): raise ValueError('Nickname obrigatório')
-        stars=int(stars)
-        if not 1<=stars<=5: raise ValueError('Estrelas fora do intervalo 1–5')
-        current=self.players()
-        if steamid:
-            match=next((p for p in current if p.get('steamid')==steamid),None)
-            if match: player_id=match['id']
-        if not player_id:
-            match=next((p for p in current if p['nickname'].casefold()==nickname.strip().casefold() and not p.get('steamid')),None)
-            if match:player_id=match['id']
-        # Nicks alternativos nunca criam uma segunda conta nem renomeiam
-        # o cadastro oficial. Ex.: Dinfas e Zbra são a mesma pessoa.
-        if not player_id and self.cloud:
-            alias=next((a for a in self._list('player_aliases')
-                        if a['alias'].casefold()==nickname.strip().casefold()),None)
+        """Identidade estável: SteamID primeiro, depois nick oficial ou alias.
+
+        O nickname oficial só muda em edição administrativa explícita (player_id).
+        Uma importação usando outro nick não renomeia a conta nem redefine estrelas.
+        """
+        nickname = nickname.strip()
+        if not nickname: raise ValueError('Nickname obrigatório')
+        stars = int(stars)
+        if not 1 <= stars <= 5: raise ValueError('Estrelas fora do intervalo 1–5')
+        current = self.players()
+        explicit_edit = player_id is not None
+        match = next((p for p in current if p['id'] == player_id), None) if explicit_edit else None
+
+        if match is None and steamid:
+            match = next((p for p in current if p.get('steamid') == steamid), None)
+        if match is None:
+            match = next((p for p in current if p['nickname'].casefold() == nickname.casefold()), None)
+        if match is None and self.cloud:
+            aliases = self._list('player_aliases')
+            alias = next((a for a in aliases if a['alias'].casefold() == nickname.casefold()), None)
             if alias:
-                canonical=next((p for p in current if p['id']==alias['player_id']),None)
-                if canonical:
-                    player_id=canonical['id']
-                    nickname=canonical['nickname']
-                    stars=int(canonical['stars'])
-        pid=player_id or str(uuid4())
-        row={'id':pid,'nickname':nickname.strip(),'steamid':steamid or None,'stars':stars}
+                match = next((p for p in current if p['id'] == alias['player_id']), None)
+
+        if match is not None:
+            player_id = match['id']
+            steamid = steamid or match.get('steamid')
+            if not explicit_edit:
+                nickname = match['nickname']
+                stars = int(match['stars'])
+        pid = player_id or str(uuid4())
+        row = {'id': pid, 'nickname': nickname, 'steamid': steamid or None, 'stars': stars}
         if self.cloud:
-            self._upsert('players',row,'id')
+            self._upsert('players', row, 'id')
         else:
             with self._connect() as con:
-                con.execute('''INSERT INTO players (id,nickname,steamid,stars) VALUES (:id,:nickname,:steamid,:stars)
+                con.execute('''INSERT INTO players (id,nickname,steamid,stars)
+                               VALUES (:id,:nickname,:steamid,:stars)
                                ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname,
-                               steamid=COALESCE(excluded.steamid,players.steamid),stars=excluded.stars''',row)
+                               steamid=COALESCE(excluded.steamid,players.steamid),
+                               stars=excluded.stars''', row)
         return pid
 
     def match_exists(self,mid):
