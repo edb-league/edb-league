@@ -64,7 +64,7 @@ def test_automatic_identity_resolution_preserves_canonical_nick():
         record=db.players()[0]
         assert record['nickname']=='Zbra' and record['stars']==2
         db.save_match({'id':'historical','played_at':'2026-09-29','map_name':'Mirage','source':'SCOPE.GG','rounds_total':21,'notes':''},[
-            {'match_id':'historical','player_id':pid,'kills':13,'deaths':15,'assists':3,'damage':1350,'rounds':21,'won':True,'observed_nickname':'ChangedNick'}])
+            {'match_id':'historical','player_id':pid,'kills':13,'deaths':15,'assists':3,'damage':1350,'rounds':21,'won':True,'headshots':0,'plants':0,'defuses':0,'observed_nickname':'ChangedNick'}])
         assert db.stats()[0]['observed_nickname']=='ChangedNick'
     finally:
         folder.cleanup()
