@@ -322,8 +322,17 @@ elif page=='Partidas':
                             '</div>',
                             unsafe_allow_html=True
                         )
+                        # Matiz sutil nas células, mantendo o contraste do placar.
+                        table_bg, table_fg = (
+                            ('#192F49','#E6F3FF') if team['won'] is True else
+                            ('#38212B','#FFE9ED') if team['won'] is False else
+                            ('#202A2B','#E4EEE9')
+                        )
+                        team_table=team['table'].style.set_properties(
+                            **{'background-color':table_bg,'color':table_fg}
+                        )
                         st.dataframe(
-                            team['table'],hide_index=True,use_container_width=True,
+                            team_table,hide_index=True,use_container_width=True,
                             column_config={
                                 'Jogador':st.column_config.TextColumn('Jogador',width='medium'),
                                 'K':st.column_config.NumberColumn('K',width='small'),
