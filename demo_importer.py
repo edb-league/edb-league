@@ -67,12 +67,51 @@ def _number(value):
         return 0.0
 
 
-def _event(parser,name,other=None):
-    try:
-        df=parser.parse_event(name,other=other) if other else parser.parse_event(name)
-        return df if isinstance(df,pd.DataFrame) else pd.DataFrame(df)
-    except Exception:
-        return pd.DataFrame()
+def _event(parser, name, other=None, player=None):
+    """Consulta eventos, com fallback caso o parser não reconheça is_warmup_period."""
+    attempts = [other]
+    if other and 'is_warmup_period' in other:
+        attempts.append([field for field in other if field != 'is_warmup_period'])
+    for fields in attempts:
+        # Solicitar team_name para reconhecer TK; alguns parsers antigos não
+        # aceitam esse campo, então recuamos ao evento básico sem falhar.
+        player_attempts = [player, None] if player else [None]
+        for player_fields in player_attempts:
+            try:
+                options = {}
+                if fields: options['other'] = fields
+                if player_fields: options['player'] = player_fields
+                df = parser.parse_event(name, **options)
+                return df if isinstance(df, pd.DataFrame) else pd.DataFrame(df)
+            except Exception:
+                continue
+    return pd.DataFrame()
+
+
+def _trim_warmup(df, match_tick=None):
+    """Exclui eventos marcados como aquecimento e anteriores ao início oficial."""
+    if df.empty:
+        return df
+    if 'is_warmup_period' in df.columns:
+        flag = df['is_warmup_period'].astype(str).str.lower().str.strip()
+        df = df[~flag.isin(('true', '1'))]
+    if match_tick is not None and 'tick' in df.columns:
+        df = df[pd.to_numeric(df['tick'], errors='coerce') >= match_tick]
+    return df.copy()
+
+
+def _trim_outside_rounds(df, starts, ends):
+    """Descarta ações após o fim de um round ou fora dos rounds finalizados."""
+    if df.empty or not ends or 'tick' not in df.columns or 'total_rounds_played' not in df.columns:
+        return df
+    round_no = pd.to_numeric(df['total_rounds_played'], errors='coerce')
+    ticks = pd.to_numeric(df['tick'], errors='coerce')
+    end_ticks = round_no.map(ends)
+    keep = end_ticks.notna() & ticks.le(end_ticks)
+    if starts:
+        start_ticks = round_no.map(starts)
+        keep &= start_ticks.isna() | ticks.ge(start_ticks)
+    return df[keep].copy()
 
 
 def _header_map(header):
@@ -91,29 +130,55 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
         header=parser.parse_header()
     except Exception:
         header={}
-    deaths=_event(parser,'player_death',other=['total_rounds_played'])
+    # O demoparser2 oferece a flag is_warmup_period para separar rounds oficiais.
+    # Usar somente a primeira aparição do match_start não é suficiente em todas
+    # as demos: eventos de aquecimento podem persistir no arquivo.
+    fields=['total_rounds_played','is_warmup_period']
+    deaths=_event(parser,'player_death',other=fields,player=['team_name'])
     if deaths.empty or not {'attacker_steamid','user_steamid'}.issubset(deaths.columns):
         raise ValueError('A demo não trouxe eventos de mortes reconhecíveis pelo parser.')
-    hurts=_event(parser,'player_hurt',other=['total_rounds_played'])
-    spawns=_event(parser,'player_spawn',other=['total_rounds_played'])
-    round_ends=_event(parser,'round_end',other=['total_rounds_played'])
-    bombs_planted=_event(parser,'bomb_planted',other=['total_rounds_played'])
-    bombs_defused=_event(parser,'bomb_defused',other=['total_rounds_played'])
-    warns.append('Confirme o placar e o número de rounds antes de salvar; warmup/substituições podem afetar a contagem.')
-    # Quando há evento explícito do fim do aquecimento, excluímos eventos anteriores.
+    hurts=_event(parser,'player_hurt',other=fields,player=['team_name'])
+    spawns=_event(parser,'player_spawn',other=fields)
+    round_starts=_event(parser,'round_start',other=fields)
+    round_ends=_event(parser,'round_end',other=fields)
+    bombs_planted=_event(parser,'bomb_planted',other=fields)
+    bombs_defused=_event(parser,'bomb_defused',other=fields)
+
     warm=_event(parser,'round_announce_match_start')
     if warm.empty:
         warm=_event(parser,'warmup_end')
-    if not warm.empty and 'tick' in warm.columns:
-        ticks=pd.to_numeric(warm['tick'],errors='coerce').dropna()
-        min_tick=int(ticks.min()) if not ticks.empty else None
-        if min_tick is not None:
-            deaths=deaths[deaths['tick']>=min_tick]
-            if 'tick' in hurts: hurts=hurts[hurts['tick']>=min_tick]
-            if 'tick' in spawns: spawns=spawns[spawns['tick']>=min_tick]
-            if 'tick' in round_ends: round_ends=round_ends[round_ends['tick']>=min_tick]
-            if 'tick' in bombs_planted: bombs_planted=bombs_planted[bombs_planted['tick']>=min_tick]
-            if 'tick' in bombs_defused: bombs_defused=bombs_defused[bombs_defused['tick']>=min_tick]
+    ticks=pd.to_numeric(warm['tick'], errors='coerce').dropna() if 'tick' in warm else pd.Series(dtype=float)
+    match_tick=int(ticks.min()) if not ticks.empty else None
+    if 'is_warmup_period' not in deaths and match_tick is None:
+        warns.append('Sem sinal de warmup disponível nesta demo; confira kills e rounds no placar oficial.')
+    deaths=_trim_warmup(deaths,match_tick)
+    hurts=_trim_warmup(hurts,match_tick)
+    spawns=_trim_warmup(spawns,match_tick)
+    round_starts=_trim_warmup(round_starts,match_tick)
+    round_ends=_trim_warmup(round_ends,match_tick)
+    bombs_planted=_trim_warmup(bombs_planted,match_tick)
+    bombs_defused=_trim_warmup(bombs_defused,match_tick)
+    if round_ends.empty:
+        warns.append('Não foram encontrados eventos de fim de round; confira o placar antes de salvar.')
+
+    starts={}
+    ends={}
+    for df, target in ((round_starts,starts),(round_ends,ends)):
+        if df.empty or not {'tick','total_rounds_played'}.issubset(df.columns):
+            continue
+        for _,r in df.iterrows():
+            try:
+                rnd=int(r['total_rounds_played']); tick=int(r['tick'])
+            except (ValueError,TypeError,OverflowError):
+                continue
+            # Em caso de restart dentro do round, usamos o início mais recente.
+            target[rnd]=max(tick,target.get(rnd,tick))
+    if ends:
+        deaths=_trim_outside_rounds(deaths,starts,ends)
+        hurts=_trim_outside_rounds(hurts,starts,ends)
+        bombs_planted=_trim_outside_rounds(bombs_planted,starts,ends)
+        bombs_defused=_trim_outside_rounds(bombs_defused,starts,ends)
+    warns.append('Revise a pontuação e a data: a demo pode ter substituições ou eventos que exigem conferência.')
     players=defaultdict(lambda: {'nickname':'', 'steamid':'','kills':0,'deaths':0,'assists':0,
                                  'damage':0,'rounds':0,'headshots':0,'plants':0,'defuses':0,
                                  'rating':None,'kast':None,'open_kills':None,'trade_kills':None})
@@ -138,7 +203,11 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
         aid=_s(r.get('attacker_steamid')); vid=_s(r.get('user_steamid'))
         if victim is not None:
             victim['deaths']+=1
-        if attacker is not None and aid!=vid:
+        # Frags contra aliados não contam como kill no placar competitivo.
+        ateam=_s(r.get('attacker_team_name'))
+        vteam=_s(r.get('user_team_name'))
+        team_kill=bool(ateam and vteam and ateam==vteam)
+        if attacker is not None and aid!=vid and not team_kill:
             attacker['kills']+=1
             if str(r.get('headshot',False)).lower() in ('true','1'):
                 attacker['headshots']+=1
@@ -149,6 +218,9 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
         for _,r in hurts.iterrows():
             a=add(r.get('attacker_steamid'),r.get('attacker_name'))
             if a is None or _s(r.get('user_steamid')) == _s(r.get('attacker_steamid')):continue
+            ateam=_s(r.get('attacker_team_name'))
+            vteam=_s(r.get('user_team_name'))
+            if ateam and vteam and ateam==vteam:continue
             # Não contabilizar dano do próprio jogador; confirmar friendly-fire em review.
             a['damage']+=int(_number(r.get('dmg_health')))
     else:
