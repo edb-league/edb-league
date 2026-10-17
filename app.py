@@ -12,7 +12,15 @@ import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from storage import Store
-from fixture_cards import fixture_title, match_stat_coverage, basic_team_tables, CARD_CSS
+# O Streamlit mantém módulos importados em cache entre reruns.
+# Recarregar o módulo evita ImportError após deploys que adicionam funções.
+import importlib
+import fixture_cards as _fixture_cards
+_fixture_cards = importlib.reload(_fixture_cards)
+fixture_title = _fixture_cards.fixture_title
+match_stat_coverage = _fixture_cards.match_stat_coverage
+basic_team_tables = _fixture_cards.basic_team_tables
+CARD_CSS = _fixture_cards.CARD_CSS
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
