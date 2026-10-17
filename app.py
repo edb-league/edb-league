@@ -12,7 +12,7 @@ import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from storage import Store
-from fixture_cards import fixture_title, CARD_CSS
+from fixture_cards import fixture_title, match_stat_coverage, CARD_CSS
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -272,7 +272,21 @@ elif page=='Partidas':
         for match in sorted(all_matches,key=lambda m:m['played_at'],reverse=True):
             title=fixture_title(match)
             with st.expander(title):
+                coverage=match_stat_coverage(match['id'],all_stats,all_scope_stats)
+                verified=(bool(match.get('result_verified'))
+                          and match.get('team_a_score') is not None
+                          and match.get('team_b_score') is not None)
+                source=match.get('source') or 'Não informada'
+                st.caption(f"Fonte: {source} · "
+                           + ("Placar verificado" if verified else "Placar ainda não verificado"))
                 st.caption(f"ID: {match['id'][:20]}…  |  Rounds: {match.get('rounds_total') or '—'}")
+                if coverage['players']:
+                    st.caption(
+                        f"Estatísticas: {coverage['players']} jogadores · "
+                        f"{coverage['kills']} kills · "
+                        f"Aim {coverage['aim']}/{coverage['players']} · "
+                        f"Granadas {coverage['grenades']}/{coverage['players']}"
+                    )
                 t=frame[frame['match_id']==match['id']]
                 if not t.empty:
                     view=t[['nickname','kills','deaths','assists','damage','rounds','won','kpr','adr']].rename(columns={
