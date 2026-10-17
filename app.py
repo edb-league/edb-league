@@ -58,6 +58,13 @@ all_stats=store.stats()
 all_scope_stats=store._list('player_scope_stats') if store.cloud else []
 frame=enrich(all_players,all_matches,all_stats)
 
+# Exibe nomes reais sem perder a identificação estável por nickname.
+NAMES_BY_NICK = {p['nickname']: p.get('real_name') for p in all_players}
+
+def player_label(nickname):
+    real = NAMES_BY_NICK.get(nickname)
+    return f'{real} ({nickname})' if real and real.casefold() != nickname.casefold() else nickname
+
 
 def esc(value):return html.escape(str(value))
 
@@ -73,6 +80,7 @@ def scoreboard_table(rows):
         st.info('Ainda não há partidas registradas nesse período.')
         return
     display=rows.copy()
+    display['Jogador'] = display['Jogador'].map(player_label)
     for col in ['Elite','Superação %','XP']:
         if col not in display:display[col]=None
     st.dataframe(display[['Jogador','Estrelas','Partidas','Kills','K/D','KPR','ADR','Vitórias','Elite','Superação %','XP']],
@@ -123,17 +131,17 @@ if page=='Visão geral':
     with c1:
         if not eligible.empty:
             r=eligible.sort_values('Elite',ascending=False).iloc[0]
-            tile('🏆 MVP · RANKING ELITE',r['Jogador'],f"Índice {r['Elite']:.1f} • {r['Partidas']} partidas")
+            tile('🏆 MVP · RANKING ELITE',player_label(r['Jogador']),f"Índice {r['Elite']:.1f} • {r['Partidas']} partidas")
         else:tile('🏆 MVP · RANKING ELITE','A definir','Exige ao menos 2 partidas')
     with c2:
         if not eligible.empty:
             r=eligible.sort_values('Superação %',ascending=False).iloc[0]
-            tile('⚡ SUPERAÇÃO',r['Jogador'],f"{r['Superação %']:+.1f}% acima da referência das estrelas")
+            tile('⚡ SUPERAÇÃO',player_label(r['Jogador']),f"{r['Superação %']:+.1f}% acima da referência das estrelas")
         else:tile('⚡ SUPERAÇÃO','A definir','Desempenho ajustado ao nível')
     with c3:
         if not board.empty:
             r=board.sort_values('Kills',ascending=False).iloc[0]
-            tile('🎯 MAIS KILLS',r['Jogador'],f"{r['Kills']} eliminações")
+            tile('🎯 MAIS KILLS',player_label(r['Jogador']),f"{r['Kills']} eliminações")
         else:tile('🎯 MAIS KILLS','A definir','Recorde acumulado')
     st.markdown('### Classificação Elite')
     if not board.empty:
@@ -173,9 +181,9 @@ elif page=='Jogadores':
         st.info('Cadastre os participantes na aba Administração.')
     else:
         options=sorted(all_players,key=lambda x:x['nickname'].casefold())
-        who=st.selectbox('Selecionar jogador',options,format_func=lambda p:p['nickname']+'  ·  '+'★'*int(p.get('stars',3)))
+        who=st.selectbox('Selecionar jogador',options,format_func=lambda p:player_label(p['nickname'])+'  ·  '+'★'*int(p.get('stars',3)))
         pframe=frame[frame['player_id']==who['id']].sort_values('played_at').copy()
-        st.markdown(f"### {esc(who['nickname'])}  {'★'*int(who['stars'])}")
+        st.markdown(f"### {esc(player_label(who['nickname']))}  {'★'*int(who['stars'])}")
         if pframe.empty:st.info('Nenhuma partida registrada para este jogador ainda.')
         else:
             n_games=len(pframe); rounds=pframe['rounds'].sum()
