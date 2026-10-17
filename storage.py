@@ -11,7 +11,7 @@ import requests
 ROOT=Path(__file__).resolve().parent
 DB_FILE=ROOT/'xinxas.db'
 FIELDS_STATS=['match_id','player_id','kills','deaths','assists','damage','rounds',
-              'won','headshots','plants','defuses','rating','kast','open_kills','trade_kills']
+              'won','headshots','plants','defuses','rating','kast','open_kills','trade_kills','observed_nickname']
 
 
 class Store:
@@ -55,9 +55,13 @@ class Store:
                 plants INTEGER NOT NULL DEFAULT 0,
                 defuses INTEGER NOT NULL DEFAULT 0,
                 rating REAL, kast REAL, open_kills INTEGER, trade_kills INTEGER,
+                observed_nickname TEXT,
                 PRIMARY KEY (match_id, player_id)
             );
             ''')
+            cols = [r[1] for r in con.execute('PRAGMA table_info(player_stats)')]
+            if 'observed_nickname' not in cols:
+                con.execute('ALTER TABLE player_stats ADD COLUMN observed_nickname TEXT')
 
     def _api(self, method, table, *, params=None, payload=None):
         headers={'apikey':self.key,'Authorization':'Bearer '+self.key,
