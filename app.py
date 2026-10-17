@@ -290,16 +290,6 @@ elif page=='Partidas':
                     ' venceu por ' in match_notes and ' sobre ' in match_notes
                 )
                 source=match.get('source') or 'Não informada'
-                st.caption(f"Fonte: {source} · "
-                           + ("Placar verificado" if verified else "Placar ainda não verificado"))
-                st.caption(f"ID: {match['id'][:20]}…  |  Rounds: {match.get('rounds_total') or '—'}")
-                if coverage['players']:
-                    st.caption(
-                        f"Estatísticas: {coverage['players']} jogadores · "
-                        f"{coverage['kills']} kills · "
-                        f"Mira {coverage['aim']}/{coverage['players']} · "
-                        f"Utilitárias {coverage['grenades']}/{coverage['players']}"
-                    )
                 t=frame[frame['match_id']==match['id']]
                 if not t.empty:
                     supplement=[x for x in all_scope_stats if x['match_id']==match['id']]
@@ -383,6 +373,18 @@ elif page=='Partidas':
                                 'smokes_used':'Smokes','enemies_damaged_fire':'Inimigos atingidos por fogo',
                                 'enemies_damaged_he':'Inimigos atingidos por HE'})
                             st.dataframe(nades,use_container_width=True,hide_index=True)
+                # Metadados técnicos ao final, sem interromper a leitura do placar.
+                st.divider()
+                st.caption(f"Fonte: {source} · "
+                           + ("Placar verificado" if verified else "Placar ainda não verificado"))
+                st.caption(f"ID: {match['id'][:20]}…  |  Rounds: {match.get('rounds_total') or '—'}")
+                if coverage['players']:
+                    st.caption(
+                        f"Estatísticas: {coverage['players']} jogadores · "
+                        f"{coverage['kills']} kills · "
+                        f"Mira {coverage['aim']}/{coverage['players']} · "
+                        f"Utilitárias {coverage['grenades']}/{coverage['players']}"
+                    )
                 if match.get('notes'):st.caption(match['notes'])
 
 elif page=='Missões & XP':
