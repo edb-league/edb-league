@@ -173,14 +173,21 @@ CARD_CSS="""
 [data-testid="stExpander"] summary strong{color:#B6F35D;font-weight:850}
 .edb-score-team{
  display:flex;justify-content:space-between;align-items:center;gap:12px;
- padding:12px 14px;margin:15px 0 7px;border-radius:10px;
- background:#1A2A25;border-left:4px solid #667B72;
+ padding:13px 15px;margin:15px 0 7px;border-radius:11px;
+ border:1px solid transparent;border-left-width:5px;
 }
-.edb-team-win{background:#203528;border-left-color:#B6F35D}
-.edb-team-loss{background:#242729;border-left-color:#778A86}
-.edb-team-name{color:#F0F8EF;font-size:1rem;font-weight:800;overflow-wrap:anywhere}
-.edb-team-result{color:#BDD4C9;font-size:.73rem;font-weight:700;text-align:right}
-.edb-team-win .edb-team-result{color:#B6F35D}
+.edb-team-win{
+ background:linear-gradient(105deg,#162A42,#203F5B);
+ border-color:#284E74;border-left-color:#59A9FA;
+}
+.edb-team-loss{
+ background:linear-gradient(105deg,#39202A,#4A2531);
+ border-color:#6D3341;border-left-color:#F07586;
+}
+.edb-team-name{color:#F6F8FA;font-size:1rem;font-weight:800;overflow-wrap:anywhere}
+.edb-team-result{font-size:.73rem;font-weight:750;text-align:right}
+.edb-team-win .edb-team-result{color:#8AC9FF}
+.edb-team-loss .edb-team-result{color:#FF9FAB}
 @media(max-width:520px){
  .edb-score-team{padding:11px;gap:6px;align-items:flex-start}
  .edb-team-result{font-size:.68rem;max-width:52%}
