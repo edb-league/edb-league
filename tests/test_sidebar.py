@@ -31,3 +31,16 @@ def test_clean_tabs_and_team_scoreboard_before_match_details():
     )
     assert "edb-score-team" in matches
     assert "Ver placar e estatísticas" not in matches or "Placar da partida" in matches
+
+
+def test_match_metadata_follows_scoreboards_and_stats():
+    matches = APP.split("elif page=='Partidas':",1)[1].split("elif page=='Missões & XP':",1)[0]
+    assert matches.index("st.markdown('#### Placar da partida')") < matches.index(
+        "st.tabs(['Geral','Mira','Utilitárias'])"
+    )
+    assert matches.index("st.tabs(['Geral','Mira','Utilitárias'])") < matches.index(
+        'st.caption(f"Fonte: {source}'
+    )
+    assert matches.index('st.caption(f"Fonte: {source}') < matches.index(
+        "if match.get('notes'):st.caption(match['notes'])"
+    )
