@@ -20,3 +20,14 @@ def test_sidebar_navigation_is_one_click_buttons():
     assert 'background:#263D32;' in APP
     assert len([x for x in ["Visão geral", "Rankings", "Jogadores",
                            "Partidas", "Missões & XP", "Administração"] if x in APP]) == 6
+
+
+def test_clean_tabs_and_team_scoreboard_before_match_details():
+    assert "st.tabs(['Elite','Superação','Resenha'])" in APP
+    assert "st.tabs(['Geral','Mira','Utilitárias'])" in APP
+    matches = APP.split("elif page=='Partidas':",1)[1].split("elif page=='Missões & XP':",1)[0]
+    assert matches.index("basic_team_tables(match,t,supplement)") < matches.index(
+        "st.tabs(['Geral','Mira','Utilitárias'])"
+    )
+    assert "edb-score-team" in matches
+    assert "Ver placar e estatísticas" not in matches or "Placar da partida" in matches
