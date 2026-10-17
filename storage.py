@@ -105,6 +105,17 @@ class Store:
         if not player_id:
             match=next((p for p in current if p['nickname'].casefold()==nickname.strip().casefold() and not p.get('steamid')),None)
             if match:player_id=match['id']
+        # Nicks alternativos nunca criam uma segunda conta nem renomeiam
+        # o cadastro oficial. Ex.: Dinfas e Zbra são a mesma pessoa.
+        if not player_id and self.cloud:
+            alias=next((a for a in self._list('player_aliases')
+                        if a['alias'].casefold()==nickname.strip().casefold()),None)
+            if alias:
+                canonical=next((p for p in current if p['id']==alias['player_id']),None)
+                if canonical:
+                    player_id=canonical['id']
+                    nickname=canonical['nickname']
+                    stars=int(canonical['stars'])
         pid=player_id or str(uuid4())
         row={'id':pid,'nickname':nickname.strip(),'steamid':steamid or None,'stars':stars}
         if self.cloud:
