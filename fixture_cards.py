@@ -60,6 +60,103 @@ def match_stat_coverage(match_id, player_stats, scope_stats):
                              "total_flash_duration_seconds")),
     }
 
+
+def match_team_names(match):
+    """Name winning/losing rosters using recorded scores or clear match notes."""
+    notes = match.get("notes") or ""
+    direct = re.search(
+        r"Placar oficial:\s*(Team\s*\d+)\s+(\d+)\s*[–-]\s*(\d+)\s+(Team\s*\d+)",
+        notes, re.I,
+    )
+    historic = re.search(
+        r"([^,.]+?)\s+venceu por\s+(\d+)\s+a\s+(\d+)\s+sobre\s+([^.]+)",
+        notes, re.I,
+    )
+    if direct or historic:
+        found = direct or historic
+        left, a, b, right = (
+            found.group(1).strip(), int(found.group(2)),
+            int(found.group(3)), found.group(4).strip(),
+        )
+        return (left, right) if a > b else (right, left)
+
+    left, right = match.get("team_a_name"), match.get("team_b_name")
+    a, b = match.get("team_a_score"), match.get("team_b_score")
+    if match.get("result_verified") and a is not None and b is not None and a != b:
+        return (left or "Equipe A", right or "Equipe B") if a > b else (
+            right or "Equipe B", left or "Equipe A"
+        )
+
+    won = re.search(r"(Team\s*\d+)\s+venceu", notes, re.I)
+    lost = re.search(r"(Team\s*\d+)\s+perdeu", notes, re.I)
+    if won and lost:
+        return won.group(1), lost.group(1)
+    return "Equipe vencedora", "Equipe adversária"
+
+
+def basic_team_tables(match, stats_frame, scope_rows):
+    """Build CS-style grouped scoreboards, preserving historical nicknames.
+
+    Only display an ADR when sourced or computable from actual damage/rounds.
+    Never assign zeros to missing ADR or invent winning sides.
+    """
+    if stats_frame.empty:
+        return []
+    winner, loser = match_team_names(match)
+    reported_adr = {
+        row["player_id"]: row.get("adr_reported")
+        for row in scope_rows
+        if row.get("match_id") == match.get("id")
+    }
+
+    def value_or_none(value):
+        return None if value is None or pd.isna(value) else value
+
+    def player_row(row):
+        original = value_or_none(row.get("observed_nickname"))
+        nick = original or row.get("nickname") or "Jogador"
+        kills, deaths, assists = (int(row.get(key) or 0) for key in ("kills", "deaths", "assists"))
+        adr = value_or_none(reported_adr.get(row["player_id"]))
+        if adr is None:
+            damage = value_or_none(row.get("damage"))
+            rounds = value_or_none(row.get("rounds"))
+            adr = (float(damage) / float(rounds)
+                   if damage is not None and rounds is not None and float(rounds) > 0 else None)
+        return {
+            "Jogador": str(nick),
+            "K": kills,
+            "A": assists,
+            "D": deaths,
+            "K/D": round(kills / deaths, 2) if deaths else float(kills),
+            "ADR": round(float(adr), 1) if adr is not None else None,
+        }
+
+    groups = []
+    for won, title in ((True, winner), (False, loser)):
+        side = stats_frame[stats_frame["won"] == won]
+        if side.empty:
+            continue
+        table = pd.DataFrame([player_row(row) for _, row in side.iterrows()])
+        table = table.sort_values(["K", "ADR"], ascending=False, na_position="last")
+        groups.append({
+            "name": title,
+            "won": won,
+            "players": len(table),
+            "kills": int(table["K"].sum()),
+            "table": table.reset_index(drop=True),
+        })
+    unknown = stats_frame[stats_frame["won"].isna()]
+    if not unknown.empty:
+        table = pd.DataFrame([player_row(row) for _, row in unknown.iterrows()])
+        groups.append({
+            "name": "Equipe não identificada",
+            "won": None,
+            "players": len(table),
+            "kills": int(table["K"].sum()),
+            "table": table.sort_values("K", ascending=False).reset_index(drop=True),
+        })
+    return groups
+
 CARD_CSS="""
 <style>
 [data-testid="stExpander"]{
