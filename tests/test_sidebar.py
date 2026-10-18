@@ -17,7 +17,7 @@ def test_sidebar_navigation_is_one_click_buttons():
     assert "on_click=open_page" in APP
     assert "page = st.session_state['edb_page']" in APP
     assert "type='primary' if st.session_state['edb_page'] == destination else 'secondary'" in APP
-    assert 'background:#263D32;' in APP
+    assert 'background:#25435F;' in APP
     assert len([x for x in ["Visão geral", "Rankings", "Jogadores",
                            "Partidas", "Missões & XP", "Administração"] if x in APP]) == 6
 
