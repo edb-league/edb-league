@@ -336,18 +336,43 @@ elif page=='Hall da Fama':
 elif page=='Partidas':
     hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
     st.markdown(CARD_CSS, unsafe_allow_html=True)
-    if not all_matches:st.info('Ainda não há partidas registradas.')
-    else:
-        # Links dos cartões definem a partida ativa; o detalhamento continua
-        # com largura total abaixo da grade (não limitado a 1/3 da página).
-        active_match_id = st.query_params.get('match')
-        if isinstance(active_match_id, list):
-            active_match_id = active_match_id[0] if active_match_id else None
-        st.markdown(match_cards(all_matches, active_match_id), unsafe_allow_html=True)
-        match = next((m for m in all_matches if str(m['id']) == str(active_match_id)), None)
-        if match is not None:
-            st.markdown(selected_match_header(match), unsafe_allow_html=True)
-            with st.container(key='edb_match_detail'):
+    active_match_id=st.query_params.get('match')
+    if isinstance(active_match_id,list):
+        active_match_id=active_match_id[0] if active_match_id else None
+    active_bo3_id=st.query_params.get('bo3')
+    if isinstance(active_bo3_id,list):
+        active_bo3_id=active_bo3_id[0] if active_bo3_id else None
+    valid_bo3_ids={str(s['id']) for s in season_series}
+    matched_link=next((m for m in all_bo3_maps
+                       if str(m['match_id'])==str(active_match_id)),None)
+    if matched_link and str(matched_link['series_id']) in valid_bo3_ids:
+        active_bo3_id=str(matched_link['series_id'])
+    if str(active_bo3_id) not in valid_bo3_ids:
+        active_bo3_id=None
+    st.markdown(bo3_cards(season_number,all_bo3,all_bo3_maps,all_matches,active_bo3_id),
+                unsafe_allow_html=True)
+    series_matches=series_maps(active_bo3_id,all_bo3_maps,all_matches) if active_bo3_id else []
+    if active_bo3_id:
+        st.markdown('#### Mapas desta BO3')
+        if series_matches:
+            st.markdown(match_cards(series_matches,active_match_id,
+                                    season_number=season_number,bo3_id=active_bo3_id),
+                        unsafe_allow_html=True)
+        else:
+            st.info('Esta BO3 ainda não tem mapas vinculados. Os registros serão adicionados após a conferência dos prints.')
+    assigned_ids={str(m['match_id']) for m in all_bo3_maps}
+    legacy_matches=[m for m in all_matches if str(m['id']) not in assigned_ids]
+    if legacy_matches:
+        st.markdown('#### Mapas antigos ainda não agrupados')
+        st.caption('Registros preservados. Serão associados às BO3 corretas após conferir datas, elencos e placares.')
+        st.markdown(match_cards(legacy_matches,active_match_id,season_number=season_number),
+                    unsafe_allow_html=True)
+    visible_matches=series_matches+legacy_matches
+    match=next((m for m in visible_matches if str(m['id'])==str(active_match_id)),None)
+    if match is not None:
+        st.markdown(selected_match_header(match,season_number,active_bo3_id),
+                    unsafe_allow_html=True)
+        with st.container(key='edb_match_detail'):
                 coverage=match_stat_coverage(match['id'],all_stats,all_scope_stats)
                 match_notes=match.get('notes') or ''
                 verified=(bool(match.get('result_verified'))
