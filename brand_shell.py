@@ -219,7 +219,7 @@ BRAND_CSS = """
 }
 
 
-/* Rankings e Medalhas usam a arte 3:1 de alta resolução como fundo completo.
+/* Banners da liga, inclusive a visão geral, usam arte 3:1 em alta resolução.
    Texto à esquerda (40%); pódio/medalhas nos 60% restantes. */
 .hero.edb-hero.edb-hero--showcase {
   display:flex;align-items:center;min-height:305px;position:relative;
@@ -281,7 +281,7 @@ def sidebar_header(players, matches, kills, period):
 @lru_cache(maxsize=8)
 def _art_data(name):
     """Carrega as artes WEBP incluídas no repositório e embute na página."""
-    if name not in {"duel", "medals", "trophy", "rankings", "matches", "xp"}:
+    if name not in {"duel", "medals", "trophy", "rankings", "matches", "xp", "home"}:
         return ""
     path = Path(__file__).resolve().parent / "assets" / f"{name}.webp.b64"
     if not path.is_file():
@@ -303,6 +303,7 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
         "Rankings": "rankings",
         "Partidas": "matches",
         "Missões & XP": "xp",
+        "Visão geral": "home",
     }.get(page)
     source = _art_data(art_name) if art_name else ""
     if source:
@@ -322,7 +323,7 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
         " edb-hero--illustrated" +
         (" edb-hero--duel" if page == "Comparar jogadores" else
          " edb-hero--hall" if page == "Hall da Fama" else
-         " edb-hero--showcase" if page in {"Rankings", "Medalhas", "Partidas", "Missões & XP"} else "")
+         " edb-hero--showcase" if page in {"Rankings", "Medalhas", "Partidas", "Missões & XP", "Visão geral"} else "")
     ) if source else ""
     return (
         '<section class="hero edb-hero' + artwork_class + '">'
