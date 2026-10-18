@@ -21,6 +21,25 @@ border-radius:13px;padding:14px}
 .edb-profile-metric-value{color:#EFF6FD;font-size:1.3rem;font-weight:850;margin-top:3px}
 .edb-profile-best{border-left:3px solid #D6B98A;background:#1F3042;
 padding:14px;border-radius:9px;color:#F3F1EA;margin:14px 0}
+.edb-fame-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:13px 0 24px}
+.edb-fame-overview-card{border:1px solid #355477;border-radius:13px;padding:14px;
+background:linear-gradient(145deg,#142B44,#0E2036);min-width:0}
+.edb-fame-overview-value{color:#8ECAFC;font-size:1.5rem;line-height:1.3;font-weight:900}
+.edb-fame-overview-label{color:#A9C3D7;font-size:.74rem;margin-top:2px}
+.edb-fame-spotlight{border:1px solid #806C50;border-radius:18px;padding:22px;
+background:linear-gradient(125deg,#29364A,#172638);margin-bottom:17px;
+box-shadow:inset 4px 0 #D6B98A}
+.edb-fame-spotlight-kicker{font-size:.7rem;letter-spacing:1.4px;color:#E8C893;font-weight:850}
+.edb-fame-spotlight-value{font-size:1.8rem;font-weight:900;color:#E9D09E;margin:9px 0 3px}
+.edb-fame-spotlight-person{color:#F3F8FF;font-size:1.12rem;font-weight:750}
+.edb-fame-toplist{display:grid;gap:8px;margin:13px 0 24px}
+.edb-fame-top-player{display:flex;align-items:center;justify-content:space-between;gap:14px;
+background:#14263B;border:1px solid #30465E;border-radius:12px;padding:12px 15px}
+.edb-fame-top-player a{color:#E0F1FF;text-decoration:none;font-weight:750}
+.edb-fame-top-player strong{font-size:1.05rem;color:#B3DDFB;font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+ .edb-fame-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 .edb-fame-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
 .edb-fame-card{border:1px solid #354A60;border-radius:16px;
 background:linear-gradient(140deg,#1B2E43,#142235);padding:18px;min-width:0}
@@ -144,12 +163,65 @@ def render_profile(st, px, player, data, hall, medals=None):
     st.caption("Os totais usam todas as partidas. O ADR acumulado é calculado por dano/rounds; partidas com rounds estimados podem afetá-lo.")
 
 
-def render_hall(st, hall, matches_count):
+def render_hall(st, hall, matches_count, players=None, records=None):
+    """Destaques calculados dos dados oficiais, sem temporadas inventadas."""
     st.markdown(LEGACY_CSS, unsafe_allow_html=True)
+    players = players or []
+    records = records or []
+    total_kills = sum(int(row["kills"]) for row in records)
+    overview = [
+        ("Jogadores", len(players)),
+        ("Partidas", matches_count),
+        ("Kills registradas", total_kills),
+        ("Recordes ativos", len(hall)),
+    ]
+    st.markdown('<div class="edb-fame-overview">' + "".join(
+        '<div class="edb-fame-overview-card"><div class="edb-fame-overview-value">' +
+        f'{count:,}'.replace(",", ".") +
+        '</div><div class="edb-fame-overview-label">' + escape(label) +
+        '</div></div>' for label,count in overview
+    ) + '</div>', unsafe_allow_html=True)
     st.caption(f"Recordes automáticos de {matches_count} partidas oficiais. Empates são compartilhados.")
     if not hall:
         st.info("Ainda não há estatísticas suficientes para estabelecer recordes.")
         return
+
+    leading = next((entry for entry in hall if entry["title"] == "Mais kills em uma partida"), None)
+    if leading:
+        st.markdown("#### Destaque da liga")
+        holders = " · ".join(
+            '<a href="' + escape(profile_link(h["id"]),quote=True) +
+            '" target="_self" style="color:#EFF6FD">' + escape(h["name"]) + '</a>'
+            for h in leading["holders"]
+        )
+        st.markdown(
+            '<section class="edb-fame-spotlight">'
+            '<div class="edb-fame-spotlight-kicker">MELHOR MARCA INDIVIDUAL</div>'
+            '<div class="edb-fame-spotlight-value">' + escape(leading["value"]) + '</div>'
+            '<div class="edb-fame-spotlight-person">' + holders + '</div>'
+            '<div class="edb-fame-detail">' + escape(leading["detail"]) + '</div>'
+            '</section>', unsafe_allow_html=True
+        )
+    if records:
+        by_player = {}
+        for row in records:
+            ident = str(row["player_id"])
+            if ident not in by_player:
+                by_player[ident] = {"id": ident, "name": row["player_name"], "kills": 0}
+            by_player[ident]["kills"] += row["kills"]
+        top = sorted(by_player.values(), key=lambda player:(-player["kills"],player["name"]))[:5]
+        st.markdown("#### Top 5 — kills acumuladas")
+        items = "".join(
+            '<div class="edb-fame-top-player"><div>'
+            '<span style="color:#D6B98A;font-weight:900;margin-right:9px">' +
+            str(index) + '.</span><a href="' + escape(profile_link(p["id"]),quote=True) +
+            '" target="_self">' + escape(p["name"]) + '</a></div><strong>' +
+            str(p["kills"]) + ' kills</strong></div>'
+            for index,p in enumerate(top,1)
+        )
+        st.markdown('<div class="edb-fame-toplist">' + items + '</div>',unsafe_allow_html=True)
+
+    st.markdown("#### Recordes da EDB LEAGUE")
     markup = ['<div class="edb-fame-grid">']
     for entry in hall:
         names = " · ".join(
@@ -166,4 +238,4 @@ def render_hall(st, hall, matches_count):
         )
     markup.append("</div>")
     st.markdown("".join(markup),unsafe_allow_html=True)
-    st.caption("Recordes individuais consideram todas as partidas e os dados disponíveis no SCOPE.GG. K/D geral exige ao menos duas partidas.")
+    st.caption("Recordes calculados pelas partidas registradas e dados disponíveis no SCOPE.GG. K/D geral exige ao menos duas partidas.")
