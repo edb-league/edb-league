@@ -7,8 +7,16 @@ import pandas as pd
 
 SOCIAL_CSS = """
 <style>
-.edb-duel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+.edb-duel-grid{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
 gap:14px;margin:15px 0}
+.edb-duel-versus{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+width:43px;height:43px;display:grid;place-items:center;border-radius:50%;z-index:2;
+font-size:.76rem;font-weight:900;color:#F5F8FF;background:#0B1F36;
+border:1px solid #5D9BD2;box-shadow:0 0 18px rgba(78,148,230,.27)}
+.edb-duel-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:16px;
+padding-top:12px;border-top:1px solid rgba(162,194,225,.22)}
+.edb-duel-quick span{display:block;color:#9FB8D0;font-size:.68rem}
+.edb-duel-quick strong{display:block;color:#F1F8FD;font-size:.92rem;font-weight:850;margin-top:2px}
 .edb-duel-player{border:1px solid #395873;border-radius:16px;
 background:linear-gradient(135deg,#1C3652,#15263A);padding:17px;min-width:0}
 .edb-duel-player--blue{border-color:#4E86B2;background:linear-gradient(135deg,#214B71,#172B43)}
@@ -125,10 +133,14 @@ def render_compare(st, px, first, second, comparison):
             ('blue' if index == 0 else 'red') +
             '"><div class="edb-duel-name">' + escape(name) +
             '</div><div class="edb-duel-meta">' +
-            escape(f'Nick: {p.get("nickname") or ""} · {info["games"]} partidas') +
+            escape(f'Nick: {p.get("nickname") or ""}') +
+            '</div><div class="edb-duel-quick">'
+            '<div><span>Partidas</span><strong>' + str(info["games"]) + '</strong></div>'
+            '<div><span>Vitórias</span><strong>' + str(info["wins"]) + '</strong></div>'
+            '<div><span>Kills</span><strong>' + str(info["kills"]) + '</strong></div>'
             '</div></section>'
             for index,(name,p,info) in enumerate(zip(names,(first,second),(fst,snd)))
-        )+'</div>',unsafe_allow_html=True
+        )+'<div class="edb-duel-versus">VS</div></div>',unsafe_allow_html=True
     )
 
     metrics = [
