@@ -10,6 +10,7 @@ import os
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from chart_theme import style_edb_bar
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
@@ -85,6 +86,22 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
+
+/* Painéis Plotly consistentes, sem incorporar imagens no HTML. */
+div[data-testid="stPlotlyChart"] {
+  background:linear-gradient(155deg,#10283F 0%,#0E2033 100%);
+  border:1px solid #365672;
+  border-radius:18px;
+  padding:12px 12px 5px;
+  box-shadow:0 9px 25px rgba(0,0,0,.16);
+  overflow:hidden;
+}
+@media(max-width:650px){
+  div[data-testid="stPlotlyChart"]{
+    border-radius:14px;
+    padding:6px 4px 2px;
+  }
+}
 
 .edb-season-rules {
   margin:22px 0 20px;padding:21px 23px;border-radius:17px;
@@ -411,10 +428,17 @@ if page=='Visão geral':
         top=board.sort_values('Elite',ascending=False).head(10)
         fig=px.bar(top.sort_values('Elite'),x='Elite',y='Jogador',orientation='h',
                    text='Elite',color_discrete_sequence=['#D6B98A'])
-        fig.update_layout(height=max(310,len(top)*37),paper_bgcolor='rgba(0,0,0,0)',
-                          plot_bgcolor='rgba(0,0,0,0)',font_color='#D6E7F7',
-                          xaxis_title='Índice de desempenho · KPR + ADR', yaxis_title='',
-                          margin=dict(l=4,r=15,t=8,b=15))
+        style_edb_bar(fig,horizontal=True)
+        fig.update_traces(
+            texttemplate='%{x:.1f}',
+            hovertemplate='<b>%{y}</b><br>Índice Elite: %{x:.1f}<extra></extra>'
+        )
+        fig.update_layout(
+            height=max(325,len(top)*42),
+            xaxis_title='Índice de desempenho · KPR + ADR',
+            yaxis_title='',showlegend=False,
+            margin=dict(l=10,r=45,t=18,b=44)
+        )
         st.plotly_chart(fig,use_container_width=True)
     else:st.info('O painel está pronto. Cadastre jogadores e registre a primeira partida em Administração.')
     st.caption('Temporada experimental: mínimo de 2 mapas.' if season_number==0 else
