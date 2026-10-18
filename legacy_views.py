@@ -5,6 +5,7 @@ from html import escape
 from urllib.parse import quote
 import pandas as pd
 from social_views import render_achievement_collection
+from chart_theme import style_edb_line
 
 LEGACY_CSS = """
 <style>
@@ -141,10 +142,17 @@ def render_profile(st, px, player, data, hall, medals=None):
             if timeline[metric].notna().any():
                 fig = px.line(timeline, x="Partida", y=metric, markers=True,
                               color_discrete_sequence=["#78B8E8"])
-                fig.update_layout(height=285, paper_bgcolor="rgba(0,0,0,0)",
-                                  plot_bgcolor="rgba(0,0,0,0)", font_color="#C3D7E8",
-                                  margin=dict(l=5,r=10,t=15,b=25),
-                                  xaxis_title="", yaxis_title=metric)
+                style_edb_line(fig)
+                fig.update_traces(
+                    hovertemplate=f"<b>%{{x}}</b><br>{metric}: %{{y:.2f}}<extra></extra>"
+                )
+                fig.update_layout(
+                    height=305,
+                    xaxis_title="", yaxis_title=metric,
+                    showlegend=False,
+                    margin=dict(l=12,r=18,t=24,b=68)
+                )
+                fig.update_xaxes(tickangle=-22)
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Ainda não há dados para esta métrica.")
