@@ -4,6 +4,7 @@ from __future__ import annotations
 from html import escape
 from urllib.parse import quote
 import pandas as pd
+from social_views import render_achievement_collection
 
 LEGACY_CSS = """
 <style>
@@ -55,7 +56,7 @@ def profile_link(player_id):
     return "?player=" + quote(str(player_id), safe="")
 
 
-def render_profile(st, px, player, data, hall):
+def render_profile(st, px, player, data, hall, medals=None):
     """Full career view based on all recorded matches, never the weekly XP cap."""
     label = str(player.get("real_name") or "").strip()
     nick = str(player.get("nickname") or "Jogador")
@@ -85,6 +86,8 @@ def render_profile(st, px, player, data, hall):
 
     if data["games"] == 0:
         st.info("Ainda não há partidas registradas para este jogador.")
+        st.markdown("#### Medalhas e conquistas")
+        render_achievement_collection(st, medals or [])
         return
     best = data["best"]
     if best:
@@ -94,19 +97,19 @@ def render_profile(st, px, player, data, hall):
             escape(str(best["map"])) + " · " + best["date"].strftime("%d/%m/%Y") +
             "</div>", unsafe_allow_html=True
         )
-    awards = [entry["title"] for entry in hall if any(h["id"] == str(player["id"]) for h in entry["holders"])]
-    badges = []
-    if data["wins"] >= 1: badges.append("Primeira vitória")
-    if any(r["kills"] >= 20 for r in data["matches"]): badges.append("20 kills em uma partida")
-    if data["kills"] >= 50: badges.append("50 kills na liga")
-    if data["kills"] >= 100: badges.append("100 kills na liga")
-    if awards: badges.extend("Recorde: " + title for title in awards)
-    if badges:
-        st.markdown("#### Conquistas e recordes")
+    st.markdown("#### Medalhas e conquistas")
+    render_achievement_collection(st, medals or [])
+    records_held = [
+        entry["title"] for entry in hall
+        if any(h["id"] == str(player["id"]) for h in entry["holders"])
+    ]
+    if records_held:
+        st.markdown("##### Recordes no Hall da Fama")
         st.markdown('<div class="edb-profile-badges">' + "".join(
-            '<span class="edb-profile-badge">' + escape(x) + '</span>' for x in badges
+            '<span class="edb-profile-badge">' + escape(x) + '</span>'
+            for x in records_held
         ) + '</div>', unsafe_allow_html=True)
-    st.caption("Conquistas calculadas automaticamente a partir das partidas registradas.")
+    st.caption("Medalhas são automáticas e não interferem no XP ou no ranking.")
 
     st.markdown("#### Evolução de desempenho")
     timeline = pd.DataFrame([{
