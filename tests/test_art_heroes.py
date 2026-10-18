@@ -140,3 +140,19 @@ def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
     assert '<div class="edb-radar"' not in markup
     assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
     assert "hero('Os Xinxas agora têm ranking.'" in APP
+
+
+def test_home_season_rules_banner_before_elite_chart():
+    assert 'def season_rules_banner(selected_season):' in APP
+    assert '14 dias' in APP
+    assert 'BO3 livres' in APP
+    assert 'Top 6 mapas' in APP
+    assert 'Temporada 0 é experimental' in APP
+    assert '.edb-season-rules-grid' in APP
+    overview = APP.split("if page=='Visão geral':", 1)[1].split("elif page=='Rankings':",1)[0]
+    assert overview.index("st.markdown(season_rules_banner(season_number)") < overview.index(
+        "st.markdown('### Classificação Elite')"
+    )
+    assert overview.index("st.markdown('### Classificação Elite')") < overview.index(
+        "st.plotly_chart(fig,use_container_width=True)"
+    )
