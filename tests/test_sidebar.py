@@ -54,7 +54,8 @@ def test_player_profiles_and_hall_of_fame_reachable():
     assert "linked_player = st.query_params.get('player')" in APP
     assert "render_player_profile(" in APP
     assert "render_hall_of_fame(" in APP
-    assert "career_records=match_records(" in APP
+    assert "def get_career_records():" in APP
+    assert "return match_records(all_players,all_matches,all_stats,get_scope_stats())" in APP
 
 
 def test_comparison_and_medal_pages_accessible():
@@ -83,7 +84,8 @@ def test_profile_and_awards_are_reachable_without_sidebar():
     assert "elif page=='Jogadores':" in APP
     assert "elif page=='Administração':" in APP
     assert "player_medals=" in APP
-    assert "career_records=match_records(" in APP
+    assert "def get_career_records():" in APP
+    assert "return match_records(all_players,all_matches,all_stats,get_scope_stats())" in APP
     assert "render_medal_catalogue(" in APP
     assert "render_hall_of_fame(" in APP
 
