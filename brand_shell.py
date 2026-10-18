@@ -281,7 +281,7 @@ def sidebar_header(players, matches, kills, period):
 @lru_cache(maxsize=3)
 def _art_data(name):
     """Carrega as artes WEBP incluídas no repositório e embute na página."""
-    if name not in {"duel", "medals", "trophy"}:
+    if name not in {"duel", "medals", "trophy", "rankings"}:
         return ""
     path = Path(__file__).resolve().parent / "assets" / f"{name}.webp.b64"
     if not path.is_file():
