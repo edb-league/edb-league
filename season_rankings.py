@@ -40,12 +40,14 @@ def _aggregate(g, stars):
     elite = _score_elite(kills, rounds, damage)
     supera = 100.0 * (kpr / TARGET_KPR[int(stars)] - 1)
     wins = int((g["won"] == True).sum())
+    mission_games=g.copy()
+    mission_games["kpr"]=mission_games["kills"] / mission_games["rounds"]
     return {
         "Kills": kills, "K/D": round(kills / max(deaths, 1), 2),
         "KPR": round(kpr, 3), "ADR": round(adr, 1) if pd.notna(adr) else None,
         "Vitórias": wins, "Elite": round(elite, 1),
         "Superação %": round(supera, 1),
-        "XP": int(xp_for_games(g, int(stars))),
+        "XP": int(xp_for_games(mission_games, int(stars))),
         "_kpr": kpr, "_adr": adr if pd.notna(adr) else -1.0,
         "_elite": elite, "_supera": supera,
     }
