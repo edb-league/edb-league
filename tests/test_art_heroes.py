@@ -147,7 +147,11 @@ def test_home_season_rules_banner_before_elite_chart():
     assert '14 dias' in APP
     assert 'BO3 livres' in APP
     assert 'Top 6 mapas' in APP
-    assert 'Temporada 0 é experimental' in APP
+    assert 'A cada temporada, uma nova disputa começa' in APP
+    assert 'Cada novo mapa pode melhorar sua classificação.' in APP
+    assert 'Para concorrer aos títulos, é necessário disputar pelo menos 6 mapas.' in APP
+    assert 'Todos os resultados ficam registrados no histórico da liga.' in APP
+    assert 'As regras abaixo entram em vigor a partir da Temporada 1' not in APP
     assert '.edb-season-rules-grid' in APP
     overview = APP.split("if page=='Visão geral':", 1)[1].split("elif page=='Rankings':",1)[0]
     assert overview.index("st.markdown(season_rules_banner(season_number)") < overview.index(
