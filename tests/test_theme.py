@@ -34,3 +34,12 @@ def test_no_old_neon_palette():
         assert '#B6F35D' not in source
         assert '#A8E64C' not in source
         assert '#263D32' not in source
+
+
+
+def test_minimal_streamlit_toolbar_preserves_blue_theme():
+    assert '[client]' in CONFIG
+    assert 'toolbarMode="minimal"' in CONFIG
+    assert '#78B8E8' in APP
+    assert '[data-testid="stToolbar"]' in APP
+    assert '[data-testid="stSidebarCollapsedControl"]' in APP
