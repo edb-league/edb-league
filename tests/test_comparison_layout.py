@@ -18,7 +18,7 @@ def test_elite_explanation_follows_ranking_cards():
 
 
 def test_comparison_column_names_replace_ab_and_metric_is_clean():
-    assert '<div class="edb-duel-metric-label">Métrica</div>' in COMPARISON
+    assert '<div class="edb-duel-metric-label">Jogador</div>' in COMPARISON
     assert '<div class="edb-duel-value edb-duel-column-name edb-duel-column--blue">' in COMPARISON
     assert '<div class="edb-duel-value edb-duel-column-name edb-duel-column--red">' in COMPARISON
     assert "escape(names[0])" in COMPARISON
