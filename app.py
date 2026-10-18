@@ -33,23 +33,23 @@ st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initia
 
 CSS='''
 <style>
-[data-testid="stAppViewContainer"] {background:linear-gradient(170deg,#111719 0%,#0B1014 65%);}
-[data-testid="stSidebar"] {background:#11191C;border-right:1px solid #283238;}
+[data-testid="stAppViewContainer"] {background:linear-gradient(170deg,#101B2B 0%,#0A1220 65%);}
+[data-testid="stSidebar"] {background:#0F1B2A;border-right:1px solid #2B4056;}
 .block-container {padding-top:2rem; max-width:1300px;}
-.stButton>button[kind="primary"] {background:#B6F35D;color:#111B14;border:none;font-weight:750;}
-.stMetric {background:#161F22;border:1px solid #263238;border-radius:14px;padding:18px;}
-[data-testid="stMetricValue"] {color:#B6F35D;}
-.hero {border:1px solid #29383A;border-radius:18px;padding:27px 30px;
- background:radial-gradient(ellipse at 92% 8%,#274026 0%,#14201F 43%,#141C21 100%);margin-bottom:12px;}
-.eyebrow {text-transform:uppercase;color:#B6F35D;letter-spacing:3px;font-size:12px;font-weight:800;}
+.stButton>button[kind="primary"] {background:#78B8E8;color:#0B1A29;border:none;font-weight:750;}
+.stMetric {background:#142337;border:1px solid #29425A;border-radius:14px;padding:18px;}
+[data-testid="stMetricValue"] {color:#78B8E8;}
+.hero {border:1px solid #2A4763;border-radius:18px;padding:27px 30px;
+ background:radial-gradient(ellipse at 92% 8%,#254C76 0%,#172B43 43%,#111D2D 100%);margin-bottom:12px;}
+.eyebrow {text-transform:uppercase;color:#78B8E8;letter-spacing:3px;font-size:12px;font-weight:800;}
 .hero h1 {margin:8px 0;font-size:2.5rem;color:#FFFFFF;letter-spacing:-1.5px;}
-.hero p {color:#AAC0B9;margin:0;font-size:15px;}
-.podium {border:1px solid #2C3B3B;border-radius:15px;padding:20px;background:#161E22;min-height:135px;}
-.podium .icon {font-size:24px;color:#A8E64C;}
-.podium .player {font-size:21px;color:#F1F7EF;font-weight:800;margin:4px 0;}
-.podium .detail {color:#95AAA6;font-size:12px;}
-.tag {color:#A8E64C;letter-spacing:1.3px;font-size:11px;font-weight:700;}
-.small-note {color:#8DABA2;font-size:12px;}
+.hero p {color:#AFC5D6;margin:0;font-size:15px;}
+.podium {border:1px solid #30475E;border-radius:15px;padding:20px;background:#17273A;min-height:135px;}
+.podium .icon {font-size:24px;color:#80BCE8;}
+.podium .player {font-size:21px;color:#F2F7FC;font-weight:800;margin:4px 0;}
+.podium .detail {color:#A5B9CE;font-size:12px;}
+.tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
+.small-note {color:#94ABC1;font-size:12px;}
 /* Navegação lateral em formato de menu, com a página atual sombreada. */
 [data-testid="stSidebar"] .stButton > button {
     width:100%;
@@ -59,27 +59,27 @@ CSS='''
     border:1px solid transparent;
     border-radius:11px;
     padding:.65rem .9rem;
-    color:#B9CCC6;
+    color:#C4D7E6;
     background:transparent;
     font-weight:550;
     transition:background-color .15s ease,border-color .15s ease;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background:#23312C;
-    border-color:#34483F;
-    color:#F1F8F3;
+    background:#1E334A;
+    border-color:#355873;
+    color:#F5FAFF;
 }
 [data-testid="stSidebar"] .stButton > button[kind="primary"],
 [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"] {
-    background:#263D32;
-    border-color:#466851;
-    color:#DFFFCC;
+    background:#25435F;
+    border-color:#416E94;
+    color:#D9EAF8;
     font-weight:750;
-    box-shadow:inset 4px 0 0 #B6F35D,0 2px 10px rgba(0,0,0,.16);
+    box-shadow:inset 4px 0 0 #78B8E8,0 2px 10px rgba(0,0,0,.16);
 }
 [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
 [data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"]:hover {
-    background:#2F4A3A;
+    background:#2D5374;
     color:#FFFFFF;
 }
 </style>'''
@@ -213,9 +213,9 @@ if page=='Visão geral':
     if not board.empty:
         top=board.sort_values('Elite',ascending=False).head(10)
         fig=px.bar(top.sort_values('Elite'),x='Elite',y='Jogador',orientation='h',
-                   text='Elite',color_discrete_sequence=['#B6F35D'])
+                   text='Elite',color_discrete_sequence=['#D6B98A'])
         fig.update_layout(height=max(310,len(top)*37),paper_bgcolor='rgba(0,0,0,0)',
-                          plot_bgcolor='rgba(0,0,0,0)',font_color='#D4E6E3',
+                          plot_bgcolor='rgba(0,0,0,0)',font_color='#D6E7F7',
                           xaxis_title='Índice de desempenho · KPR + ADR', yaxis_title='',
                           margin=dict(l=4,r=15,t=8,b=15))
         st.plotly_chart(fig,use_container_width=True)
@@ -261,8 +261,8 @@ elif page=='Jogadores':
             c=pframe[['played_at','kpr']].copy()
             c['Partida']=range(1,len(c)+1)
             fig=px.line(c,x='Partida',y='kpr',markers=True,
-                        color_discrete_sequence=['#B6F35D'])
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',font_color='#B4CAC7',height=270)
+                        color_discrete_sequence=['#78B8E8'])
+            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',font_color='#B4CADC',height=270)
             st.plotly_chart(fig,use_container_width=True)
             st.dataframe(pframe[['played_at','map_name','kills','deaths','assists','rounds','kpr','adr','won']].rename(columns={
                 'played_at':'Data','map_name':'Mapa','kills':'Kills','deaths':'Mortes','assists':'Assist.',
@@ -312,7 +312,7 @@ elif page=='Partidas':
                         table_bg, table_fg = (
                             ('#192F49','#E6F3FF') if team['won'] is True else
                             ('#38212B','#FFE9ED') if team['won'] is False else
-                            ('#202A2B','#E4EEE9')
+                            ('#1D2D3F','#E9F1F8')
                         )
                         team_table=team['table'].style.set_properties(
                             **{'background-color':table_bg,'color':table_fg}
