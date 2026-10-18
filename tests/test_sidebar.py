@@ -9,7 +9,7 @@ def test_brand_is_edb_and_no_target_emoji_in_title():
     assert "sidebar_header(" in APP
     assert "_sidebar_header_slot = st.sidebar.empty()" in APP
     assert "hero_banner(" in APP
-    assert "◆ EDB LEAGUE / CS2" in APP
+    assert "import brand_shell as _brand_shell" in APP
     assert "## 🎯 XINXAS LEAGUE" not in APP
 
 
