@@ -5,6 +5,8 @@ No fake scores or performance percentages appear in the header.
 """
 from __future__ import annotations
 from html import escape
+from pathlib import Path
+from functools import lru_cache
 
 
 BRAND_CSS = """
@@ -104,9 +106,28 @@ BRAND_CSS = """
 .edb-radar-dot.b {right:29px;bottom:39px;width:6px;height:6px;}
 .edb-radar-callout {position:absolute;right:3px;bottom:3px;border:1px solid rgba(137,191,238,.35);
   border-radius:7px;padding:5px 8px;background:#112F4A;color:#ADD2ED;font-size:.62rem;letter-spacing:1.5px;font-weight:800;}
+
+/* Artes originais dedicadas a Comparar, Medalhas e Hall da Fama. */
+.hero.edb-hero.edb-hero--illustrated {
+  min-height:264px;
+  grid-template-columns:minmax(0,1.12fr) minmax(240px,.88fr);
+  border-color:#3975A8;
+  background:linear-gradient(115deg,#07182E,#0C2646);
+}
+.edb-hero--illustrated .edb-hero-art {position:relative;overflow:visible;min-height:204px;}
+.edb-hero--illustrated .edb-art-image {
+  position:absolute;inset:-26px -28px -26px -60px;width:calc(100% + 88px);height:calc(100% + 52px);
+  object-fit:cover;object-position:center;z-index:1;
+  mask-image:linear-gradient(90deg,transparent 0%,black 26%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,black 26%);
+  pointer-events:none;
+}
+.edb-hero--illustrated .edb-hero-copy {max-width:560px;}
+.edb-hero--illustrated .edb-hero-chip {border-color:rgba(111,177,226,.32);}
 @media(max-width:920px) {
   .hero.edb-hero {grid-template-columns:minmax(0,1fr) 180px;padding:23px 19px;gap:9px;}
   .edb-radar {transform:scale(.84);}
+  .hero.edb-hero.edb-hero--illustrated {grid-template-columns:minmax(0,1fr) 180px;}
 }
 @media(max-width:650px) {
   .block-container {padding-top:1rem;}
@@ -119,6 +140,18 @@ BRAND_CSS = """
     min-height:0;opacity:.20;pointer-events:none;}
   .edb-radar {transform:scale(.82);}
   .edb-hero-copy {padding-right:4px;}
+  .hero.edb-hero.edb-hero--illustrated {
+    grid-template-columns:minmax(0,1fr);min-height:205px;overflow:hidden;
+  }
+  .edb-hero--illustrated .edb-hero-art {
+    position:absolute;right:0;top:0;width:65%;height:100%;min-height:0;opacity:.43;
+  }
+  .edb-hero--illustrated .edb-art-image {
+    inset:0;width:100%;height:100%;object-position:55% center;
+    mask-image:linear-gradient(90deg,transparent 0%,black 42%);
+    -webkit-mask-image:linear-gradient(90deg,transparent 0%,black 42%);
+  }
+  .edb-hero--illustrated .edb-hero-copy {position:relative;max-width:100%;}
 }
 </style>
 """
@@ -147,23 +180,46 @@ def sidebar_header(players, matches, kills, period):
     )
 
 
-def hero_banner(title, subtitle, players, matches, maps):
-    """Safe HTML with truthful league metrics and a vector-like tactical motif."""
+@lru_cache(maxsize=3)
+def _art_data(name):
+    """Carrega as artes WEBP incluídas no repositório e embute na página."""
+    if name not in {"duel", "medals", "trophy"}:
+        return ""
+    path = Path(__file__).resolve().parent / "assets" / f"{name}.webp.b64"
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="ascii").strip()
+
+
+def hero_banner(title, subtitle, players, matches, maps, page=None):
+    """Banner da liga com arte opcional e apenas métricas verificadas."""
     chips = [("Jogadores", players), ("Partidas", matches), ("Mapas", maps)]
     rendered_chips = "".join(
         '<span class="edb-hero-chip"><b>' + _fmt(number) + '</b>' +
         label + '</span>' for label, number in chips
     )
-    artwork = (
-        '<div class="edb-hero-art" aria-hidden="true">'
-        '<div class="edb-radar-grid"></div>'
-        '<div class="edb-radar"><span class="edb-radar-axis-h"></span>'
-        '<span class="edb-radar-axis-v"></span>'
-        '<span class="edb-radar-dot a"></span><span class="edb-radar-dot b"></span>'
-        '</div><span class="edb-radar-callout">TACTICAL / CS2</span></div>'
-    )
+    art_name = {
+        "Comparar jogadores": "duel",
+        "Medalhas": "medals",
+        "Hall da Fama": "trophy",
+    }.get(page)
+    source = _art_data(art_name) if art_name else ""
+    if source:
+        artwork = ('<div class="edb-hero-art" aria-hidden="true">'
+                   '<img class="edb-art-image" src="data:image/webp;base64,' +
+                   source + '" alt="" loading="eager" /></div>')
+    else:
+        artwork = (
+            '<div class="edb-hero-art" aria-hidden="true">'
+            '<div class="edb-radar-grid"></div>'
+            '<div class="edb-radar"><span class="edb-radar-axis-h"></span>'
+            '<span class="edb-radar-axis-v"></span>'
+            '<span class="edb-radar-dot a"></span><span class="edb-radar-dot b"></span>'
+            '</div><span class="edb-radar-callout">TACTICAL / CS2</span></div>'
+        )
+    artwork_class = " edb-hero--illustrated" if source else ""
     return (
-        '<section class="hero edb-hero">'
+        '<section class="hero edb-hero' + artwork_class + '">'
         '<div class="edb-hero-copy"><span class="eyebrow">◆ EDB LEAGUE / CS2</span>'
         '<h1>' + escape(str(title)) + '</h1><p>' + escape(str(subtitle)) + '</p>'
         '<div class="edb-hero-chips">' + rendered_chips + '</div></div>' +
