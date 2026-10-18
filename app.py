@@ -21,6 +21,10 @@ fixture_title = _fixture_cards.fixture_title
 match_stat_coverage = _fixture_cards.match_stat_coverage
 basic_team_tables = _fixture_cards.basic_team_tables
 CARD_CSS = _fixture_cards.CARD_CSS
+import ranking_cards as _ranking_cards
+_ranking_cards = importlib.reload(_ranking_cards)
+render_ranking_cards = _ranking_cards.ranking_cards
+RANKING_CSS = _ranking_cards.RANKING_CSS
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -116,23 +120,15 @@ def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
                 f'<div class="player">{esc(symbol)} {esc(player)}</div><div class="detail">{esc(detail)}</div></div>',unsafe_allow_html=True)
 
-def scoreboard_table(rows):
+def scoreboard_table(rows, focus='Elite'):
     if rows.empty:
         st.info('Ainda não há partidas registradas nesse período.')
         return
-    display=rows.copy()
-    display['Jogador'] = display['Jogador'].map(player_label)
-    for col in ['Elite','Superação %','XP']:
-        if col not in display:display[col]=None
-    st.dataframe(display[['Jogador','Estrelas','Partidas','Kills','K/D','KPR','ADR','Vitórias','Elite','Superação %','XP']],
-                 use_container_width=True,hide_index=True,
-                 column_config={
-                     'Estrelas':st.column_config.NumberColumn('★ Nível',format='%d ★'),
-                     'Elite':st.column_config.NumberColumn('Índice Elite',format='%.1f'),
-                     'Superação %':st.column_config.NumberColumn('Superação',format='%.1f%%'),
-                     'ADR':st.column_config.NumberColumn('ADR estimado',format='%.1f'),
-                     'KPR':st.column_config.NumberColumn('Kills / round',format='%.3f'),
-                 })
+    st.markdown(RANKING_CSS, unsafe_allow_html=True)
+    st.markdown(
+        render_ranking_cards(rows.to_dict('records'),focus,name_formatter=player_label),
+        unsafe_allow_html=True
+    )
 
 
 st.sidebar.markdown('## EDB LEAGUE')
@@ -232,18 +228,18 @@ elif page=='Rankings':
     with a:
         st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
         st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
-        scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board)
+        scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
     with b:
         st.write('Quanto cada jogador supera a expectativa de KPR para seu nível de 1 a 5 estrelas.')
         st.caption('Superação é uma referência por estrelas, não evolução histórica. Requer 2 partidas para premiação.')
-        scoreboard_table(board.sort_values('Superação %',ascending=False) if not board.empty else board)
+        scoreboard_table(board.sort_values('Superação %',ascending=False) if not board.empty else board,focus='Superação %')
         st.markdown('#### Evolução real: últimas 2 partidas versus as 2 anteriores')
         changes=historical_progress(selected)
         if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
         else:st.dataframe(changes,use_container_width=True,hide_index=True)
     with c:
         st.write('XP de participação, vitórias e missões proporcionais às estrelas. Até quatro partidas por semana contam para o XP.')
-        scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board)
+        scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
 
 elif page=='Jogadores':
     hero('Os jogadores','Performance, estrelas e evolução de cada integrante.')
@@ -397,7 +393,7 @@ elif page=='Missões & XP':
     st.caption('Concluir uma partida de pelo menos 8 rounds com KPR acima da meta rende 100 XP, uma vez por semana.')
     st.caption('Presença: +40 XP por jogo; vitória informada: +20 XP; limite de 4 jogos com XP por semana.')
     st.markdown('### Ranking de experiência')
-    scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board)
+    scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
     st.markdown('### Prêmios estatísticos')
     awards=weekly_awards(selected)
     if awards:
