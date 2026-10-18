@@ -25,7 +25,10 @@ def test_all_three_pages_use_their_distinct_artwork():
         markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
         assert '<img class="edb-art-image"' in markup
         assert 'data:image/webp;base64,' in markup
-        assert 'class="hero edb-hero edb-hero--illustrated"' in markup
+        expected = ('class="hero edb-hero edb-hero--illustrated edb-hero--duel"'
+                    if page == "Comparar jogadores"
+                    else 'class="hero edb-hero edb-hero--illustrated"')
+        assert expected in markup
         assert '<div class="edb-radar"' not in markup
     assert ".edb-hero--illustrated" in BRAND_CSS
     assert "@media(max-width:650px)" in BRAND_CSS
@@ -54,3 +57,15 @@ def test_comparison_selectors_follow_approved_copy():
     assert "st.selectbox('Selecionar jogador 1'" in APP
     assert "st.selectbox('Selecionar jogador 2'" in APP
     assert '<div class="edb-duel-metric-label">Jogador</div>' in SOCIAL
+
+
+def test_desktop_comparison_uses_full_resolution_art_and_full_bleed():
+    raw = base64.b64decode((ROOT / "assets" / "duel.webp.b64").read_text(encoding="ascii"), validate=True)
+    # Replace the previous tiny demo art (few KB) with a real high-resolution asset.
+    assert len(raw) > 120_000
+    assert raw[8:12] == b"WEBP"
+    assert "edb-hero--duel .edb-hero-art" in BRAND_CSS
+    assert "edb-hero--duel .edb-art-image" in BRAND_CSS
+    assert "object-fit:cover;object-position:center center;" in BRAND_CSS
+    assert "flex:0 1 40%;max-width:40%" in BRAND_CSS
+    assert "edb-hero--duel" not in hero_banner("Medalhas", "Conquistas", 11, 3, 3, page="Medalhas")
