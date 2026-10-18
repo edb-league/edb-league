@@ -9,12 +9,12 @@ def test_brand_and_top_menu_are_loaded():
     assert "hero_banner(" in APP
     assert "import brand_shell as _brand_shell" in APP
     assert "import top_navigation as _top_navigation" in APP
-    assert "st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)" in APP
+    assert "TOP_NAV_CSS, top_navigation(page)" in APP
     assert "initial_sidebar_state='collapsed'" in APP
 
 
 def test_top_navigation_reads_query_params_and_keeps_player_links():
-    assert "st.markdown(top_navigation(page), unsafe_allow_html=True)" in APP
+    assert "st.markdown(" in APP and "'\\n\\n'.join((CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)))" in APP
     assert "requested_page = st.query_params.get('page')" in APP
     assert "st.session_state['edb_page'] = ROUTES[requested_page]" in APP
     assert "linked_player = st.query_params.get('player')" in APP
@@ -66,12 +66,12 @@ def test_comparison_and_medal_pages_accessible():
 
 
 def test_page_banner_follows_top_nav_without_extra_toolbar():
-    assert "st.markdown(top_navigation(page), unsafe_allow_html=True)" in APP
+    assert "st.markdown(" in APP and "'\\n\\n'.join((CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)))" in APP
     assert "selected = frame.copy()" in APP
     assert "st.selectbox('Filtrar partidas por período'," not in APP
     assert "with st.container(key='edb_period_toolbar')" not in APP
     assert "top_counters(len(all_players)" not in APP
-    assert "st.markdown(BRAND_CSS,unsafe_allow_html=True)" in APP
+    assert "CSS, BRAND_CSS, TOP_NAV_CSS" in APP
     assert "unique_maps = len({" in APP
 
 
@@ -85,3 +85,10 @@ def test_profile_and_awards_are_reachable_without_sidebar():
     assert "career_records=match_records(" in APP
     assert "render_medal_catalogue(" in APP
     assert "render_hall_of_fame(" in APP
+
+
+def test_styles_are_not_rendered_as_empty_blocks_before_menu():
+    assert "st.markdown(CSS,unsafe_allow_html=True)" not in APP
+    assert "st.markdown(BRAND_CSS,unsafe_allow_html=True)" not in APP
+    assert "st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)" not in APP
+    assert "'\\n\\n'.join((CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)))" in APP
