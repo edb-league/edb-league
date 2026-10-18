@@ -153,6 +153,39 @@ BRAND_CSS = """
   }
   .edb-hero--illustrated .edb-hero-copy {position:relative;max-width:100%;}
 }
+
+/* Comparar jogadores: arte de 2172x724 ocupa TODO o banner.
+   40% à esquerda para texto e 60% à direita para a cena aprovada. */
+.hero.edb-hero.edb-hero--duel {
+  display:flex;align-items:center;min-height:285px;position:relative;
+  overflow:hidden;background:#07162A;padding:27px 29px;
+}
+.edb-hero--duel .edb-hero-art {
+  position:absolute;inset:0;width:100%;height:100%;min-height:0;
+  display:block;z-index:0;opacity:1;overflow:hidden;
+}
+.edb-hero--duel .edb-art-image {
+  position:absolute;inset:0;width:100%;height:100%;
+  display:block;object-fit:cover;object-position:center center;
+  -webkit-mask-image:none;mask-image:none;
+}
+.hero.edb-hero--duel:before {
+  content:"";position:absolute;z-index:1;inset:0;
+  background:linear-gradient(90deg,rgba(4,14,28,.65) 0%,
+    rgba(4,14,28,.35) 32%,rgba(4,14,28,0) 53%);
+  pointer-events:none;border-radius:inherit;
+}
+.edb-hero--duel .edb-hero-copy {
+  position:relative;z-index:3;flex:0 1 40%;max-width:40%;min-width:0;
+}
+.edb-hero--duel .edb-hero-chip {
+  background:rgba(5,19,39,.76);border-color:rgba(139,191,237,.3);
+}
+@media(max-width:920px) {
+  .hero.edb-hero.edb-hero--duel {min-height:255px;}
+  .edb-hero--duel .edb-hero-copy {flex-basis:46%;max-width:46%;}
+}
+
 </style>
 """
 
@@ -217,7 +250,10 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
             '<span class="edb-radar-dot a"></span><span class="edb-radar-dot b"></span>'
             '</div><span class="edb-radar-callout">TACTICAL / CS2</span></div>'
         )
-    artwork_class = " edb-hero--illustrated" if source else ""
+    artwork_class = (
+        " edb-hero--illustrated" +
+        (" edb-hero--duel" if page == "Comparar jogadores" else "")
+    ) if source else ""
     return (
         '<section class="hero edb-hero' + artwork_class + '">'
         '<div class="edb-hero-copy"><span class="eyebrow">◆ EDB LEAGUE / CS2</span>'
