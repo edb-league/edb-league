@@ -55,11 +55,12 @@ def test_hall_maintains_ties_and_stable_identity():
     titles={record["title"]:record for record in hall_of_fame(rows)}
     assert titles["Mais kills em uma partida"]["value"]=="24 kills"
     assert {h["id"] for h in titles["Mais kills em uma partida"]["holders"]}=={"one","two"}
+    assert len(titles["Mais kills em uma partida"]["holders"])==2
     assert titles["Mais kills na liga"]["value"]=="48 kills"
     assert titles["Mais kills na liga"]["holders"][0]["id"]=="two"
     assert titles["Mais dano de granadas"]["holders"][0]["id"]=="one"
     assert titles["Maior ADR em uma partida"]["value"]=="105.0 ADR"
-    assert titles["Mais vitórias"]["value"]=="1 vitórias"
+    assert titles["Mais vitórias"]["value"]=="1 vitória"
 
 
 def test_missing_data_not_promoted_to_fake_records():
