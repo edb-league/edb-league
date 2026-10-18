@@ -177,7 +177,7 @@ def hero(title,subtitle):
         if m.get('map_name')
     })
     st.markdown(
-        hero_banner(title,subtitle,len(all_players),len(all_matches),unique_maps),
+        hero_banner(title,subtitle,len(all_players),len(all_matches),unique_maps,page=page),
         unsafe_allow_html=True
     )
 
@@ -329,7 +329,7 @@ elif page=='Rankings':
         scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
 
 elif page=='Comparar jogadores':
-    hero('Comparar jogadores','Desempenho lado a lado e encontros nas mesmas partidas.')
+    hero('Comparar jogadores','Análise lado a lado: desempenho, vitórias e confrontos da liga.')
     if len(all_players) < 2:
         st.info('Cadastre pelo menos dois jogadores para começar a comparação.')
     else:
@@ -353,7 +353,7 @@ elif page=='Comparar jogadores':
                            compare_players(first_id,second_id,career_records))
 
 elif page=='Medalhas':
-    hero('Medalhas e conquistas','Desafios de bronze, prata e ouro para todos os jogadores.')
+    hero('Medalhas','Reconhecimento para quem faz a diferença. Conquiste, evolua e deixe sua marca.')
     render_medal_catalogue(st,all_players,player_medals)
 
 elif page=='Jogadores':
@@ -380,8 +380,8 @@ elif page=='Jogadores':
         )
 
 elif page=='Hall da Fama':
-    hero('Hall da Fama','Recordes oficiais, melhores marcas e protagonistas da temporada.')
-    render_hall_of_fame(st,all_time_records,len(all_matches))
+    hero('Hall da Fama','Grandes jogadores constroem momentos. Lendas deixam um legado.')
+    render_hall_of_fame(st,all_time_records,len(all_matches),all_players,career_records)
 
 elif page=='Partidas':
     hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
