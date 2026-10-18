@@ -1,4 +1,4 @@
-"""EDB LEAGUE: temporadas com meta configurável de BO3 e agrupamento explícito de mapas."""
+"""EDB LEAGUE: temporadas quinzenais e agrupamento historico de BO3."""
 from __future__ import annotations
 
 from datetime import date
@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 DEFAULT_SEASONS = [
     {"number":0,"label":"Temporada 0","starts_on":None,"ends_on":"2026-10-18","bo3_target":3},
-    {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":None,"bo3_target":5},
+    {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":"2026-11-01","bo3_target":None},
 ]
 
 SEASON_CSS = """
@@ -30,6 +30,8 @@ SEASON_CSS = """
  background:#285F89;border-color:#79BDEA;color:#F5FAFF !important;
  box-shadow:inset 0 -2px #83D0FF;
 }
+.edb-season-progress{height:6px;border-radius:6px;background:#29435A;overflow:hidden;margin-top:6px;max-width:260px;}
+.edb-season-progress>span{display:block;height:100%;background:#79C6F2;border-radius:inherit;}
 .edb-series-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:15px 0 22px;}
 .edb-series-card{
  display:flex;flex-direction:column;gap:10px;min-height:153px;padding:18px 19px;
@@ -99,24 +101,53 @@ def confirmed_bo3_count(season_number, series, map_links):
         and counts.get(str(s["id"]),0)>=2)
 
 
-def season_bar(seasons, season_number, page_slug, completed, *, rank=None):
-    name=next((s.get("label") or f"Temporada {season_number}" for s in seasons
-               if int(s["number"])==int(season_number)),f"Temporada {season_number}")
-    target=next((int(s.get("bo3_target") or 5) for s in seasons
-                 if int(s["number"])==int(season_number)),5)
+def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_date=None):
+    """Mostra dias transcorridos (nao meta de BO3) a partir da temporada 1."""
+    on_date=on_date or date.today()
+    by_number={int(s["number"]):s for s in seasons}
+    chosen=by_number.get(int(season_number),{})
+    name=str(chosen.get("label") or f"Temporada {season_number}")
+    start=_parse_date(chosen.get("starts_on"))
+    end=_parse_date(chosen.get("ends_on"))
+    archived=bool(chosen.get("homologated_at"))
+    if int(season_number)==0:
+        summary=f"ENCERRADA · EXPERIMENTAL · {completed}/3 BO3 historicas"
+        progress=""
+    elif start is None or end is None:
+        summary=f"{completed} BO3 concluidas · calendario a confirmar"
+        progress=""
+    elif on_date < start:
+        summary=f"A INICIAR · {start.strftime('%d/%m')} a {end.strftime('%d/%m/%Y')}"
+        progress=""
+    elif on_date > end:
+        summary=(f"HOMOLOGADA · {completed} BO3 concluidas" if archived else
+                 f"ENCERRADA · AGUARDANDO HOMOLOGACAO · {completed} BO3 concluidas")
+        progress=""
+    else:
+        day=(on_date-start).days+1
+        remaining=(end-on_date).days
+        summary=f"Dia {day}/14 · {remaining} dias restantes · {completed} BO3 concluidas"
+        progress=(f'<div class="edb-season-progress" aria-label="Dia {day} de 14">'
+                  f'<span style="width:{min(100,100*day/14):.2f}%"></span></div>')
+    link_extra=""
+    if rank is not None and page_slug=="rankings":
+        link_extra="&amp;ranking="+quote(str(rank),safe="")
+    nums=sorted(by_number)
+    visible={0,int(season_number)}
+    visible.update(n for n in nums if abs(n-int(season_number))<=2)
+    if nums: visible.add(max(nums))
     buttons=[]
-    for s in sorted(seasons,key=lambda item:int(item["number"]),reverse=True):
-        number=int(s["number"])
-        suffix=(" edb-season-active" if number==int(season_number) else "")
-        href="?page="+quote(page_slug,safe="")+"&amp;season="+str(number)
-        if rank is not None and page_slug=="rankings":
-            href+="&amp;ranking="+quote(str(rank),safe="")
+    for n in sorted(visible,reverse=True):
+        if n not in by_number: continue
+        suffix=" edb-season-active" if n==int(season_number) else ""
+        href="?page="+quote(page_slug,safe="")+"&amp;season="+str(n)+link_extra
+        label=str(by_number[n].get("label") or f"Temporada {n}")
         buttons.append('<a href="'+href+'" target="_self" class="edb-season-link'+suffix+
-            '" aria-current="'+("page" if number==int(season_number) else "false")+
-            '">'+escape(str(s.get("label") or f"Temporada {number}"))+'</a>')
+                       '" aria-current="'+("page" if n==int(season_number) else "false")+
+                       '">'+escape(label)+'</a>')
     return (SEASON_CSS+'<div class="edb-season-bar"><div class="edb-season-title"><strong>'+
-            escape(str(name))+'</strong><span>'+str(completed)+' de '+str(target)+
-            ' BO3 concluídas</span></div><nav class="edb-season-switch" aria-label="Selecionar temporada">'+
+            escape(name)+'</strong><span>'+escape(summary)+progress+
+            '</span></div><nav class="edb-season-switch" aria-label="Selecionar temporada">'+
             ''.join(buttons)+'</nav></div>')
 
 
