@@ -87,3 +87,17 @@ def test_legacy_rules_stay_separate():
     assert new.iloc[0]["Partidas"] == 6
     # Regra T0 preserva 4 primeiros jogos por semana.
     assert old.iloc[0]["Partidas"] < 6
+
+
+
+def test_late_third_map_does_not_create_third_week_of_xp():
+    data=_rows(total=6)
+    data["played_at"] = pd.to_datetime([
+        "2026-10-19", "2026-10-20", "2026-10-26",
+        "2026-10-27", "2026-11-01", "2026-11-02",
+    ])
+    data["kills"]=20
+    data["won"]=True
+    xp=season_boards(data,1)["xp"].iloc[0]["XP"]
+    # Seis vitorias, duas semanas de missao, sem terceira missao em 02/11.
+    assert xp == 6*60+2*100
