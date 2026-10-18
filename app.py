@@ -45,13 +45,18 @@ render_medal_catalogue = _social_views.render_medal_catalogue
 import brand_shell as _brand_shell
 _brand_shell = importlib.reload(_brand_shell)
 BRAND_CSS = _brand_shell.BRAND_CSS
-sidebar_header = _brand_shell.sidebar_header
 hero_banner = _brand_shell.hero_banner
+import top_navigation as _top_navigation
+_top_navigation = importlib.reload(_top_navigation)
+TOP_NAV_CSS = _top_navigation.TOP_NAV_CSS
+top_navigation = _top_navigation.top_navigation
+top_counters = _top_navigation.top_counters
+ROUTES = _top_navigation.ROUTES
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
 
-st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initial_sidebar_state='collapsed')
 
 CSS='''
 <style>
@@ -72,69 +77,11 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
-/* Não esconda stToolbar: em versões do Streamlit ele inclui o
-   controle nativo de reabrir a sidebar. O modo minimal do config.toml
-   reduz os itens de compartilhamento sem destruir esse controle. */
-[data-testid="stDecoration"],
-#MainMenu {
-    display:none !important;
-}
-[data-testid="stHeader"] {
-    background:transparent !important;
-    height:3.5rem;
-    z-index:999;
-}
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="stHeader"] [data-testid="stSidebarCollapsedControl"] {
-    display:flex !important;
-    visibility:visible !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
-    z-index:1000;
-}
-[data-testid="stSidebarCollapsedControl"] button {
-    color:#EAF5FF !important;
-    background:rgba(20,49,77,.92) !important;
-    border:1px solid #416E94 !important;
-    border-radius:10px !important;
-    min-width:42px;
-    min-height:42px;
-}
-/* Navegação lateral em formato de menu, com a página atual sombreada. */
-[data-testid="stSidebar"] .stButton > button {
-    width:100%;
-    min-height:44px;
-    justify-content:flex-start;
-    text-align:left;
-    border:1px solid transparent;
-    border-radius:11px;
-    padding:.65rem .9rem;
-    color:#C4D7E6;
-    background:transparent;
-    font-weight:550;
-    transition:background-color .15s ease,border-color .15s ease;
-}
-[data-testid="stSidebar"] .stButton > button:hover {
-    background:#1E334A;
-    border-color:#355873;
-    color:#F5FAFF;
-}
-[data-testid="stSidebar"] .stButton > button[kind="primary"],
-[data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"] {
-    background:#25435F;
-    border-color:#416E94;
-    color:#D9EAF8;
-    font-weight:750;
-    box-shadow:inset 4px 0 0 #78B8E8,0 2px 10px rgba(0,0,0,.16);
-}
-[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
-[data-testid="stSidebar"] .stButton > button[data-testid="stBaseButton-primary"]:hover {
-    background:#2D5374;
-    color:#FFFFFF;
-}
+/* A navegação e o botão de administrador usam TOP_NAV_CSS. */
 </style>'''
 st.markdown(CSS,unsafe_allow_html=True)
 st.markdown(BRAND_CSS,unsafe_allow_html=True)
+st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)
 
 
 def secret(k):
@@ -196,57 +143,41 @@ def scoreboard_table(rows, focus='Elite'):
     )
 
 
-# O placeholder preserva a marca no topo, antes dos botões de navegação.
-_sidebar_header_slot = st.sidebar.empty()
-
-# Cada botão é um destino: sem radio/checklist e com destaque para a seção ativa.
-# O clique atualiza o estado antes do rerun nativo do Streamlit.
-NAVIGATION = [
-    ('Visão geral', ':material/home:'),
-    ('Rankings', ':material/leaderboard:'),
-    ('Comparar jogadores', ':material/compare_arrows:'),
-    ('Hall da Fama', ':material/emoji_events:'),
-    ('Medalhas', ':material/military_tech:'),
-    ('Jogadores', ':material/groups:'),
-    ('Partidas', ':material/sports_esports:'),
-    ('Missões & XP', ':material/military_tech:'),
-    ('Administração', ':material/settings:')
-]
-NAV_PAGES = [item[0] for item in NAVIGATION]
+# A navegação horizontal tem sete destinos públicos na ordem solicitada.
+# Jogadores continua acessível pelos cartões e pelos links de perfil.
+NAV_PAGES = set(ROUTES.values())
 if st.session_state.get('edb_page') not in NAV_PAGES:
-    st.session_state['edb_page'] = NAV_PAGES[0]
+    st.session_state['edb_page'] = 'Visão geral'
 
-# Links nos cartões de ranking abrem a identidade permanente do jogador.
 linked_player = st.query_params.get('player')
-if isinstance(linked_player,list):
+if isinstance(linked_player, list):
     linked_player = linked_player[0] if linked_player else None
 if linked_player and any(str(p['id']) == str(linked_player) for p in all_players):
     st.session_state['edb_page'] = 'Jogadores'
     st.session_state['edb_profile_choice'] = str(linked_player)
-
-def open_page(destination):
-    st.session_state['edb_page'] = destination
-    if 'player' in st.query_params:
-        del st.query_params['player']
+else:
+    requested_page = st.query_params.get('page')
+    if isinstance(requested_page, list):
+        requested_page = requested_page[0] if requested_page else None
+    if requested_page in ROUTES:
+        st.session_state['edb_page'] = ROUTES[requested_page]
 
 def clear_profile_link():
     if 'player' in st.query_params:
         del st.query_params['player']
 
-for index, (destination, nav_icon) in enumerate(NAVIGATION):
-    st.sidebar.button(
-        destination,
-        key=f'edb_nav_{index}',
-        icon=nav_icon,
-        type='primary' if st.session_state['edb_page'] == destination else 'secondary',
-        use_container_width=True,
-        on_click=open_page,
-        args=(destination,)
-    )
 page = st.session_state['edb_page']
-st.sidebar.divider()
-today=datetime.now(TZ).date()
-period=st.sidebar.selectbox('Período', ['Temporada inteira','Esta semana','Este mês'])
+st.markdown(top_navigation(page), unsafe_allow_html=True)
+
+today = datetime.now(TZ).date()
+total_kills = sum(int(stat.get('kills') or 0) for stat in all_stats)
+# Mantém o filtro de período e os totais antes exibidos no menu lateral.
+with st.container(key='edb_period_toolbar'):
+    st.markdown(top_counters(len(all_players),len(all_matches),total_kills),
+                unsafe_allow_html=True)
+    period = st.selectbox('Filtrar partidas por período',
+                          ['Temporada inteira','Esta semana','Este mês'],
+                          key='edb_period')
 
 if not frame.empty:
     if period=='Esta semana':
@@ -260,16 +191,6 @@ else:selected=frame.copy()
 
 board=leaderboard(selected)
 eligible=board[board['Elegível']] if not board.empty else board
-season_kills=sum(int(s.get('kills') or 0) for s in all_stats)
-_sidebar_header_slot.markdown(
-    sidebar_header(len(all_players),len(all_matches),season_kills,period),
-    unsafe_allow_html=True
-)
-if not store.cloud:
-    st.sidebar.caption('💾 Dados locais (SQLite). Para publicar com persistência, configure Supabase.')
-else:
-    st.sidebar.caption('☁️ Banco persistente: Supabase')
-
 if page=='Visão geral':
     hero('A resenha agora tem ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
     k1,k2,k3,k4=st.columns(4)
