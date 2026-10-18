@@ -14,21 +14,17 @@ from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboar
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
 from storage import Store
-# O Streamlit mantém módulos importados em cache entre reruns.
-# Recarregar o módulo evita ImportError após deploys que adicionam funções.
-import importlib
+# Os imports Python ja sao reutilizados entre reruns; nao forcar reload
+# a cada interacao. O deploy atualiza os modulos pelo reinicio do aplicativo.
 import fixture_cards as _fixture_cards
-_fixture_cards = importlib.reload(_fixture_cards)
 fixture_title = _fixture_cards.fixture_title
 match_stat_coverage = _fixture_cards.match_stat_coverage
 basic_team_tables = _fixture_cards.basic_team_tables
 CARD_CSS = _fixture_cards.CARD_CSS
 import match_cards as _match_cards
-_match_cards = importlib.reload(_match_cards)
 match_cards = _match_cards.match_cards
 selected_match_header = _match_cards.selected_match_header
 import season_system as _season_system
-_season_system = importlib.reload(_season_system)
 DEFAULT_SEASONS = _season_system.DEFAULT_SEASONS
 chosen_season_number = _season_system.chosen_season_number
 season_match_ids = _season_system.season_match_ids
@@ -37,39 +33,30 @@ season_bar = _season_system.season_bar
 bo3_cards = _season_system.bo3_cards
 series_maps = _season_system.series_maps
 import season_rankings as _season_rankings
-_season_rankings = importlib.reload(_season_rankings)
 season_boards = _season_rankings.season_boards
 has_technical_tie = _season_rankings.has_technical_tie
 import ranking_cards as _ranking_cards
-_ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
 RANKING_CSS = _ranking_cards.RANKING_CSS
 import ranking_navigation as _ranking_navigation
-_ranking_navigation = importlib.reload(_ranking_navigation)
 rank_switch = _ranking_navigation.rank_switch
 import league_legacy as _league_legacy
-_league_legacy = importlib.reload(_league_legacy)
 match_records = _league_legacy.match_records
 player_summary = _league_legacy.player_summary
 hall_of_fame = _league_legacy.hall_of_fame
 import legacy_views as _legacy_views
-_legacy_views = importlib.reload(_legacy_views)
 render_player_profile = _legacy_views.render_profile
 render_hall_of_fame = _legacy_views.render_hall
 import league_social as _league_social
-_league_social = importlib.reload(_league_social)
 compare_players = _league_social.compare_players
 achievements = _league_social.achievements
 import social_views as _social_views
-_social_views = importlib.reload(_social_views)
 render_compare = _social_views.render_compare
 render_medal_catalogue = _social_views.render_medal_catalogue
 import brand_shell as _brand_shell
-_brand_shell = importlib.reload(_brand_shell)
 BRAND_CSS = _brand_shell.BRAND_CSS
 hero_banner = _brand_shell.hero_banner
 import top_navigation as _top_navigation
-_top_navigation = importlib.reload(_top_navigation)
 TOP_NAV_CSS = _top_navigation.TOP_NAV_CSS
 top_navigation = _top_navigation.top_navigation
 ROUTES = _top_navigation.ROUTES
@@ -143,6 +130,18 @@ def secret(k):
     except (FileNotFoundError,KeyError):
         return os.getenv(k,'')
 
+@st.cache_data(ttl=3600, max_entries=4, show_spinner=False)
+def ensure_current_calendar(supabase_url: str, _service_role_key: str, brasil_date: str) -> None:
+    """Confere o calendario no maximo uma vez por hora e em cada novo dia.
+
+    A chave do dia em Brasilia ativa a nova temporada na virada da data.
+    A escrita RPC e idempotente e continua restrita ao servidor.
+    """
+    Store(url=supabase_url,key=_service_role_key)._api(
+        'POST','rpc/ensure_edb_calendar',payload={}
+    )
+
+
 @st.cache_data(ttl=60, max_entries=4, show_spinner=False)
 def load_league_snapshot(supabase_url: str, _service_role_key: str) -> dict:
     """Uma consulta completa por ate 60 s, compartilhada entre reruns.
@@ -152,9 +151,9 @@ def load_league_snapshot(supabase_url: str, _service_role_key: str) -> dict:
     processo Streamlit. Todas as leituras permanecem no servidor.
     """
     cloud_store=Store(url=supabase_url,key=_service_role_key)
-    # Atualiza o calendario e congela estrelas somente quando o cache expira
-    # ou uma gravacao administrativa provoca invalidacao.
-    cloud_store._api('POST','rpc/ensure_edb_calendar',payload={})
+    # Confere o calendario uma vez por hora, nunca a cada rerun ou leitura.
+    ensure_current_calendar(supabase_url,_service_role_key,
+                            datetime.now(TZ).date().isoformat())
     return {
         'players': cloud_store.players(),
         'matches': cloud_store.matches(),
@@ -175,6 +174,26 @@ def load_scope_stats(supabase_url: str, _service_role_key: str) -> list[dict]:
     return Store(url=supabase_url,key=_service_role_key)._list('player_scope_stats')
 
 
+@st.cache_data(ttl=60, max_entries=8, show_spinner=False)
+def cached_enriched_frame(players: list, matches: list, stats: list) -> pd.DataFrame:
+    """Evita reconstruir o DataFrame quando as partidas nao mudaram."""
+    return enrich(players,matches,stats)
+
+
+@st.cache_data(ttl=60, max_entries=12, show_spinner=False)
+def cached_season_boards(selected: pd.DataFrame, season_number: int,
+                         frozen_stars: tuple) -> dict:
+    """Reutiliza os tres rankings para a mesma temporada e mapa selecionado."""
+    return season_boards(selected,season_number,dict(frozen_stars))
+
+
+@st.cache_data(ttl=60, max_entries=8, show_spinner=False)
+def cached_career_records(players: list, matches: list, stats: list,
+                          scope_stats: list) -> list:
+    """Reutiliza o historico apenas nas telas que realmente precisam dele."""
+    return match_records(players,matches,stats,scope_stats)
+
+
 store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
 
 
@@ -183,6 +202,9 @@ def invalidate_league_cache():
     if store.cloud:
         load_league_snapshot.clear()
         load_scope_stats.clear()
+        cached_enriched_frame.clear()
+        cached_season_boards.clear()
+        cached_career_records.clear()
 
 
 if store.cloud:
@@ -218,7 +240,10 @@ def get_scope_stats():
 
 
 def get_career_records():
-    return match_records(all_players,all_matches,all_stats,get_scope_stats())
+    scope_stats=get_scope_stats()
+    if store.cloud:
+        return cached_career_records(all_players,all_matches,all_stats,scope_stats)
+    return match_records(all_players,all_matches,all_stats,scope_stats)
 
 
 # Exibe nomes reais sem perder a identificação estável por nickname.
@@ -336,12 +361,14 @@ season_record=next((s for s in all_seasons if int(s['number'])==season_number),{
 season_homologated=bool(season_record.get('homologated_at'))
 # Enriquecimento e classificacao sao necessarios apenas nestas tres telas.
 if page in ('Visão geral','Rankings','Missões & XP'):
-    frame=enrich(all_players,all_matches,all_stats)
+    frame=(cached_enriched_frame(all_players,all_matches,all_stats) if store.cloud
+           else enrich(all_players,all_matches,all_stats))
     # Mapas sem associacao a BO3 nao entram na classificacao oficial.
     selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
     season_stars={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
                   if int(r['season_number'])==season_number}
-    boards=season_boards(selected,season_number,season_stars)
+    boards=(cached_season_boards(selected,season_number,tuple(sorted(season_stars.items())))
+            if store.cloud else season_boards(selected,season_number,season_stars))
     # Rankings homologados sao snapshots: alteracoes posteriores nao mudam o historico.
     if season_homologated:
         for rank_type in ('elite','superacao','xp'):
