@@ -216,7 +216,7 @@ selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not fra
 board=leaderboard(selected)
 eligible=board[board['Elegível']] if not board.empty else board
 if page=='Visão geral':
-    hero('A resenha agora tem ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
+    hero('Os Xinxas agora têm ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
     k1,k2,k3,k4=st.columns(4)
     k1.metric('Jogadores cadastrados',len(all_players))
     k2.metric('Partidas registradas',len(selected['match_id'].unique()) if not selected.empty else 0)
