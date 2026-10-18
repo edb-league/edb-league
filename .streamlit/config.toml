@@ -12,4 +12,3 @@ toolbarMode="minimal"
 
 [server]
 maxUploadSize=350
-enableStaticServing=true

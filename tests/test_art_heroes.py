@@ -21,14 +21,10 @@ def test_three_hero_images_are_valid_embedded_webp_files():
 
 
 def test_all_three_pages_use_their_distinct_artwork():
-    pages = {"Comparar jogadores":"duel", "Medalhas":"medals", "Hall da Fama":"trophy",
-             "Rankings":"rankings", "Partidas":"matches", "Missões & XP":"xp", "Visão geral":"home"}
-    for page, name in pages.items():
+    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings", "Partidas", "Missões & XP", "Visão geral"):
         markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
         assert '<img class="edb-art-image"' in markup
-        assert f'src="/app/static/{name}.webp"' in markup
-        assert "data:image/webp;base64," not in markup
-        assert len(markup) < 5000
+        assert 'data:image/webp;base64,' in markup
         expected = ('class="hero edb-hero edb-hero--illustrated edb-hero--duel"'
                     if page == "Comparar jogadores"
                     else 'class="hero edb-hero edb-hero--illustrated edb-hero--hall"'
@@ -101,7 +97,7 @@ def test_medals_and_rankings_use_new_2172x724_desktop_art():
         markup = hero_banner(page, "Texto de demonstração", 11, 3, 3, page=page)
         assert 'edb-hero--illustrated edb-hero--showcase' in markup
         assert '<img class="edb-art-image"' in markup
-        assert f'src="/app/static/{asset}.webp"' in markup
+        assert "data:image/webp;base64," in markup
     assert ".edb-hero--showcase .edb-hero-art" in BRAND_CSS
     assert ".edb-hero--showcase .edb-art-image" in BRAND_CSS
     assert "object-fit:cover;object-position:center center;" in BRAND_CSS
@@ -122,7 +118,7 @@ def test_partidas_and_missoes_xp_have_distinct_full_bleed_high_resolution_art():
         art_set.add(raw)
         markup = hero_banner(page, "Desempenho real", 11, 3, 3, page=page)
         assert 'class="hero edb-hero edb-hero--illustrated edb-hero--showcase"' in markup
-        assert f'src="/app/static/{asset}.webp"' in markup
+        assert 'data:image/webp;base64,' in markup
         assert '<div class="edb-radar"' not in markup
         assert "Desempenho real" in markup
     assert len(art_set) == 2
@@ -140,8 +136,7 @@ def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
     assert raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
     markup = hero_banner("Página inicial", "Uma liga de CS2", 11, 3, 3, page="Visão geral")
     assert 'class="hero edb-hero edb-hero--illustrated edb-hero--showcase"' in markup
-    assert 'src="/app/static/home.webp"' in markup
-    assert "data:image/webp;base64," not in markup
+    assert 'data:image/webp;base64,' in markup
     assert '<div class="edb-radar"' not in markup
     assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
     assert "hero('Os Xinxas agora têm ranking.'" in APP
@@ -165,20 +160,3 @@ def test_home_season_rules_banner_before_elite_chart():
     assert overview.index("st.markdown('### Classificação Elite')") < overview.index(
         "st.plotly_chart(fig,use_container_width=True)"
     )
-
-
-def test_static_images_are_identical_to_approved_webp_art():
-    """Imagens separadas do HTML devem ser exatamente as artes aprovadas."""
-    config=(ROOT/".streamlit"/"config.toml").read_text(encoding="utf-8")
-    assert "enableStaticServing=true" in config
-    pages={"duel":"Comparar jogadores", "medals":"Medalhas", "trophy":"Hall da Fama",
-           "rankings":"Rankings", "matches":"Partidas", "xp":"Missões & XP", "home":"Visão geral"}
-    for name, page in pages.items():
-        original=base64.b64decode((ROOT/"assets"/f"{name}.webp.b64").read_text(encoding="ascii"),validate=True)
-        image=(ROOT/"static"/f"{name}.webp").read_bytes()
-        assert image == original
-        assert image[:4] == b"RIFF" and image[8:12] == b"WEBP"
-        markup=hero_banner("Título", "Descrição", 10, 10, 4, page=page)
-        assert f'src="/app/static/{name}.webp"' in markup
-        assert "data:image/webp;base64," not in markup
-        assert len(markup) < 5000

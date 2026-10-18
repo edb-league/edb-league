@@ -5,6 +5,9 @@ No fake scores or performance percentages appear in the header.
 """
 from __future__ import annotations
 from html import escape
+from pathlib import Path
+from functools import lru_cache
+
 
 BRAND_CSS = """
 <style>
@@ -275,11 +278,15 @@ def sidebar_header(players, matches, kills, period):
     )
 
 
-def _art_url(name):
-    """Caminho local servido separadamente para cache HTTP do navegador."""
+@lru_cache(maxsize=8)
+def _art_data(name):
+    """Carrega as artes WEBP incluídas no repositório e embute na página."""
     if name not in {"duel", "medals", "trophy", "rankings", "matches", "xp", "home"}:
         return ""
-    return "/app/static/" + name + ".webp"
+    path = Path(__file__).resolve().parent / "assets" / f"{name}.webp.b64"
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="ascii").strip()
 
 
 def hero_banner(title, subtitle, players, matches, maps, page=None):
@@ -298,11 +305,11 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
         "Missões & XP": "xp",
         "Visão geral": "home",
     }.get(page)
-    source = _art_url(art_name) if art_name else ""
+    source = _art_data(art_name) if art_name else ""
     if source:
         artwork = ('<div class="edb-hero-art" aria-hidden="true">'
-                   '<img class="edb-art-image" src="' +
-                   source + '" alt="" loading="eager" decoding="async" /></div>')
+                   '<img class="edb-art-image" src="data:image/webp;base64,' +
+                   source + '" alt="" loading="eager" /></div>')
     else:
         artwork = (
             '<div class="edb-hero-art" aria-hidden="true">'
