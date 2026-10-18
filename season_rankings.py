@@ -152,7 +152,7 @@ def season_boards(frame, season_number, frozen_stars=None):
     return boards
 
 
-def has_technical_tie(df):
+def has_technical_tie(df, rank_type):
     """Empate integral do campeao nos criterios do regulamento."""
     if df is None or len(df) < 2:
         return False
@@ -160,7 +160,6 @@ def has_technical_tie(df):
     if len(qualified) < 2:
         return False
     a, b = qualified.iloc[0], qualified.iloc[1]
-    rank_type = "xp" if a.get("__rank_type") == "xp" else None
     if rank_type == "xp":
         fields = ("__score_precise", "__wins_precise", "__elite_precise")
     else:
