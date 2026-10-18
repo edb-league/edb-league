@@ -37,3 +37,12 @@ def test_mobile_adaptive_hero_and_escape_user_content():
     assert '<script>' not in banner
     assert '<img src=x>' not in banner
     assert "&lt;img src=x&gt;" in banner
+
+
+def test_compact_sidebar_brand_has_air_below_navigation_and_no_tagline():
+    markup = sidebar_header(11, 3, 496, "Temporada inteira")
+    assert "Uma temporada, várias formas de vencer." not in markup
+    assert "edb-brand-desc" not in markup
+    assert "margin-top:-18px;margin-bottom:26px" in BRAND_CSS
+    assert "EDB LEAGUE" in markup
+    assert "COUNTER-STRIKE 2" in markup
