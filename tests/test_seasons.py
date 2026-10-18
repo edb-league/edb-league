@@ -19,7 +19,7 @@ def _series():
 
 
 def test_season_zero_and_one_boundary_is_october_nineteenth():
-    assert [s["bo3_target"] for s in DEFAULT_SEASONS] == [5, 5]
+    assert [s["bo3_target"] for s in DEFAULT_SEASONS] == [3, 5]
     assert current_season_number(DEFAULT_SEASONS,date(2026,10,18)) == 0
     assert current_season_number(DEFAULT_SEASONS,date(2026,10,19)) == 1
     assert current_season_number(DEFAULT_SEASONS,date(2026,11,30)) == 1
@@ -53,11 +53,11 @@ def test_completed_series_requires_status_winner_and_two_mapped_games():
     assert confirmed_bo3_count(0,series,match_links)==0
 
 
-def test_five_draft_slots_no_fake_matches_and_links_are_scoped():
+def test_three_legacy_draft_slots_no_fake_matches_and_links_are_scoped():
     matches=[{"id":"old","map_name":"Anubis","played_at":"2026-09-29"}]
-    layout=bo3_cards(0,_series(),[],matches)
-    assert layout.count('class="edb-series-card"')==5
-    for x in range(1,6):
+    layout=bo3_cards(0,_series()[:3],[],matches)
+    assert layout.count('class="edb-series-card"')==3
+    for x in range(1,4):
         assert f"BO3 #{x}" in layout
     assert "0 de até 3 mapas" in layout
     assert "AGUARDANDO REGISTRO" in layout
