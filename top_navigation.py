@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from html import escape
+from pathlib import Path
+from functools import lru_cache
 
 NAV_ITEMS = (
     ("home", "Visão geral", ""),
@@ -33,46 +35,71 @@ LOCK_SVG = (
 
 TOP_NAV_CSS = """
 <style>
-/* Barra de categorias: ocupa o topo, sem depender de menu lateral. */
+/* A marca e as categorias dividem o mesmo cabeçalho junto ao topo. */
 [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {
   display:none !important;
 }
 [data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu {
   display:none !important;
 }
-.block-container {padding-top:.7rem !important;padding-bottom:5.5rem !important;}
+.block-container {padding-top:0.25rem !important;padding-bottom:5.5rem !important;}
+.edb-topbar {
+  display:flex;align-items:center;gap:20px;
+  min-height:66px;padding:5px 15px 5px 13px;margin:0 0 12px;
+  background:#08182B;
+  border:1px solid #243B55;border-radius:11px;
+  box-shadow:0 7px 22px rgba(0,0,0,.14);
+  position:relative;isolation:isolate;
+}
+.edb-topbrand {
+  display:inline-flex;align-items:center;gap:9px;
+  color:#F2F6FD !important;text-decoration:none !important;
+  flex:0 0 auto;white-space:nowrap;min-width:0;
+}
+.edb-topbrand img {
+  width:48px;height:48px;object-fit:contain;display:block;
+  filter:drop-shadow(0 1px 4px rgba(209,170,107,.12));
+}
+.edb-topbrand-name {
+  font-size:.95rem;font-weight:900;letter-spacing:.9px;
+  color:#F4F7FC;line-height:1;
+}
 .edb-topnav {
-  display:flex;align-items:center;gap:6px;padding:8px 10px;
-  margin-bottom:11px;border:1px solid #335575;border-radius:17px;
-  background:linear-gradient(120deg,#122B46,#0B1F33);
-  box-shadow:0 12px 28px rgba(0,0,0,.17);
+  display:flex;align-items:stretch;justify-content:flex-end;
+  gap:4px;flex:1 1 auto;min-width:0;
+  height:55px;margin:0;padding:0 2px;
   overflow-x:auto;overscroll-behavior-inline:contain;
-  scrollbar-width:thin;scrollbar-color:#48769B transparent;
-  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
 }
+.edb-topnav::-webkit-scrollbar {display:none;}
 .edb-topnav a {
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  flex:0 0 auto;min-height:40px;white-space:nowrap;
-  padding:9px 12px;border:1px solid transparent;border-radius:11px;
-  font-size:.82rem;font-weight:750;line-height:1.2;
-  color:#BBD0E4 !important;text-decoration:none !important;
-  transition:background .15s,border-color .15s,color .15s;
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;white-space:nowrap;padding:10px 13px 12px;
+  font-size:.78rem;font-weight:680;line-height:1.3;
+  color:#A8BCD2 !important;text-decoration:none !important;
+  border:none;border-radius:0;min-height:50px;
+  background:transparent;
+  transition:color .15s,background .15s;
 }
-.edb-topnav a:hover, .edb-topnav a:focus-visible {
-  background:#24405D;border-color:#456D92;color:#FFFFFF !important;
+.edb-topnav a:hover,.edb-topnav a:focus-visible {
+  color:#EBF6FF !important;background:rgba(77,134,193,.10);
 }
 .edb-topnav a.edb-nav-selected {
-  background:linear-gradient(135deg,#28547B,#234565);
-  border-color:#5B93C4;color:#F5FAFF !important;
-  box-shadow:inset 0 -3px #8BC7F4;
+  color:#91D4FF !important;font-weight:850;
+  background:transparent;
 }
-.edb-topnav .edb-nav-home {min-width:44px;padding:8px 11px;}
+.edb-topnav a.edb-nav-selected:after {
+  content:"";position:absolute;bottom:1px;left:17%;right:17%;
+  height:3px;border-radius:4px;
+  background:#65C4FC;box-shadow:0 0 9px rgba(101,196,252,.5);
+}
+.edb-topnav .edb-nav-home {min-width:46px;padding:10px 13px;}
 .edb-nav-home svg {display:block;}
-/* O período e os contadores continuam acessíveis no conteúdo principal. */
+/* Informações reais continuam acessíveis depois do cabeçalho. */
 .edb-topmeta {display:flex;align-items:center;gap:13px;flex-wrap:wrap;
-  min-height:40px;color:#A3BFD9;font-size:.78rem;padding:2px 2px 7px;}
+  min-height:35px;color:#A3BFD9;font-size:.78rem;padding:2px 2px 6px;}
 .edb-topmeta b {color:#E7D0AA;font-variant-numeric:tabular-nums;font-weight:850;}
-/* Admin fica isolado das categorias, sempre no canto inferior esquerdo. */
+/* Acesso administrativo permanece separado, fixo no canto inferior esquerdo. */
 .edb-admin-float {
   position:fixed;left:18px;bottom:18px;z-index:999;
   display:inline-flex;align-items:center;gap:8px;
@@ -88,18 +115,36 @@ TOP_NAV_CSS = """
 .edb-admin-float.edb-admin-selected {
   color:#EBCF9F !important;border-color:#9D8460;
 }
-@media(max-width:850px) {
-  .edb-topnav {border-radius:14px;gap:4px;padding:7px;margin-bottom:10px;}
-  .edb-topnav a {font-size:.78rem;padding:8px 10px;}
+@media(max-width:1080px) {
+  .edb-topbar {gap:12px;padding:4px 10px;min-height:59px;}
+  .edb-topbrand img {width:42px;height:42px;}
+  .edb-topbrand-name {font-size:.85rem;letter-spacing:.55px;}
+  .edb-topnav {justify-content:flex-start;height:51px;}
+  .edb-topnav a {font-size:.75rem;padding:8px 10px 11px;}
 }
 @media(max-width:650px) {
-  .edb-topnav {margin-right:-6px;border-radius:13px;scroll-snap-type:x proximity;}
-  .edb-topnav a {scroll-snap-align:start;min-height:42px;}
+  .block-container {padding-top:0.1rem !important;}
+  .edb-topbar {gap:8px;min-height:54px;padding:4px 7px;margin-bottom:8px;border-radius:9px;}
+  .edb-topbrand {gap:4px;}
+  .edb-topbrand img {width:36px;height:36px;}
+  .edb-topbrand-name {font-size:.72rem;letter-spacing:0;}
+  .edb-topnav {height:46px;scroll-snap-type:x proximity;}
+  .edb-topnav a {scroll-snap-align:start;min-height:42px;font-size:.73rem;padding:8px 10px;}
   .edb-admin-float {left:11px;bottom:12px;min-height:40px;padding:9px 11px;font-size:.73rem;}
   .edb-topmeta {font-size:.7rem;gap:9px;}
 }
 </style>
 """
+
+
+@lru_cache(maxsize=1)
+def _crest_image():
+    """Imagem fornecida pelo usuário, otimizada e armazenada no próprio repositório."""
+    path = Path(__file__).resolve().parent / "assets" / "edb_crest.webp.b64"
+    try:
+        return path.read_text(encoding="ascii").strip()
+    except OSError:
+        return ""
 
 
 def top_navigation(page):
@@ -123,8 +168,16 @@ def top_navigation(page):
         ' href="?page=admin" target="_self" aria-label="Administrador">'
         + LOCK_SVG + 'Administrador</a>'
     )
-    return ('<nav class="edb-topnav" aria-label="Categorias da EDB LEAGUE">'
-            + ''.join(links) + '</nav>' + admin)
+    image = _crest_image()
+    logo = ('<img src="data:image/webp;base64,' + image +
+            '" alt="Brasão EDB LEAGUE" width="48" height="48" />'
+            if image else '<span aria-hidden="true">EDB</span>')
+    brand = ('<a class="edb-topbrand" href="?page=home" target="_self"'
+             ' aria-label="EDB LEAGUE, página inicial">' +
+             logo + '<span class="edb-topbrand-name">EDB LEAGUE</span></a>')
+    return ('<header class="edb-topbar">' + brand +
+            '<nav class="edb-topnav" aria-label="Categorias da EDB LEAGUE">' +
+            ''.join(links) + '</nav></header>' + admin)
 
 
 def top_counters(players, matches, kills):
