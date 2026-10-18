@@ -25,7 +25,8 @@ def test_top_navigation_reads_query_params_and_keeps_player_links():
 
 
 def test_clean_tabs_and_team_scoreboard_before_match_details():
-    assert "st.tabs(['Elite','Superação','Resenha'])" in APP
+    assert "st.tabs(['Elite','Superação','Resenha'])" not in APP
+    assert "st.markdown(rank_switch(selected_rank), unsafe_allow_html=True)" in APP
     assert "st.tabs(['Geral','Mira','Utilitárias'])" in APP
     matches = APP.split("elif page=='Partidas':",1)[1].split("elif page=='Missões & XP':",1)[0]
     assert matches.index("basic_team_tables(match,t,supplement)") < matches.index(
