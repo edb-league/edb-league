@@ -26,7 +26,7 @@ def test_top_navigation_reads_query_params_and_keeps_player_links():
 
 def test_clean_tabs_and_team_scoreboard_before_match_details():
     assert "st.tabs(['Elite','Superação','Resenha'])" not in APP
-    assert "st.markdown(rank_switch(selected_rank), unsafe_allow_html=True)" in APP
+    assert "st.markdown(rank_switch(selected_rank, season=season_number), unsafe_allow_html=True)" in APP
     assert "st.tabs(['Geral','Mira','Utilitárias'])" in APP
     matches = APP.split("elif page=='Partidas':",1)[1].split("elif page=='Missões & XP':",1)[0]
     assert matches.index("basic_team_tables(match,t,supplement)") < matches.index(
@@ -68,7 +68,7 @@ def test_comparison_and_medal_pages_accessible():
 
 def test_page_banner_follows_top_nav_without_extra_toolbar():
     assert "st.markdown(" in APP and "'\\n\\n'.join((CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)))" in APP
-    assert "selected = frame.copy()" in APP
+    assert "frame['match_id'].astype(str).isin(season_ids)" in APP
     assert "st.selectbox('Filtrar partidas por período'," not in APP
     assert "with st.container(key='edb_period_toolbar')" not in APP
     assert "top_counters(len(all_players)" not in APP
