@@ -33,7 +33,7 @@ def test_active_ranking_has_visible_blue_background_and_glow():
 def test_categories_switch_real_content_without_streamlit_tabs():
     ranking = APP.split("elif page=='Rankings':",1)[1].split("elif page=='Comparar jogadores':",1)[0]
     assert "st.tabs(['Elite','Superação','Resenha'])" not in APP
-    assert "st.markdown(rank_switch(selected_rank), unsafe_allow_html=True)" in ranking
+    assert "st.markdown(rank_switch(selected_rank, season=season_number), unsafe_allow_html=True)" in ranking
     assert "st.query_params.get('ranking', 'elite')" in ranking
     assert "if selected_rank == 'elite':" in ranking
     assert "elif selected_rank == 'superacao':" in ranking
