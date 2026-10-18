@@ -68,9 +68,18 @@ def test_comparison_and_medal_pages_accessible():
 
 def test_sidebar_brand_precedes_navigation_and_uses_real_stats():
     assert APP.index("_sidebar_header_slot = st.sidebar.empty()") < APP.index(
-        "st.sidebar.markdown('**Navegação**')"
+        "for index, (destination, nav_icon) in enumerate(NAVIGATION)"
     )
+    assert "st.sidebar.markdown('**Navegação**')" not in APP
     assert "season_kills=sum(int(s.get('kills') or 0) for s in all_stats)" in APP
     assert "sidebar_header(len(all_players),len(all_matches),season_kills,period)" in APP
     assert "unique_maps = len({" in APP
     assert "st.markdown(BRAND_CSS,unsafe_allow_html=True)" in APP
+
+
+
+def test_native_header_compact_without_losing_sidebar_button():
+    assert '[data-testid="stToolbar"]' in APP
+    assert '[data-testid="stHeader"]' in APP
+    assert '[data-testid="stSidebarCollapsedControl"]' in APP
+    assert '#MainMenu' in APP
