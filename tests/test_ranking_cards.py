@@ -19,7 +19,7 @@ def test_each_player_has_an_independent_rounded_card():
     markup=ranking_cards(example_records(),"Elite")
     assert markup.count('<article class="edb-rank-card">')==2
     assert 'border-radius:18px' in RANKING_CSS
-    assert 'border:1px solid #32423E' in RANKING_CSS
+    assert 'border:1px solid #2C4258' in RANKING_CSS
     assert 'grid-template-columns:repeat(3,minmax(0,1fr))' in RANKING_CSS
     assert '#01' in markup and '#02' in markup
     assert 'Scby (The Most)' in markup
