@@ -25,6 +25,9 @@ import ranking_cards as _ranking_cards
 _ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
 RANKING_CSS = _ranking_cards.RANKING_CSS
+import ranking_navigation as _ranking_navigation
+_ranking_navigation = importlib.reload(_ranking_navigation)
+rank_switch = _ranking_navigation.rank_switch
 import league_legacy as _league_legacy
 _league_legacy = importlib.reload(_league_legacy)
 match_records = _league_legacy.match_records
@@ -76,53 +79,6 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
-
-/* Rankings: abas angulares estilo interface competitiva CS2. O container
-   nomeado limita o visual a Elite/Superação/Resenha; outras tabs intactas. */
-.st-key-edb_ranking_tabs [data-testid="stTabs"] [data-baseweb="tab-list"],
-.st-key-edb_ranking_tabs [data-testid="stTabs"] [role="tablist"] {
-  display:flex;align-items:stretch;gap:9px;max-width:830px;
-  padding:4px 0 8px;background:transparent;border:0;
-  overflow-x:auto;scrollbar-width:thin;
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[data-baseweb="tab"],
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[role="tab"] {
-  flex:1 0 155px;min-width:0;min-height:54px;
-  display:flex;align-items:center;justify-content:center;
-  padding:11px 23px !important;margin:0 !important;
-  border:0 !important;border-radius:0 !important;
-  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,11px 100%,0 50%);
-  background:linear-gradient(130deg,#1D334B,#11253A) !important;
-  color:#B7C9DE !important;font-weight:800 !important;
-  font-size:.90rem !important;letter-spacing:.055em;
-  position:relative;transition:background .15s ease,color .15s ease;
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[data-baseweb="tab"]:hover,
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[role="tab"]:hover {
-  color:#F5FAFF !important;background:linear-gradient(130deg,#285275,#1B344C) !important;
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[aria-selected="true"] {
-  color:#F5FBFF !important;
-  background:linear-gradient(130deg,#31698F,#234D70) !important;
-  filter:drop-shadow(0 0 7px rgba(80,167,229,.35));
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[aria-selected="true"]::after {
-  content:"";position:absolute;bottom:0;left:12%;right:12%;height:3px;
-  background:#80D1FF;box-shadow:0 0 9px rgba(110,207,255,.8);
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] [data-baseweb="tab-highlight"],
-.st-key-edb_ranking_tabs [data-testid="stTabs"] [data-baseweb="tab-border"] {
-  display:none !important;
-}
-.st-key-edb_ranking_tabs [data-testid="stTabs"] button[role="tab"] p {
-  color:inherit !important;font-size:inherit !important;font-weight:inherit !important;
-}
-@media(max-width:650px) {
-  .st-key-edb_ranking_tabs [data-testid="stTabs"] button[role="tab"] {
-    flex-basis:122px;min-height:48px;padding:9px 15px !important;
-    font-size:.77rem !important;
-  }
-}
 
 /* A navegação e o botão de administrador usam TOP_NAV_CSS. */
 </style>'''
@@ -266,25 +222,30 @@ if page=='Visão geral':
 
 elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
-    with st.container(key='edb_ranking_tabs'):
-        a,b,c=st.tabs(['Elite','Superação','Resenha'])
-        with a:
-            scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
-            # A metodologia fica ao fim dos cartões, preservando o ranking como foco.
-            with st.expander('Como funciona o Índice Elite'):
-                st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
-                st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
-        with b:
-            st.write('Quanto cada jogador supera a expectativa de KPR para seu nível de 1 a 5 estrelas.')
-            st.caption('Superação é uma referência por estrelas, não evolução histórica. Requer 2 partidas para premiação.')
-            scoreboard_table(board.sort_values('Superação %',ascending=False) if not board.empty else board,focus='Superação %')
-            st.markdown('#### Evolução real: últimas 2 partidas versus as 2 anteriores')
-            changes=historical_progress(selected)
-            if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
-            else:st.dataframe(changes,use_container_width=True,hide_index=True)
-        with c:
-            st.write('XP de participação, vitórias e missões proporcionais às estrelas. Até quatro partidas por semana contam para o XP.')
-            scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
+    # Os links trocam ?ranking= sem depender do DOM interno de st.tabs.
+    # Alteração de URL reinicia o script preservando as mesmas estatísticas.
+    selected_rank = st.query_params.get('ranking', 'elite')
+    if isinstance(selected_rank, list):
+        selected_rank = selected_rank[0] if selected_rank else 'elite'
+    selected_rank = selected_rank if selected_rank in {'elite','superacao','resenha'} else 'elite'
+    st.markdown(rank_switch(selected_rank), unsafe_allow_html=True)
+    if selected_rank == 'elite':
+        scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
+        # A metodologia fica ao fim dos cartões, preservando o ranking como foco.
+        with st.expander('Como funciona o Índice Elite'):
+            st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
+            st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
+    elif selected_rank == 'superacao':
+        st.write('Quanto cada jogador supera a expectativa de KPR para seu nível de 1 a 5 estrelas.')
+        st.caption('Superação é uma referência por estrelas, não evolução histórica. Requer 2 partidas para premiação.')
+        scoreboard_table(board.sort_values('Superação %',ascending=False) if not board.empty else board,focus='Superação %')
+        st.markdown('#### Evolução real: últimas 2 partidas versus as 2 anteriores')
+        changes=historical_progress(selected)
+        if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
+        else:st.dataframe(changes,use_container_width=True,hide_index=True)
+    elif selected_rank == 'resenha':
+        st.write('XP de participação, vitórias e missões proporcionais às estrelas. Até quatro partidas por semana contam para o XP.')
+        scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
 
 elif page=='Comparar jogadores':
     hero('Comparar jogadores','Análise lado a lado: desempenho, vitórias e confrontos da liga.')
