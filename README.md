@@ -1,7 +1,7 @@
-# XINXAS LEAGUE — versão inicial (MVP)
+# EDB LEAGUE — aplicativo de CS2
 
 Painel web para a liga informal de Counter-Strike 2. Possui perfis com estrelas,
-rankings **Elite / Superação / Resenha**, missões, XP, histórico, premiações por
+rankings **Elite / Superação / XP**, missões, XP, histórico, premiações por
 estatística, registro por CSV ou demo `.dem.gz` e exportação de backups.
 
 **Status do desenvolvimento:** interface e regras implementadas; testes
@@ -107,23 +107,21 @@ SUPABASE_SERVICE_ROLE_KEY = "CHAVE_PRIVADA_SERVICE_ROLE"
 grande pode exceder memória/tempo; nesse caso, o parser pode rodar localmente e
 o CSV resultante pode ser enviado pelo painel, ou optar por hospedagem mais forte.
 
-## D) Regras atuais (calibração provisória)
+## D) Temporadas e regras oficiais
 
-- **Estrelas 1–5**: cadastro manual; podem ser ajustadas em Administração.
-- **Elite:** índice = `100 × (0,60 × KPR/0,75 + 0,40 × ADR/75)`;
-  se não houver dano, usa `100 × KPR/0,75` (atenção à comparação entre fontes).
-- **Superação:** `% de KPR acima da referência por estrelas`;
-  referências: 1★ 0,42; 2★ 0,57; 3★ 0,72; 4★ 0,87; 5★ 1,02.
-- **Evolução real:** últimas duas partidas vs. duas anteriores; precisa de 4 jogos.
-- **Resenha / XP:** 40 XP por partida, 20 XP por vitória informada, 100 XP
-  por missão completada de KPR (mín. 8 rounds; no máximo 1 por semana).
-- **Teto:** apenas quatro jogos por semana/jogador contam para ranking e XP,
-  mas todos ficam registrados para histórico e evolução.
-- **MVP e Superação:** exigem no mínimo duas partidas no período. Premiações
-  humorísticas e clipes exigem votação manual.
+O regulamento v1.0 esta em [REGULAMENTO.md](REGULAMENTO.md).
 
-São números de **partida piloto**, não uma verdade sobre o nível dos jogadores.
-Vamos recalibrar com 2–3 semanas de dados reais.
+- **Temporada 0 (experimental):** encerrada em 18/10/2026; as duas BO3 reais permanecem no banco e seus resultados nao sao recalculados.
+- **Temporada 1:** 19/10/2026 a 01/11/2026; ciclos sucessivos de 14 dias, sem limite de BO3.
+- **Ranking Elite:** 6 melhores mapas por Indice Elite, usando KPR e ADR.
+- **Ranking Superacao:** 6 melhores mapas por superacao da meta associada as estrelas congeladas na temporada.
+- **Ranking XP:** 6 mapas (40 por participacao, 20 por vitoria) e ate 100 XP por semana de missao (2 semanas).
+- Para concorrer a qualquer titulo oficial, sao necessarios ao menos 6 mapas disputados.
+- **Tres titulos oficiais:** MVP (Elite), Revelacao (Superacao) e Xinxa (XP).
+- Apos o encerramento, o administrador confere e homologa classificacoes e titulos. O banco grava snapshots historicos.
+- Todos os mapas continuam computados no historico de carreira, mesmo que nao estejam entre os seis pontuaveis.
+- A T0 conserva a metodologia legada sem receber novas regras retroativamente.
+- O calendario quinzenal e as estrelas congeladas sao controlados automaticamente no Supabase. Alteracoes de estrelas durante uma temporada valem para a seguinte.
 
 ## E) Limitações honestas desta versão
 
@@ -136,8 +134,7 @@ Vamos recalibrar com 2–3 semanas de dados reais.
 - Data e placar devem ser revisados antes de salvar; há deduplicação por SHA-256
   para demos e por conteúdo para CSV, mas a **mesma partida** enviada em duas
   fontes diferentes pode gerar duplicidade. Não faça isso.
-- Há apenas uma temporada lógica no MVP; gestão de temporadas históricas e
-  votação integrada são evoluções futuras.
+- O calendário quinzenal e o registro de títulos estão implementados; votação integrada ainda é evolução futura.
 - Modo de administrador por senha compartilhada, não contas individuais.
   Defina senha forte e não a compartilhe com o grupo.
 
@@ -145,7 +142,10 @@ Vamos recalibrar com 2–3 semanas de dados reais.
 
 - `app.py`: interface Streamlit.
 - `demo_importer.py`: decompressão e leitura dos eventos.
-- `core.py`: rankings, missões, XP e evolução.
+- `core.py`: calculo legado, missões, XP e evolução.
+- `season_rankings.py`: 6 melhores mapas por indicador para temporadas quinzenais.
+- `season_system.py`: calendario e cartões das BO3.
+- `REGULAMENTO.md`: texto consolidado das regras em vigor.
 - `storage.py`: SQLite local / Supabase REST.
 - `supabase_schema.sql`: criação do banco online.
 - `sample_scoreboard.csv`: transcrição da partida mostrada por print.
