@@ -25,6 +25,15 @@ import ranking_cards as _ranking_cards
 _ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
 RANKING_CSS = _ranking_cards.RANKING_CSS
+import league_legacy as _league_legacy
+_league_legacy = importlib.reload(_league_legacy)
+match_records = _league_legacy.match_records
+player_summary = _league_legacy.player_summary
+hall_of_fame = _league_legacy.hall_of_fame
+import legacy_views as _legacy_views
+_legacy_views = importlib.reload(_legacy_views)
+render_player_profile = _legacy_views.render_profile
+render_hall_of_fame = _legacy_views.render_hall
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -102,6 +111,9 @@ all_stats=store.stats()
 # _list já existia na primeira versão, e usa a chave somente no servidor.
 all_scope_stats=store._list('player_scope_stats') if store.cloud else []
 frame=enrich(all_players,all_matches,all_stats)
+# Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
+career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
+all_time_records=hall_of_fame(career_records)
 
 # Exibe nomes reais sem perder a identificação estável por nickname.
 NAMES_BY_NICK = {p['nickname']: p.get('real_name') for p in all_players}
@@ -139,6 +151,7 @@ st.sidebar.caption('Uma temporada, várias formas de vencer.')
 NAVIGATION = [
     ('Visão geral', ':material/home:'),
     ('Rankings', ':material/leaderboard:'),
+    ('Hall da Fama', ':material/emoji_events:'),
     ('Jogadores', ':material/groups:'),
     ('Partidas', ':material/sports_esports:'),
     ('Missões & XP', ':material/military_tech:'),
@@ -148,8 +161,22 @@ NAV_PAGES = [item[0] for item in NAVIGATION]
 if st.session_state.get('edb_page') not in NAV_PAGES:
     st.session_state['edb_page'] = NAV_PAGES[0]
 
+# Links nos cartões de ranking abrem a identidade permanente do jogador.
+linked_player = st.query_params.get('player')
+if isinstance(linked_player,list):
+    linked_player = linked_player[0] if linked_player else None
+if linked_player and any(str(p['id']) == str(linked_player) for p in all_players):
+    st.session_state['edb_page'] = 'Jogadores'
+    st.session_state['edb_profile_choice'] = str(linked_player)
+
 def open_page(destination):
     st.session_state['edb_page'] = destination
+    if 'player' in st.query_params:
+        del st.query_params['player']
+
+def clear_profile_link():
+    if 'player' in st.query_params:
+        del st.query_params['player']
 
 st.sidebar.markdown('**Navegação**')
 for index, (destination, nav_icon) in enumerate(NAVIGATION):
@@ -242,31 +269,30 @@ elif page=='Rankings':
         scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
 
 elif page=='Jogadores':
-    hero('Os jogadores','Performance, estrelas e evolução de cada integrante.')
+    hero('Perfil dos jogadores','Identidade, carreira, evolução e conquistas individuais.')
     if not all_players:
         st.info('Cadastre os participantes na aba Administração.')
     else:
-        options=sorted(all_players,key=lambda x:x['nickname'].casefold())
-        who=st.selectbox('Selecionar jogador',options,format_func=lambda p:player_label(p['nickname'])+'  ·  '+'★'*int(p.get('stars',3)))
-        pframe=frame[frame['player_id']==who['id']].sort_values('played_at').copy()
-        st.markdown(f"### {esc(player_label(who['nickname']))}  {'★'*int(who['stars'])}")
-        if pframe.empty:st.info('Nenhuma partida registrada para este jogador ainda.')
-        else:
-            n_games=len(pframe); rounds=pframe['rounds'].sum()
-            a,b,c,d=st.columns(4)
-            a.metric('Jogos',n_games)
-            b.metric('Kills',int(pframe['kills'].sum()))
-            c.metric('K/D',f"{pframe['kills'].sum()/max(pframe['deaths'].sum(),1):.2f}")
-            d.metric('KPR',f"{pframe['kills'].sum()/max(rounds,1):.2f}")
-            c=pframe[['played_at','kpr']].copy()
-            c['Partida']=range(1,len(c)+1)
-            fig=px.line(c,x='Partida',y='kpr',markers=True,
-                        color_discrete_sequence=['#78B8E8'])
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)',plot_bgcolor='rgba(0,0,0,0)',font_color='#B4CADC',height=270)
-            st.plotly_chart(fig,use_container_width=True)
-            st.dataframe(pframe[['played_at','map_name','kills','deaths','assists','rounds','kpr','adr','won']].rename(columns={
-                'played_at':'Data','map_name':'Mapa','kills':'Kills','deaths':'Mortes','assists':'Assist.',
-                'rounds':'Rounds','kpr':'KPR','adr':'ADR','won':'Vitória'}),hide_index=True,use_container_width=True)
+        by_id={str(p['id']):p for p in all_players}
+        ordered=sorted(all_players,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
+        ids=[str(p['id']) for p in ordered]
+        if st.session_state.get('edb_profile_choice') not in ids:
+            st.session_state['edb_profile_choice']=ids[0]
+        profile_id=st.selectbox(
+            'Selecionar jogador', ids,
+            format_func=lambda pid: player_label(by_id[pid]['nickname']) +
+                          '  ·  ' + '★'*int(by_id[pid].get('stars',3)),
+            key='edb_profile_choice',
+            on_change=clear_profile_link
+        )
+        who=by_id[profile_id]
+        render_player_profile(
+            st,px,who,player_summary(profile_id,career_records),all_time_records
+        )
+
+elif page=='Hall da Fama':
+    hero('Hall da Fama','Recordes oficiais, melhores marcas e protagonistas da temporada.')
+    render_hall_of_fame(st,all_time_records,len(all_matches))
 
 elif page=='Partidas':
     hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
