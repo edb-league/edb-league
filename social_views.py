@@ -48,6 +48,24 @@ background:linear-gradient(135deg,#16283B,#111D2D);padding:10px 15px;margin:14px
 .edb-duel-column--red{color:#FF93A2}
 .edb-duel-value-best{color:#D6B98A}
 .edb-duel-note{color:#9FB5C8;font-size:.75rem;margin:12px 0}
+.edb-medal-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 24px}
+.edb-medal-overview-card{background:linear-gradient(125deg,#142F4A,#0B2238);border:1px solid #315676;
+border-radius:12px;padding:14px;min-width:0}
+.edb-medal-overview-card strong{font-size:1.45rem;color:#A3D2FF;font-weight:900;display:block}
+.edb-medal-overview-card span{font-size:.73rem;color:#AFC8DC}
+.edb-medal-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 22px}
+.edb-medal-tier-panel{border:1px solid #3B5067;border-radius:14px;padding:18px;
+background:linear-gradient(125deg,#172B41,#0C1D2E)}
+.edb-medal-tier-panel .name{font-weight:900;color:#F1F6FE;font-size:.97rem}
+.edb-medal-tier-panel .sub{font-size:.76rem;color:#AFC3D5;margin-top:7px}
+.edb-medal-tier-panel.bronze{border-color:#785648}
+.edb-medal-tier-panel.silver{border-color:#687F97}
+.edb-medal-tier-panel.gold{border-color:#97835B}
+.edb-medal-tier-panel.gold .name{color:#E8C78E}
+@media(max-width:700px){
+ .edb-medal-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .edb-medal-tiers{grid-template-columns:1fr;gap:8px}
+}
 .edb-medal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
 gap:12px;margin:16px 0 24px}
 .edb-medal-card{border:1px solid #3B4C63;border-radius:15px;
@@ -221,10 +239,45 @@ def render_achievement_collection(st, medals):
 
 
 def render_medal_catalogue(st, players, medals_by_id):
-    st.markdown(SOCIAL_CSS,unsafe_allow_html=True)
-    st.caption("As medalhas são calculadas automaticamente a cada atualização do banco. Progresso é individual.")
-    markup=['<div class="edb-medal-grid">']
+    """Painel de conquistas oficiais, sem simular medalhas ou vencedores."""
     from league_social import MEDALS
+    st.markdown(SOCIAL_CSS,unsafe_allow_html=True)
+    types = len(MEDALS)
+    earned = [m for medals in medals_by_id.values() for m in medals if m["earned"]]
+    honored = sum(
+        any(m["earned"] for m in medals_by_id.get(str(p["id"]),[]))
+        for p in players
+    )
+    summary = [
+        ("Medalhas disponíveis", types),
+        ("Jogadores premiados", honored),
+        ("Níveis de conquista", 3),
+        ("Medalhas conquistadas", len(earned)),
+    ]
+    st.markdown('<div class="edb-medal-overview">' + "".join(
+        '<div class="edb-medal-overview-card"><strong>' +
+        str(value) + '</strong><span>' + escape(label) + '</span></div>'
+        for label,value in summary
+    ) + '</div>',unsafe_allow_html=True)
+    st.markdown('### Categorias de medalhas')
+    captions = {"bronze": "Os primeiros marcos da jornada.",
+                "silver": "Constância e destaque nas partidas.",
+                "gold": "Feitos raros que merecem reconhecimento."}
+    tiers = [("bronze","Bronze"),("silver","Prata"),("gold","Ouro")]
+    tiles = []
+    for tier,label in tiers:
+        count = sum(m["tier"] == tier for m in MEDALS)
+        tiles.append(
+            '<div class="edb-medal-tier-panel ' + tier + '">'
+            '<div class="name">' + label + '</div>'
+            '<div class="sub">' + str(count) + ' medalhas · ' +
+            captions[tier] + '</div></div>'
+        )
+    st.markdown('<div class="edb-medal-tiers">' + ''.join(tiles) + '</div>',
+                unsafe_allow_html=True)
+    st.markdown('### Medalhas da EDB LEAGUE')
+    st.caption("Vencedores vinculados ao cadastro dos jogadores. Todos os números refletem partidas registradas.")
+    markup=['<div class="edb-medal-grid">']
     for m in MEDALS:
         holders=[]
         for player in players:
@@ -247,4 +300,4 @@ def render_medal_catalogue(st, players, medals_by_id):
             '</article>'
         )
     st.markdown(''.join(markup)+'</div>',unsafe_allow_html=True)
-    st.caption("Selecione Jogadores no menu para ver as medalhas conquistadas e as barras de progresso individuais.")
+    st.caption("Abra o perfil de um jogador para ver as medalhas conquistadas e seu progresso individual.")
