@@ -108,8 +108,8 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
             '</div></div>'
             f'<div class="edb-rank-divider"></div><div class="edb-rank-metrics">{metrics}</div>'
             f'<div class="edb-rank-secondary">{lower}{provisional}</div>'
-            '<div class="edb-rank-secondary">Ver perfil completo →</div>' if player_id else '' 
-            '</article>' + link_end
+            + ('<div class="edb-rank-secondary">Ver perfil completo →</div>' if player_id else '')
+            + '</article>' + link_end
         )
     pieces.append("</div>")
     return "\n".join(pieces)
