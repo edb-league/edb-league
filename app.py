@@ -34,6 +34,14 @@ import legacy_views as _legacy_views
 _legacy_views = importlib.reload(_legacy_views)
 render_player_profile = _legacy_views.render_profile
 render_hall_of_fame = _legacy_views.render_hall
+import league_social as _league_social
+_league_social = importlib.reload(_league_social)
+compare_players = _league_social.compare_players
+achievements = _league_social.achievements
+import social_views as _social_views
+_social_views = importlib.reload(_social_views)
+render_compare = _social_views.render_compare
+render_medal_catalogue = _social_views.render_medal_catalogue
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -114,6 +122,10 @@ frame=enrich(all_players,all_matches,all_stats)
 # Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
 career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
 all_time_records=hall_of_fame(career_records)
+player_medals={
+    str(p['id']):achievements(str(p['id']),career_records)
+    for p in all_players
+}
 
 # Exibe nomes reais sem perder a identificação estável por nickname.
 NAMES_BY_NICK = {p['nickname']: p.get('real_name') for p in all_players}
@@ -151,7 +163,9 @@ st.sidebar.caption('Uma temporada, várias formas de vencer.')
 NAVIGATION = [
     ('Visão geral', ':material/home:'),
     ('Rankings', ':material/leaderboard:'),
+    ('Comparar jogadores', ':material/compare_arrows:'),
     ('Hall da Fama', ':material/emoji_events:'),
+    ('Medalhas', ':material/military_tech:'),
     ('Jogadores', ':material/groups:'),
     ('Partidas', ':material/sports_esports:'),
     ('Missões & XP', ':material/military_tech:'),
@@ -268,6 +282,34 @@ elif page=='Rankings':
         st.write('XP de participação, vitórias e missões proporcionais às estrelas. Até quatro partidas por semana contam para o XP.')
         scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
 
+elif page=='Comparar jogadores':
+    hero('Comparar jogadores','Desempenho lado a lado e encontros nas mesmas partidas.')
+    if len(all_players) < 2:
+        st.info('Cadastre pelo menos dois jogadores para começar a comparação.')
+    else:
+        by_id={str(p['id']):p for p in all_players}
+        ordered=sorted(all_players,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
+        ids=[str(p['id']) for p in ordered]
+        for key,default in [('edb_duel_first',ids[0]),('edb_duel_second',ids[1])]:
+            if st.session_state.get(key) not in ids:
+                st.session_state[key]=default
+        a,b=st.columns(2)
+        with a:
+            first_id=st.selectbox('Jogador A',ids,key='edb_duel_first',
+                                  format_func=lambda pid:player_label(by_id[pid]['nickname']))
+        with b:
+            second_id=st.selectbox('Jogador B',ids,key='edb_duel_second',
+                                   format_func=lambda pid:player_label(by_id[pid]['nickname']))
+        if first_id==second_id:
+            st.warning('Escolha dois jogadores diferentes para comparar os resultados.')
+        else:
+            render_compare(st,px,by_id[first_id],by_id[second_id],
+                           compare_players(first_id,second_id,career_records))
+
+elif page=='Medalhas':
+    hero('Medalhas e conquistas','Desafios de bronze, prata e ouro para todos os jogadores.')
+    render_medal_catalogue(st,all_players,player_medals)
+
 elif page=='Jogadores':
     hero('Perfil dos jogadores','Identidade, carreira, evolução e conquistas individuais.')
     if not all_players:
@@ -287,7 +329,8 @@ elif page=='Jogadores':
         )
         who=by_id[profile_id]
         render_player_profile(
-            st,px,who,player_summary(profile_id,career_records),all_time_records
+            st,px,who,player_summary(profile_id,career_records),all_time_records,
+            player_medals.get(profile_id,[])
         )
 
 elif page=='Hall da Fama':
