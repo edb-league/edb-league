@@ -6,7 +6,9 @@ APP = (Path(__file__).resolve().parents[1] / "app.py").read_text(encoding="utf-8
 
 def test_brand_is_edb_and_no_target_emoji_in_title():
     assert "page_title='EDB LEAGUE'" in APP
-    assert "## EDB LEAGUE" in APP
+    assert "sidebar_header(" in APP
+    assert "_sidebar_header_slot = st.sidebar.empty()" in APP
+    assert "hero_banner(" in APP
     assert "◆ EDB LEAGUE / CS2" in APP
     assert "## 🎯 XINXAS LEAGUE" not in APP
 
@@ -62,3 +64,13 @@ def test_comparison_and_medal_pages_accessible():
     assert "player_medals=" in APP
     assert "render_medal_catalogue(" in APP
     assert "compare_players(first_id,second_id,career_records)" in APP
+
+
+def test_sidebar_brand_precedes_navigation_and_uses_real_stats():
+    assert APP.index("_sidebar_header_slot = st.sidebar.empty()") < APP.index(
+        "st.sidebar.markdown('**Navegação**')"
+    )
+    assert "season_kills=sum(int(s.get('kills') or 0) for s in all_stats)" in APP
+    assert "sidebar_header(len(all_players),len(all_matches),season_kills,period)" in APP
+    assert "unique_maps = len({" in APP
+    assert "st.markdown(BRAND_CSS,unsafe_allow_html=True)" in APP
