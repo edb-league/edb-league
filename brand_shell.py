@@ -18,6 +18,7 @@ BRAND_CSS = """
 /* Use the sidebar's full real width and do not style Streamlit's collapse control. */
 .edb-brand {
   position:relative;isolation:isolate;overflow:hidden;padding:16px 15px 14px;
+  margin-top:-18px;margin-bottom:26px;
   border:1px solid #2C4A67;border-radius:18px;
   background:linear-gradient(135deg,#163451 0%,#102840 48%,#0B2036 100%);
   box-shadow:0 10px 28px rgba(0,0,0,.18);
@@ -40,7 +41,6 @@ BRAND_CSS = """
 }
 .edb-brand-title {font-size:1.14rem;letter-spacing:.5px;font-weight:900;color:#F5F9FE;line-height:1.12;}
 .edb-brand-kicker {font-size:.64rem;letter-spacing:2.2px;font-weight:750;color:#8EC8F1;margin-top:4px;}
-.edb-brand-desc {position:relative;z-index:1;font-size:.74rem;color:#AFC7DC;line-height:1.45;margin:12px 0 0;}
 .edb-brand-stats {
   position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   gap:6px;margin-top:14px;
@@ -141,7 +141,6 @@ def sidebar_header(players, matches, kills, period):
         '<div class="edb-brand-row"><span class="edb-brand-mark">EDB</span>'
         '<div><div class="edb-brand-title">EDB LEAGUE</div>'
         '<div class="edb-brand-kicker">COUNTER-STRIKE 2</div></div></div>'
-        '<p class="edb-brand-desc">Uma temporada, várias formas de vencer.</p>'
         '<div class="edb-brand-stats">' + numbers + '</div>'
         '<div class="edb-brand-period"><i></i>Período: <b>' +
         safe_period + '</b></div></section>'
