@@ -21,7 +21,7 @@ def test_three_hero_images_are_valid_embedded_webp_files():
 
 
 def test_all_three_pages_use_their_distinct_artwork():
-    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings"):
+    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings", "Partidas", "Missões & XP"):
         markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
         assert '<img class="edb-art-image"' in markup
         assert 'data:image/webp;base64,' in markup
@@ -37,7 +37,7 @@ def test_all_three_pages_use_their_distinct_artwork():
 
 
 def test_unrelated_pages_keep_default_radar_without_using_artwork():
-    markup = hero_banner("Partidas", "Confrontos", 11, 3, 3, page="Partidas")
+    markup = hero_banner("Visão geral", "Confrontos", 11, 3, 3, page="Visão geral")
     assert '<div class="edb-radar"' in markup
     assert 'data:image/webp;base64,' not in markup
 
@@ -104,3 +104,24 @@ def test_medals_and_rankings_use_new_2172x724_desktop_art():
     assert "flex:0 1 40%;max-width:40%" in BRAND_CSS
     assert "edb-hero--duel" not in hero_banner("Medalhas", "", 11, 3, 3, page="Medalhas")
     assert "edb-hero--hall" not in hero_banner("Rankings", "", 11, 3, 3, page="Rankings")
+
+
+def test_partidas_and_missoes_xp_have_distinct_full_bleed_high_resolution_art():
+    art_set = set()
+    for asset, page in (("matches", "Partidas"), ("xp", "Missões & XP")):
+        raw = base64.b64decode(
+            (ROOT / "assets" / f"{asset}.webp.b64").read_text(encoding="ascii"),
+            validate=True,
+        )
+        assert len(raw) > 200_000
+        assert raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
+        art_set.add(raw)
+        markup = hero_banner(page, "Desempenho real", 11, 3, 3, page=page)
+        assert 'class="hero edb-hero edb-hero--illustrated edb-hero--showcase"' in markup
+        assert 'data:image/webp;base64,' in markup
+        assert '<div class="edb-radar"' not in markup
+        assert "Desempenho real" in markup
+    assert len(art_set) == 2
+    assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
+    assert 'flex:0 1 40%;max-width:40%' in BRAND_CSS
+    assert 'object-fit:cover;object-position:center center;' in BRAND_CSS
