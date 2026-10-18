@@ -85,8 +85,10 @@ def test_page_only_renders_detail_section_when_a_valid_match_is_selected():
     from pathlib import Path
     app=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
     matches=app.split("elif page=='Partidas':",1)[1].split("elif page=='Missões & XP':",1)[0]
-    assert "st.markdown(match_cards(all_matches, active_match_id), unsafe_allow_html=True)" in matches
-    assert "match = next((m for m in all_matches if str(m['id']) == str(active_match_id)), None)" in matches
+    assert "bo3_cards(season_number,all_bo3,all_bo3_maps,all_matches,active_bo3_id)" in matches
+    assert "match_cards(series_matches,active_match_id," in matches
+    assert "match_cards(legacy_matches,active_match_id,season_number=season_number)" in matches
+    assert "match=next((m for m in visible_matches if str(m['id'])==str(active_match_id)),None)" in matches
     assert "if match is not None:" in matches
     assert "with st.container(key='edb_match_detail'):" in matches
     assert "st.tabs(['Geral','Mira','Utilitárias'])" in matches
