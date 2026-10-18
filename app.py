@@ -25,6 +25,15 @@ import match_cards as _match_cards
 _match_cards = importlib.reload(_match_cards)
 match_cards = _match_cards.match_cards
 selected_match_header = _match_cards.selected_match_header
+import season_system as _season_system
+_season_system = importlib.reload(_season_system)
+DEFAULT_SEASONS = _season_system.DEFAULT_SEASONS
+chosen_season_number = _season_system.chosen_season_number
+season_match_ids = _season_system.season_match_ids
+confirmed_bo3_count = _season_system.confirmed_bo3_count
+season_bar = _season_system.season_bar
+bo3_cards = _season_system.bo3_cards
+series_maps = _season_system.series_maps
 import ranking_cards as _ranking_cards
 _ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
@@ -105,6 +114,12 @@ all_stats=store.stats()
 # antiga na memória durante hot-reload do repositório.
 # _list já existia na primeira versão, e usa a chave somente no servidor.
 all_scope_stats=store._list('player_scope_stats') if store.cloud else []
+# Supabase conserva duas temporadas independentes; IDs de mapas só entram
+# nos rankings quando a associação a uma BO3 é confirmada.
+all_seasons=store._list('league_seasons') if store.cloud else DEFAULT_SEASONS
+all_bo3=store._list('bo3_series') if store.cloud else []
+all_bo3_maps=store._list('bo3_maps') if store.cloud else []
+all_bo3_players=store._list('bo3_players') if store.cloud else []
 frame=enrich(all_players,all_matches,all_stats)
 # Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
 career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
@@ -133,6 +148,12 @@ def hero(title,subtitle):
         hero_banner(title,subtitle,len(all_players),len(all_matches),unique_maps,page=page),
         unsafe_allow_html=True
     )
+    if page in ('Visão geral','Rankings','Partidas','Missões & XP'):
+        routes={'Visão geral':'home','Rankings':'rankings','Partidas':'matches','Missões & XP':'xp'}
+        rank=st.query_params.get('ranking') if page=='Rankings' else None
+        st.markdown(season_bar(all_seasons,season_number,routes[page],
+                               season_completed,rank=rank),
+                    unsafe_allow_html=True)
 
 def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
@@ -181,10 +202,16 @@ st.markdown(
 )
 
 today = datetime.now(TZ).date()
-# Sem contadores nem seletor entre o menu superior e o banner.
-# Os rankings e demais páginas consideram a temporada inteira.
-selected = frame.copy()
-
+requested_season=st.query_params.get('season')
+if isinstance(requested_season,list):
+    requested_season=requested_season[0] if requested_season else None
+season_number=chosen_season_number(all_seasons,today,requested_season)
+season_ids=season_match_ids(season_number,all_bo3,all_bo3_maps)
+season_series=[s for s in all_bo3 if int(s['season_number'])==season_number]
+season_completed=confirmed_bo3_count(season_number,all_bo3,all_bo3_maps)
+# Os mapas arquivados sem associação validada permanecem no histórico,
+# sem contaminar os títulos nem as estatísticas da nova temporada.
+selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
 board=leaderboard(selected)
 eligible=board[board['Elegível']] if not board.empty else board
 if page=='Visão geral':
@@ -232,7 +259,7 @@ elif page=='Rankings':
     if isinstance(selected_rank, list):
         selected_rank = selected_rank[0] if selected_rank else 'elite'
     selected_rank = selected_rank if selected_rank in {'elite','superacao','resenha'} else 'elite'
-    st.markdown(rank_switch(selected_rank), unsafe_allow_html=True)
+    st.markdown(rank_switch(selected_rank, season=season_number), unsafe_allow_html=True)
     if selected_rank == 'elite':
         scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
         # A metodologia fica ao fim dos cartões, preservando o ranking como foco.
