@@ -50,7 +50,6 @@ import top_navigation as _top_navigation
 _top_navigation = importlib.reload(_top_navigation)
 TOP_NAV_CSS = _top_navigation.TOP_NAV_CSS
 top_navigation = _top_navigation.top_navigation
-top_counters = _top_navigation.top_counters
 ROUTES = _top_navigation.ROUTES
 
 ROOT=Path(__file__).parent
@@ -170,24 +169,9 @@ page = st.session_state['edb_page']
 st.markdown(top_navigation(page), unsafe_allow_html=True)
 
 today = datetime.now(TZ).date()
-total_kills = sum(int(stat.get('kills') or 0) for stat in all_stats)
-# Mantém o filtro de período e os totais antes exibidos no menu lateral.
-with st.container(key='edb_period_toolbar'):
-    st.markdown(top_counters(len(all_players),len(all_matches),total_kills),
-                unsafe_allow_html=True)
-    period = st.selectbox('Filtrar partidas por período',
-                          ['Temporada inteira','Esta semana','Este mês'],
-                          key='edb_period')
-
-if not frame.empty:
-    if period=='Esta semana':
-        start=today-timedelta(days=today.weekday())
-        selected=frame[frame['played_at'].dt.date >= start].copy()
-    elif period=='Este mês':
-        selected=frame[(frame['played_at'].dt.year==today.year)&(frame['played_at'].dt.month==today.month)].copy()
-    else:
-        selected=frame.copy()
-else:selected=frame.copy()
+# Sem contadores nem seletor entre o menu superior e o banner.
+# Os rankings e demais páginas consideram a temporada inteira.
+selected = frame.copy()
 
 board=leaderboard(selected)
 eligible=board[board['Elegível']] if not board.empty else board
