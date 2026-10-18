@@ -80,6 +80,7 @@ def test_tie_detection_checks_actual_full_precision():
 
 def test_legacy_rules_stay_separate():
     data=_rows(total=6)
+    data["kpr"]=data["kills"]/data["rounds"]  # enriquecimento usado pelo core legado
     old=season_boards(data,0)["elite"]
     new=season_boards(data,1)["elite"]
     assert old.iloc[0]["Elegível"] == True
