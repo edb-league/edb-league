@@ -14,6 +14,8 @@ background:linear-gradient(135deg,#1C3652,#15263A);padding:17px;min-width:0}
 .edb-duel-player:nth-child(2){background:linear-gradient(135deg,#2F344D,#18253B);border-color:#5A5770}
 .edb-duel-name{color:#F0F5FB;font-size:1.15rem;font-weight:850;overflow-wrap:anywhere}
 .edb-duel-meta{color:#AFC4D8;font-size:.75rem;margin-top:6px}
+.edb-duel-comparison{border:1px solid #39516B;border-radius:16px;
+background:linear-gradient(135deg,#16283B,#111D2D);padding:10px 15px;margin:14px 0}
 .edb-duel-metric{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
 gap:12px;align-items:center;border-bottom:1px solid #293E55;padding:11px 3px}
 .edb-duel-metric-label{font-size:.85rem;color:#C0D1DF}
@@ -92,7 +94,7 @@ def render_compare(st, px, first, second, comparison):
         ("Assistências",fst["assists"],snd["assists"],0,""),
     ]
     st.markdown("#### Comparação de carreira")
-    markup=['<div class="edb-rank-card">']
+    markup=['<div class="edb-duel-comparison">']
     markup.append(
         '<div class="edb-duel-metric"><div class="edb-duel-metric-label">'
         'Métrica · <span style="color:#78B8E8">' + escape(names[0]) +
