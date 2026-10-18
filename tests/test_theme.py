@@ -12,7 +12,7 @@ def test_primary_color_is_blue_in_streamlit_and_app():
     assert 'primaryColor="#78B8E8"' in CONFIG
     assert 'backgroundColor="#0A1220"' in CONFIG
     assert '#78B8E8' in APP
-    assert 'background:#25435F;' in APP
+    assert "st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)" in APP
 
 
 def test_ranking_uses_subtle_champagne_not_neon_green():
@@ -43,4 +43,4 @@ def test_minimal_streamlit_toolbar_preserves_blue_theme():
     assert '#78B8E8' in APP
     assert '[data-testid="stToolbar"],' not in APP
     assert 'toolbarMode="minimal"' in CONFIG
-    assert '[data-testid="stSidebarCollapsedControl"] button' in APP
+    assert '[data-testid="stSidebarCollapsedControl"] button' not in APP
