@@ -21,6 +21,10 @@ fixture_title = _fixture_cards.fixture_title
 match_stat_coverage = _fixture_cards.match_stat_coverage
 basic_team_tables = _fixture_cards.basic_team_tables
 CARD_CSS = _fixture_cards.CARD_CSS
+import match_cards as _match_cards
+_match_cards = importlib.reload(_match_cards)
+match_cards = _match_cards.match_cards
+selected_match_header = _match_cards.selected_match_header
 import ranking_cards as _ranking_cards
 _ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
@@ -307,9 +311,16 @@ elif page=='Partidas':
     st.markdown(CARD_CSS, unsafe_allow_html=True)
     if not all_matches:st.info('Ainda não há partidas registradas.')
     else:
-        for match in sorted(all_matches,key=lambda m:m['played_at'],reverse=True):
-            title=fixture_title(match)
-            with st.expander(title):
+        # Links dos cartões definem a partida ativa; o detalhamento continua
+        # com largura total abaixo da grade (não limitado a 1/3 da página).
+        active_match_id = st.query_params.get('match')
+        if isinstance(active_match_id, list):
+            active_match_id = active_match_id[0] if active_match_id else None
+        st.markdown(match_cards(all_matches, active_match_id), unsafe_allow_html=True)
+        match = next((m for m in all_matches if str(m['id']) == str(active_match_id)), None)
+        if match is not None:
+            st.markdown(selected_match_header(match), unsafe_allow_html=True)
+            with st.container(key='edb_match_detail'):
                 coverage=match_stat_coverage(match['id'],all_stats,all_scope_stats)
                 match_notes=match.get('notes') or ''
                 verified=(bool(match.get('result_verified'))
