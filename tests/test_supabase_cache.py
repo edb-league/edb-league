@@ -10,7 +10,9 @@ def test_snapshot_uses_short_server_side_ttl_and_all_public_tables():
     end = APP.index("\nstore=Store(", start)
     snapshot = APP[start:end]
     assert "_service_role_key" in snapshot
-    assert "rpc/ensure_edb_calendar" in snapshot
+    assert "ensure_current_calendar(supabase_url,_service_role_key," in snapshot
+    assert "'POST','rpc/ensure_edb_calendar',payload={}" in APP
+    assert "@st.cache_data(ttl=3600, max_entries=4, show_spinner=False)" in APP
     for table in (
         "players", "matches", "player_stats",
         "league_seasons", "bo3_series", "bo3_maps", "bo3_players",
