@@ -88,9 +88,12 @@ def test_selected_series_maps_are_ordered_and_never_fabricated():
 
 def test_real_app_filters_rankings_by_linked_bo3_maps():
     app=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
-    assert "all_seasons=store._list('league_seasons')" in app
-    assert "all_bo3=store._list('bo3_series')" in app
-    assert "all_bo3_maps=store._list('bo3_maps')" in app
+    assert "'seasons': cloud_store._list('league_seasons')" in app
+    assert "'bo3': cloud_store._list('bo3_series')" in app
+    assert "'bo3_maps': cloud_store._list('bo3_maps')" in app
+    assert "all_seasons=snapshot['seasons']" in app
+    assert "all_bo3=snapshot['bo3']" in app
+    assert "all_bo3_maps=snapshot['bo3_maps']" in app
     assert "season_number=chosen_season_number(all_seasons,today,requested_season)" in app
     assert "season_ids=season_match_ids(season_number,all_bo3,all_bo3_maps)" in app
     assert "frame['match_id'].astype(str).isin(season_ids)" in app
