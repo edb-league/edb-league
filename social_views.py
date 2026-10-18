@@ -4,6 +4,7 @@ from __future__ import annotations
 from html import escape
 from urllib.parse import quote
 import pandas as pd
+from chart_theme import style_edb_bar
 
 SOCIAL_CSS = """
 <style>
@@ -207,13 +208,23 @@ def render_compare(st, px, first, second, comparison):
             {"Partida":label,"Jogador":names[0],"Kills":x["kills"]},
             {"Partida":label,"Jogador":names[1],"Kills":y["kills"]},
         ])
+    st.markdown("##### Eliminações por mapa")
     fig=px.bar(pd.DataFrame(chart),x="Partida",y="Kills",color="Jogador",barmode="group",
-               color_discrete_sequence=["#78B8E8","#B8A1BE"])
-    fig.update_layout(height=max(310,80*len(shared)+180),
-                      paper_bgcolor="rgba(0,0,0,0)",
-                      plot_bgcolor="rgba(0,0,0,0)",font_color="#CEDFED",
-                      xaxis_title="",yaxis_title="Kills",
-                      legend_title_text="",margin=dict(l=0,r=8,t=16,b=16))
+               text="Kills",color_discrete_sequence=["#78B8E8","#E28787"])
+    style_edb_bar(fig,grouped=True)
+    fig.update_traces(
+        texttemplate="%{y:.0f}",
+        hovertemplate="Mapa: %{x}<br>Kills: %{y}<extra>%{fullData.name}</extra>"
+    )
+    fig.update_layout(
+        height=max(325,80*len(shared)+180),
+        xaxis_title="",yaxis_title="Kills",
+        legend_title_text="",legend=dict(
+            orientation="h",yanchor="bottom",y=1.03,xanchor="left",x=0
+        ),
+        margin=dict(l=12,r=20,t=48,b=72)
+    )
+    fig.update_xaxes(tickangle=-22)
     st.plotly_chart(fig,use_container_width=True)
     st.dataframe(pd.DataFrame(rows),use_container_width=True,hide_index=True)
     st.caption("Vitória em confronto direto é vitória da equipe, não abates de um jogador contra o outro.")
