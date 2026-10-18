@@ -72,6 +72,19 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
+/* Menos elementos nativos no topo; o toggle da sidebar permanece acessível. */
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+#MainMenu {
+    display:none !important;
+}
+[data-testid="stHeader"] {
+    background:transparent !important;
+    height:2.9rem;
+}
+[data-testid="stHeader"] [data-testid="stSidebarCollapsedControl"] {
+    display:flex !important;
+}
 /* Navegação lateral em formato de menu, com a página atual sombreada. */
 [data-testid="stSidebar"] .stButton > button {
     width:100%;
@@ -205,7 +218,6 @@ def clear_profile_link():
     if 'player' in st.query_params:
         del st.query_params['player']
 
-st.sidebar.markdown('**Navegação**')
 for index, (destination, nav_icon) in enumerate(NAVIGATION):
     st.sidebar.button(
         destination,
