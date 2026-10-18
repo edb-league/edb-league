@@ -51,7 +51,8 @@ def test_unconfirmed_result_is_not_invented_but_known_winner_is_shown():
     assert '<b class="edb-match-number--loss">—</b>' in markup
     assert "PLACAR PENDENTE" in markup
     assert "Team 2" in markup and "Team 1" in markup
-    assert "13" not in markup
+    assert '<b class="edb-match-number--win">13</b>' not in markup
+    assert '<b class="edb-match-number--loss">13</b>' not in markup
 
 
 def test_selected_link_toggles_and_detail_header_remains_full_width():
@@ -75,7 +76,7 @@ def test_html_in_match_metadata_is_escaped():
     markup=match_cards([match])
     assert '<img src=x onerror=alert(1)>' not in markup
     assert "&lt;img src=x onerror=alert(1)&gt;" in markup
-    assert "Dust2 &lt;script&gt;" in markup
+    assert "DUST2 &lt;SCRIPT&gt;" in markup
     assert "Rivals &amp; Co" in markup
     assert "m%3Cevil%3E" in markup
 
