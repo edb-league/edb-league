@@ -5,5 +5,10 @@ backgroundColor="#0A1220"
 secondaryBackgroundColor="#15263B"
 textColor="#F1F6FA"
 font="sans serif"
+# Mostrar somente controles que a hospedagem exija. O menu interno
+# de desenvolvimento do Streamlit deixa de ocupar o topo.
+[client]
+toolbarMode="minimal"
+
 [server]
 maxUploadSize=350
