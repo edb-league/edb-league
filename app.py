@@ -341,10 +341,10 @@ elif page=='Comparar jogadores':
                 st.session_state[key]=default
         a,b=st.columns(2)
         with a:
-            first_id=st.selectbox('Jogador A',ids,key='edb_duel_first',
+            first_id=st.selectbox('Selecionar jogador 1',ids,key='edb_duel_first',
                                   format_func=lambda pid:player_label(by_id[pid]['nickname']))
         with b:
-            second_id=st.selectbox('Jogador B',ids,key='edb_duel_second',
+            second_id=st.selectbox('Selecionar jogador 2',ids,key='edb_duel_second',
                                    format_func=lambda pid:player_label(by_id[pid]['nickname']))
         if first_id==second_id:
             st.warning('Escolha dois jogadores diferentes para comparar os resultados.')
