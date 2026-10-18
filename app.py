@@ -59,7 +59,7 @@ st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initia
 
 CSS='''
 <style>
-[data-testid="stAppViewContainer"] {background:linear-gradient(170deg,#101B2B 0%,#0A1220 65%);}
+[data-testid="stAppViewContainer"] {background:linear-gradient(170deg,#30343B 0%,#252930 55%,#1F2329 100%);}
 [data-testid="stSidebar"] {background:#0F1B2A;border-right:1px solid #2B4056;}
 .block-container {padding-top:2rem; max-width:1300px;}
 .stButton>button[kind="primary"] {background:#78B8E8;color:#0B1A29;border:none;font-weight:750;}
