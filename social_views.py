@@ -11,8 +11,16 @@ SOCIAL_CSS = """
 gap:14px;margin:15px 0}
 .edb-duel-player{border:1px solid #395873;border-radius:16px;
 background:linear-gradient(135deg,#1C3652,#15263A);padding:17px;min-width:0}
-.edb-duel-player:nth-child(2){background:linear-gradient(135deg,#2F344D,#18253B);border-color:#5A5770}
-.edb-duel-name{color:#F0F5FB;font-size:1.15rem;font-weight:850;overflow-wrap:anywhere}
+.edb-duel-player--blue{border-color:#4E86B2;background:linear-gradient(135deg,#214B71,#172B43)}
+/* O segundo jogador recebe vermelho mais marcante no cartão superior. */
+.edb-duel-player--red{
+ background:linear-gradient(135deg,#562938,#30202E);
+ border:1px solid #AD5A69;
+ box-shadow:inset 4px 0 0 #F07788,0 5px 18px rgba(92,26,45,.18);
+}
+.edb-duel-name{font-size:1.15rem;font-weight:850;overflow-wrap:anywhere}
+.edb-duel-player--blue .edb-duel-name{color:#98D1FF}
+.edb-duel-player--red .edb-duel-name{color:#FFA5B2}
 .edb-duel-meta{color:#AFC4D8;font-size:.75rem;margin-top:6px}
 .edb-duel-comparison{border:1px solid #39516B;border-radius:16px;
 background:linear-gradient(135deg,#16283B,#111D2D);padding:10px 15px;margin:14px 0}
@@ -33,9 +41,11 @@ background:linear-gradient(135deg,#16283B,#111D2D);padding:10px 15px;margin:14px
  border-left:1px solid #5A7290;padding-left:12px;
 }
 .edb-duel-column-name{
- font-size:.88rem;color:#C7DFF4;line-height:1.3;
+ font-size:.88rem;line-height:1.3;
  font-weight:850;overflow-wrap:anywhere;
 }
+.edb-duel-column--blue{color:#98D1FF}
+.edb-duel-column--red{color:#FF93A2}
 .edb-duel-value-best{color:#D6B98A}
 .edb-duel-note{color:#9FB5C8;font-size:.75rem;margin:12px 0}
 .edb-medal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -93,11 +103,13 @@ def render_compare(st, px, first, second, comparison):
         names.append(real if real and real.casefold()!=nickname.casefold() else nickname)
     st.markdown(
         '<div class="edb-duel-grid">' + "".join(
-            '<section class="edb-duel-player"><div class="edb-duel-name">' +
-            escape(name) + '</div><div class="edb-duel-meta">' +
+            '<section class="edb-duel-player edb-duel-player--' +
+            ('blue' if index == 0 else 'red') +
+            '"><div class="edb-duel-name">' + escape(name) +
+            '</div><div class="edb-duel-meta">' +
             escape(f'Nick: {p.get("nickname") or ""} · {info["games"]} partidas') +
             '</div></section>'
-            for name,p,info in zip(names,(first,second),(fst,snd))
+            for index,(name,p,info) in enumerate(zip(names,(first,second),(fst,snd)))
         )+'</div>',unsafe_allow_html=True
     )
 
@@ -116,8 +128,8 @@ def render_compare(st, px, first, second, comparison):
     markup.append(
         '<div class="edb-duel-metric edb-duel-header">'
         '<div class="edb-duel-metric-label">Métrica</div>'
-        '<div class="edb-duel-value edb-duel-column-name">' + escape(names[0]) + '</div>'
-        '<div class="edb-duel-value edb-duel-column-name">' + escape(names[1]) + '</div>'
+        '<div class="edb-duel-value edb-duel-column-name edb-duel-column--blue">' + escape(names[0]) + '</div>'
+        '<div class="edb-duel-value edb-duel-column-name edb-duel-column--red">' + escape(names[1]) + '</div>'
         '</div>'
     )
     for title,a,b,dec,suffix in metrics:
