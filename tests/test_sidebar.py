@@ -65,11 +65,12 @@ def test_comparison_and_medal_pages_accessible():
     assert "compare_players(first_id,second_id,career_records)" in APP
 
 
-def test_period_and_totals_remain_visible_after_sidebar_removal():
-    assert "top_counters(len(all_players),len(all_matches),total_kills)" in APP
-    assert "with st.container(key='edb_period_toolbar')" in APP
-    assert "st.selectbox('Filtrar partidas por período'," in APP
-    assert "season_kills" not in APP
+def test_page_banner_follows_top_nav_without_extra_toolbar():
+    assert "st.markdown(top_navigation(page), unsafe_allow_html=True)" in APP
+    assert "selected = frame.copy()" in APP
+    assert "st.selectbox('Filtrar partidas por período'," not in APP
+    assert "with st.container(key='edb_period_toolbar')" not in APP
+    assert "top_counters(len(all_players)" not in APP
     assert "st.markdown(BRAND_CSS,unsafe_allow_html=True)" in APP
     assert "unique_maps = len({" in APP
 
