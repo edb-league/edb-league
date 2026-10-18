@@ -9,27 +9,27 @@ RANKING_CSS = """
 <style>
 .edb-rank-list{display:flex;flex-direction:column;gap:12px;margin:16px 0 22px}
 .edb-rank-card{
-  border:1px solid #32423E;border-radius:18px;
-  background:linear-gradient(135deg,#192426,#141C20);
+  border:1px solid #2C4258;border-radius:18px;
+  background:linear-gradient(135deg,#16283B,#111D2D);
   box-shadow:0 4px 14px rgba(0,0,0,.12);
   padding:16px 18px;overflow:hidden;
 }
-.edb-rank-card:first-child{border-color:#547B57;box-shadow:inset 4px 0 #B6F35D,0 4px 14px rgba(0,0,0,.12)}
+.edb-rank-card:first-child{border-color:#957A55;box-shadow:inset 4px 0 #D6B98A,0 4px 14px rgba(0,0,0,.12)}
 .edb-rank-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .edb-rank-player{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
-.edb-rank-place{font-size:.8rem;font-weight:800;color:#A0B5AD;min-width:30px}
+.edb-rank-place{font-size:.8rem;font-weight:800;color:#AABED0;min-width:30px}
 .edb-rank-identity{min-width:0}
-.edb-rank-name{font-size:1rem;font-weight:800;color:#F2F7F4;line-height:1.35;overflow-wrap:anywhere}
-.edb-rank-stars{color:#C2E794;font-size:.78rem;letter-spacing:1.5px;margin-top:3px}
+.edb-rank-name{font-size:1rem;font-weight:800;color:#F2F7FC;line-height:1.35;overflow-wrap:anywhere}
+.edb-rank-stars{color:#C7AA7D;font-size:.78rem;letter-spacing:1.5px;margin-top:3px}
 .edb-rank-focus{text-align:right;flex:none}
-.edb-rank-focus-label{color:#99AEA6;text-transform:uppercase;letter-spacing:1px;font-size:.62rem;font-weight:700}
-.edb-rank-focus-value{color:#B6F35D;font-size:1.3rem;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
-.edb-rank-divider{border-top:1px solid #32403E;margin:13px 0 12px}
+.edb-rank-focus-label{color:#A6BACE;text-transform:uppercase;letter-spacing:1px;font-size:.62rem;font-weight:700}
+.edb-rank-focus-value{color:#D6B98A;font-size:1.3rem;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.edb-rank-divider{border-top:1px solid #2D4156;margin:13px 0 12px}
 .edb-rank-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
 .edb-rank-metric{text-align:left;min-width:0}
-.edb-rank-metric-label{font-size:.68rem;color:#8EA9A0}
-.edb-rank-metric-value{font-size:.9rem;font-weight:750;color:#E5F0EB;font-variant-numeric:tabular-nums}
-.edb-rank-secondary{font-size:.72rem;color:#9FAFA9;margin-top:12px;line-height:1.5}
+.edb-rank-metric-label{font-size:.68rem;color:#9AB0C4}
+.edb-rank-metric-value{font-size:.9rem;font-weight:750;color:#E7F2FA;font-variant-numeric:tabular-nums}
+.edb-rank-secondary{font-size:.72rem;color:#A1B5C7;margin-top:12px;line-height:1.5}
 @media(max-width:640px){
  .edb-rank-card{padding:13px 13px;border-radius:15px}
  .edb-rank-heading{gap:7px}
