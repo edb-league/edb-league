@@ -19,7 +19,8 @@ def test_sidebar_navigation_is_one_click_buttons():
     assert "type='primary' if st.session_state['edb_page'] == destination else 'secondary'" in APP
     assert 'background:#25435F;' in APP
     assert len([x for x in ["Visão geral", "Rankings", "Jogadores",
-                           "Partidas", "Missões & XP", "Administração", "Hall da Fama"] if x in APP]) == 7
+                           "Partidas", "Missões & XP", "Administração", "Hall da Fama",
+                           "Comparar jogadores", "Medalhas"] if x in APP]) == 9
 
 
 def test_clean_tabs_and_team_scoreboard_before_match_details():
@@ -52,3 +53,12 @@ def test_player_profiles_and_hall_of_fame_reachable():
     assert "render_player_profile(" in APP
     assert "render_hall_of_fame(" in APP
     assert "career_records=match_records(" in APP
+
+
+def test_comparison_and_medal_pages_accessible():
+    assert "('Comparar jogadores', ':material/compare_arrows:')" in APP
+    assert "elif page=='Comparar jogadores':" in APP
+    assert "elif page=='Medalhas':" in APP
+    assert "player_medals=" in APP
+    assert "render_medal_catalogue(" in APP
+    assert "compare_players(first_id,second_id,career_records)" in APP
