@@ -3,30 +3,54 @@ from __future__ import annotations
 import re
 import pandas as pd
 
-def fixture_title(match):
-    """Use recorded scores; unknown scores remain unavailable."""
-    notes=match.get("notes") or ""
-    game=(match.get("map_name") or "Mapa não informado").upper()
-    played=pd.to_datetime(match.get("played_at"),errors="coerce")
-    day=played.strftime("%d/%m/%Y") if pd.notna(played) else "Data não informada"
-    left=match.get("team_a_name") or "Time A"
-    right=match.get("team_b_name") or "Time B"
-    a,b=match.get("team_a_score"),match.get("team_b_score")
-    confirmed=bool(match.get("result_verified")) and a is not None and b is not None
-    m=re.search(r"Placar oficial:\s*(Team\s*\d+)\s+(\d+)\s*[–-]\s*(\d+)\s+(Team\s*\d+)",notes,re.I)
-    n=re.search(r"([^,.]+?)\s+venceu por\s+(\d+)\s+a\s+(\d+)\s+sobre\s+([^.]+)",notes,re.I)
-    if m or n:
-        found=m or n
-        left,a,b,right=found.group(1).strip(),int(found.group(2)),int(found.group(3)),found.group(4).strip()
-        confirmed=True
-    if not confirmed:
-        won=re.search(r"(Team\s*\d+)\s+venceu",notes,re.I)
-        lost=re.search(r"(Team\s*\d+)\s+perdeu",notes,re.I)
-        if won and lost:
-            left,right=won.group(1),lost.group(1)
-    score=f"{a} : {b}" if confirmed else "— : —"
-    return f"**{game}** · {day}    |    {left}    **{score}**    {right}"
+def fixture_overview(match):
+    """Dados confiáveis do confronto; nunca inventar placar ausente."""
+    notes = match.get("notes") or ""
+    game = (match.get("map_name") or "Mapa não informado").upper()
+    played = pd.to_datetime(match.get("played_at"), errors="coerce")
+    day = played.strftime("%d/%m/%Y") if pd.notna(played) else "Data não informada"
+    left = match.get("team_a_name") or "Time A"
+    right = match.get("team_b_name") or "Time B"
+    a, b = match.get("team_a_score"), match.get("team_b_score")
+    verified = bool(match.get("result_verified")) and a is not None and b is not None
 
+    official = re.search(
+        r"Placar oficial:\s*(Team\s*\d+)\s+(\d+)\s*[–-]\s*(\d+)\s+(Team\s*\d+)",
+        notes, re.I
+    )
+    historic = re.search(
+        r"([^,.]+?)\s+venceu por\s+(\d+)\s+a\s+(\d+)\s+sobre\s+([^.]+)",
+        notes, re.I
+    )
+    if official or historic:
+        found = official or historic
+        left, a, b, right = (found.group(1).strip(), int(found.group(2)),
+                             int(found.group(3)), found.group(4).strip())
+        verified = True
+
+    winner = None
+    if verified and a != b:
+        winner = "left" if int(a) > int(b) else "right"
+    elif not verified:
+        won = re.search(r"(Team\s*\d+)\s+venceu", notes, re.I)
+        lost = re.search(r"(Team\s*\d+)\s+perdeu", notes, re.I)
+        if won and lost:
+            left, right = won.group(1), lost.group(1)
+            winner = "left"
+
+    return {"map": game, "date": day, "left": str(left), "right": str(right),
+            "score_left": int(a) if verified else None,
+            "score_right": int(b) if verified else None,
+            "verified": verified, "winner": winner}
+
+
+def fixture_title(match):
+    """Título legível usado nos detalhes, refletindo apenas resultados registrados."""
+    info = fixture_overview(match)
+    score = (f"{info['score_left']} : {info['score_right']}" if info["verified"]
+             else "— : —")
+    return (f"**{info['map']}** · {info['date']}    |    "
+            f"{info['left']}    **{score}**    {info['right']}")
 
 def match_stat_coverage(match_id, player_stats, scope_stats):
     """Summarize already-saved stats, distinguishing present values from missing ones.
