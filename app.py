@@ -203,16 +203,16 @@ def hero(title,subtitle):
 
 def season_rules_banner(selected_season):
     """Resumo permanente das regras oficiais antes do grafico da pagina inicial."""
-    legacy = int(selected_season) == 0
     subtitle = (
-        'A Temporada 0 é experimental e permanece encerrada, com seus resultados originais preservados.'
-        if legacy else
-        'A cada quinzena, os rankings recomeçam. Os mapas não selecionados continuam nas estatísticas de carreira.'
+        'A cada temporada, uma nova disputa começa e os rankings são reiniciados. '
+        'Jogue quantas vezes quiser, acompanhe sua evolução e tente conquistar as primeiras posições. '
+        'Cada novo mapa pode melhorar sua classificação.'
     )
     foot = (
-        'As regras abaixo entram em vigor a partir da Temporada 1; não alteram os rankings históricos da Temporada 0.'
-        if legacy else
-        'É preciso disputar pelo menos 6 mapas para concorrer aos títulos MVP, Revelação e Xinxa. Ao final, os resultados são conferidos e homologados.'
+        'Para concorrer aos títulos, é necessário disputar pelo menos 6 mapas. '
+        'Ao final da temporada, os líderes dos rankings Elite, Superação e XP poderão conquistar '
+        'os títulos de MVP, Revelação e Xinxa. '
+        'Todos os resultados ficam registrados no histórico da liga.'
     )
     return (
         '<section class="edb-season-rules" aria-label="Como funcionam as temporadas da EDB LEAGUE">'
