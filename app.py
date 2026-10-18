@@ -78,9 +78,8 @@ CSS='''
 .small-note {color:#94ABC1;font-size:12px;}
 /* A navegação e o botão de administrador usam TOP_NAV_CSS. */
 </style>'''
-st.markdown(CSS,unsafe_allow_html=True)
-st.markdown(BRAND_CSS,unsafe_allow_html=True)
-st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)
+# CSS será aplicado junto com a barra superior para não criar
+# blocos invisíveis com espaçamento antes do menu.
 
 
 def secret(k):
@@ -166,7 +165,12 @@ def clear_profile_link():
         del st.query_params['player']
 
 page = st.session_state['edb_page']
-st.markdown(top_navigation(page), unsafe_allow_html=True)
+# CSS e cabeçalho no MESMO bloco: elimina os espaços que os
+# st.markdown(<style>) anteriores deixavam no início da página.
+st.markdown(
+    '\n\n'.join((CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page))),
+    unsafe_allow_html=True,
+)
 
 today = datetime.now(TZ).date()
 # Sem contadores nem seletor entre o menu superior e o banner.
