@@ -1,4 +1,4 @@
-"""EDB LEAGUE: temporadas de cinco BO3 e agrupamento explícito de mapas."""
+"""EDB LEAGUE: temporadas com meta configurável de BO3 e agrupamento explícito de mapas."""
 from __future__ import annotations
 
 from datetime import date
@@ -6,7 +6,7 @@ from html import escape
 from urllib.parse import quote
 
 DEFAULT_SEASONS = [
-    {"number":0,"label":"Temporada 0","starts_on":None,"ends_on":"2026-10-18","bo3_target":5},
+    {"number":0,"label":"Temporada 0","starts_on":None,"ends_on":"2026-10-18","bo3_target":3},
     {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":None,"bo3_target":5},
 ]
 
