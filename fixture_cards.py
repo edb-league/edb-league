@@ -160,17 +160,17 @@ def basic_team_tables(match, stats_frame, scope_rows):
 CARD_CSS="""
 <style>
 [data-testid="stExpander"]{
- border:1px solid #355147;border-radius:16px;margin-bottom:12px;
- background:linear-gradient(120deg,#192820,#142023);
+ border:1px solid #344B64;border-radius:16px;margin-bottom:12px;
+ background:linear-gradient(120deg,#172639,#142132);
  overflow:hidden;
 }
 [data-testid="stExpander"] summary{padding:17px 20px;min-height:74px}
-[data-testid="stExpander"] summary:hover{background:rgba(182,243,93,.08)}
+[data-testid="stExpander"] summary:hover{background:rgba(120,184,232,.10)}
 [data-testid="stExpander"] summary p{
- color:#F1FAEF;font-size:clamp(.9rem,2.2vw,1.08rem);
+ color:#EFF6FC;font-size:clamp(.9rem,2.2vw,1.08rem);
  font-weight:700;line-height:1.6;
 }
-[data-testid="stExpander"] summary strong{color:#B6F35D;font-weight:850}
+[data-testid="stExpander"] summary strong{color:#8BC2EB;font-weight:850}
 .edb-score-team{
  display:flex;justify-content:space-between;align-items:center;gap:12px;
  padding:13px 15px;margin:15px 0 7px;border-radius:11px;
