@@ -72,18 +72,33 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
-/* Menos elementos nativos no topo; o toggle da sidebar permanece acessível. */
-[data-testid="stToolbar"],
+/* Não esconda stToolbar: em versões do Streamlit ele inclui o
+   controle nativo de reabrir a sidebar. O modo minimal do config.toml
+   reduz os itens de compartilhamento sem destruir esse controle. */
 [data-testid="stDecoration"],
 #MainMenu {
     display:none !important;
 }
 [data-testid="stHeader"] {
     background:transparent !important;
-    height:2.9rem;
+    height:3.5rem;
+    z-index:999;
 }
+[data-testid="stSidebarCollapsedControl"],
 [data-testid="stHeader"] [data-testid="stSidebarCollapsedControl"] {
     display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    z-index:1000;
+}
+[data-testid="stSidebarCollapsedControl"] button {
+    color:#EAF5FF !important;
+    background:rgba(20,49,77,.92) !important;
+    border:1px solid #416E94 !important;
+    border-radius:10px !important;
+    min-width:42px;
+    min-height:42px;
 }
 /* Navegação lateral em formato de menu, com a página atual sombreada. */
 [data-testid="stSidebar"] .stButton > button {
