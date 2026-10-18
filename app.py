@@ -11,7 +11,7 @@ import plotly.express as px
 import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
-from bo3_admin import analyze_bo3_uploads, roster_for_preview, build_bo3_bundle
+from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
 from storage import Store
 # O Streamlit mantém módulos importados em cache entre reruns.
 # Recarregar o módulo evita ImportError após deploys que adicionam funções.
@@ -543,26 +543,38 @@ elif page=='Administração':
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
         with st.expander('🎮 Importar BO3 completa · Temporada 0', expanded=False):
-            st.caption('Importe os três arquivos .dem ou .dem.gz de uma mesma BO3. A Temporada 0 tem três confrontos no total. Nenhuma partida antiga será excluída até que os três mapas, os dez jogadores e os vencedores sejam confirmados.')
-            bo3_uploads=st.file_uploader(
-                'As três demos da BO3 (uma por mapa)',
-                type=['dem','gz'],accept_multiple_files=True,key='edb_bo3_demos'
-            )
-            if bo3_uploads and len(bo3_uploads)!=3:
-                st.warning('Selecione exatamente três arquivos para analisar a BO3.')
-            if len(bo3_uploads or [])==3 and st.button('Analisar três demos',key='edb_analyze_three_demos'):
+            st.caption('Processe as três demos .dem ou .dem.gz uma de cada vez para evitar sobrecarga de memória. Depois confira os dez atletas, o resultado dos mapas e a ordem da BO3. Os dados antigos só serão substituídos quando tudo estiver validado.')
+            staged_bo3=st.session_state.get('edb_pending_bo3',[])
+            if staged_bo3 and st.button('Reiniciar análise da BO3',key='edb_reset_bo3'):
+                st.session_state.pop('edb_pending_bo3',None)
+                st.rerun()
+            if len(staged_bo3)<3:
+                st.caption(f"Mapas analisados: {len(staged_bo3)} de 3")
+                bo3_file=st.file_uploader(
+                    f"Envie a demo do mapa {len(staged_bo3)+1}",
+                    type=['dem','gz'],key=f'edb_bo3_demo_{len(staged_bo3)+1}'
+                )
+                if bo3_file and st.button('Analisar esta demo',key=f'edb_analyze_bo3_{len(staged_bo3)+1}'):
+                    try:
+                        with st.spinner('Lendo eventos e estatísticas da demo enviada...'):
+                            new_demo=analyze_one_bo3_upload(bo3_file)
+                        if any(d['id']==new_demo['id'] or d['filename']==new_demo['filename'] for d in staged_bo3):
+                            st.error('Esta demo já foi analisada. Envie outra.')
+                        elif staged_bo3 and (
+                            {str(p['steamid']) for p in new_demo['players']}
+                            != {str(p['steamid']) for p in staged_bo3[0]['players']}
+                        ):
+                            st.error('Esta demo não tem os mesmos dez SteamIDs do primeiro mapa. Nenhum dado foi apagado.')
+                        else:
+                            st.session_state['edb_pending_bo3']=[*staged_bo3,new_demo]
+                            st.rerun()
+                    except Exception as exc:
+                        st.error('A análise desta demo falhou, sem alterar o banco: '+str(exc))
+            if len(staged_bo3)==3:
                 try:
-                    with st.spinner('Processando os três mapas e verificando se o elenco é o mesmo...'):
-                        st.session_state['edb_pending_bo3']=analyze_bo3_uploads(bo3_uploads)
-                    st.success('Três demos analisadas. Confira o elenco, a ordem e os vencedores abaixo.')
+                    validate_three_bo3_demos(staged_bo3)
                 except Exception as exc:
-                    st.session_state.pop('edb_pending_bo3',None)
-                    st.error('Importação interrompida com segurança: '+str(exc))
-            staged_bo3=st.session_state.get('edb_pending_bo3')
-            if staged_bo3:
-                current_filenames={f.name for f in (bo3_uploads or [])}
-                if current_filenames!={d['filename'] for d in staged_bo3}:
-                    st.warning('Os arquivos enviados foram alterados. Analise novamente as três demos.')
+                    st.error('A BO3 não passou na validação: '+str(exc))
                 else:
                     st.markdown('##### Prévia extraída das demos')
                     st.dataframe(pd.DataFrame([
