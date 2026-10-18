@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from pathlib import Path
 import hashlib
 import html
+import json
 import os
 import pandas as pd
 import plotly.express as px
@@ -35,6 +36,10 @@ confirmed_bo3_count = _season_system.confirmed_bo3_count
 season_bar = _season_system.season_bar
 bo3_cards = _season_system.bo3_cards
 series_maps = _season_system.series_maps
+import season_rankings as _season_rankings
+_season_rankings = importlib.reload(_season_rankings)
+season_boards = _season_rankings.season_boards
+has_technical_tie = _season_rankings.has_technical_tie
 import ranking_cards as _ranking_cards
 _ranking_cards = importlib.reload(_ranking_cards)
 render_ranking_cards = _ranking_cards.ranking_cards
@@ -70,7 +75,7 @@ top_navigation = _top_navigation.top_navigation
 ROUTES = _top_navigation.ROUTES
 
 ROOT=Path(__file__).parent
-TZ=ZoneInfo('America/Maceio')
+TZ=ZoneInfo('America/Sao_Paulo')
 
 st.set_page_config(page_title='EDB LEAGUE',page_icon='🏆',layout='wide',initial_sidebar_state='collapsed')
 
@@ -108,6 +113,10 @@ def secret(k):
         return os.getenv(k,'')
 
 store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
+# Cria automaticamente o calendario quinzenal ate a proxima temporada
+# e congela as estrelas de todos os jogadores na temporada corrente.
+if store.cloud:
+    store._api('POST','rpc/ensure_edb_calendar',payload={})
 all_players=store.players()
 all_matches=store.matches()
 all_stats=store.stats()
@@ -121,6 +130,9 @@ all_seasons=store._list('league_seasons') if store.cloud else DEFAULT_SEASONS
 all_bo3=store._list('bo3_series') if store.cloud else []
 all_bo3_maps=store._list('bo3_maps') if store.cloud else []
 all_bo3_players=store._list('bo3_players') if store.cloud else []
+all_frozen_stars=store._list('season_player_stars') if store.cloud else []
+all_final_rankings=store._list('season_final_rankings') if store.cloud else []
+all_season_titles=store._list('season_titles') if store.cloud else []
 frame=enrich(all_players,all_matches,all_stats)
 # Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
 career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
@@ -153,7 +165,7 @@ def hero(title,subtitle):
         routes={'Visão geral':'home','Rankings':'rankings','Partidas':'matches','Missões & XP':'xp'}
         rank=st.query_params.get('ranking') if page=='Rankings' else None
         st.markdown(season_bar(all_seasons,season_number,routes[page],
-                               season_completed,rank=rank),
+                               season_completed,rank=rank,on_date=today),
                     unsafe_allow_html=True)
 
 def tile(eyebrow,player,detail,symbol='✦'):
@@ -210,35 +222,49 @@ season_number=chosen_season_number(all_seasons,today,requested_season)
 season_ids=season_match_ids(season_number,all_bo3,all_bo3_maps)
 season_series=[s for s in all_bo3 if int(s['season_number'])==season_number]
 season_completed=confirmed_bo3_count(season_number,all_bo3,all_bo3_maps)
-# Os mapas arquivados sem associação validada permanecem no histórico,
-# sem contaminar os títulos nem as estatísticas da nova temporada.
+season_record=next((s for s in all_seasons if int(s['number'])==season_number),{})
+season_homologated=bool(season_record.get('homologated_at'))
+# Mapas sem associacao a BO3 nao entram na classificacao oficial.
 selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
-board=leaderboard(selected)
-eligible=board[board['Elegível']] if not board.empty else board
+season_stars={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
+              if int(r['season_number'])==season_number}
+boards=season_boards(selected,season_number,season_stars)
+# Rankings homologados sao snapshots: alteracoes posteriores nao mudam o historico.
+if season_homologated:
+    for rank_type in ('elite','superacao','xp'):
+        archived=[r['rank_data'] for r in all_final_rankings
+                  if int(r['season_number'])==season_number and r['rank_type']==rank_type]
+        boards[rank_type]=pd.DataFrame(archived).sort_values('__order') if archived else boards[rank_type].iloc[0:0]
+board=boards['elite']
+board_superacao=boards['superacao']
+board_xp=boards['xp']
+eligible=board[board['Elegível']==True] if not board.empty else board
 if page=='Visão geral':
     hero('Os Xinxas agora têm ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
     k1,k2,k3,k4=st.columns(4)
     k1.metric('Jogadores cadastrados',len(all_players))
     k2.metric('Partidas registradas',len(selected['match_id'].unique()) if not selected.empty else 0)
     k3.metric('Kills registradas',int(selected['kills'].sum()) if not selected.empty else 0)
-    k4.metric('XP distribuído',int(board['XP'].sum()) if not board.empty else 0)
+    k4.metric('XP distribuído',int(board_xp['XP'].sum()) if not board_xp.empty else 0)
     st.markdown('### Destaques da temporada')
     c1,c2,c3=st.columns(3)
     with c1:
         if not eligible.empty:
             r=eligible.sort_values('Elite',ascending=False).iloc[0]
             tile('🏆 MVP · RANKING ELITE',player_label(r['Jogador']),f"Índice {r['Elite']:.1f} • {r['Partidas']} partidas")
-        else:tile('🏆 MVP · RANKING ELITE','A definir','Exige ao menos 2 partidas')
+        else:tile('🏆 MVP · RANKING ELITE','A definir',f'Exige pelo menos {6 if season_number>=1 else 2} mapas')
     with c2:
-        if not eligible.empty:
-            r=eligible.sort_values('Superação %',ascending=False).iloc[0]
-            tile('⚡ SUPERAÇÃO',player_label(r['Jogador']),f"{r['Superação %']:+.1f}% acima da referência das estrelas")
-        else:tile('⚡ SUPERAÇÃO','A definir','Desempenho ajustado ao nível')
+        qualified=board_superacao[board_superacao['Elegível']==True] if not board_superacao.empty else board_superacao
+        if not qualified.empty:
+            r=qualified.iloc[0]
+            tile('⚡ REVELAÇÃO · SUPERAÇÃO',player_label(r['Jogador']),f"{r['Superação %']:+.1f}% da meta")
+        else:tile('⚡ REVELAÇÃO','A definir','Aguardando elegíveis')
     with c3:
-        if not board.empty:
-            r=board.sort_values('Kills',ascending=False).iloc[0]
-            tile('🎯 MAIS KILLS',player_label(r['Jogador']),f"{r['Kills']} eliminações")
-        else:tile('🎯 MAIS KILLS','A definir','Recorde acumulado')
+        qualified=board_xp[board_xp['Elegível']==True] if not board_xp.empty else board_xp
+        if not qualified.empty:
+            r=qualified.iloc[0]
+            tile('🏅 XINXA · RANKING XP',player_label(r['Jogador']),f"{int(r['XP'])} XP")
+        else:tile('🏅 XINXA','A definir','Aguardando elegíveis')
     st.markdown('### Classificação Elite')
     if not board.empty:
         top=board.sort_values('Elite',ascending=False).head(10)
@@ -250,7 +276,8 @@ if page=='Visão geral':
                           margin=dict(l=4,r=15,t=8,b=15))
         st.plotly_chart(fig,use_container_width=True)
     else:st.info('O painel está pronto. Cadastre jogadores e registre a primeira partida em Administração.')
-    st.caption('O MVP e a Superação exigem pelo menos 2 partidas no período. Os valores serão recalibrados quando tivermos mais dados reais.')
+    st.caption('Temporada experimental: mínimo de 2 mapas.' if season_number==0 else
+               'Classificações provisórias até homologação; são necessários 6 mapas para concorrer aos três títulos oficiais.')
 
 elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
@@ -262,22 +289,22 @@ elif page=='Rankings':
     selected_rank = selected_rank if selected_rank in {'elite','superacao','resenha'} else 'elite'
     st.markdown(rank_switch(selected_rank, season=season_number), unsafe_allow_html=True)
     if selected_rank == 'elite':
-        scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
+        scoreboard_table(board,focus='Elite')
         # A metodologia fica ao fim dos cartões, preservando o ranking como foco.
         with st.expander('Como funciona o Índice Elite'):
             st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
             st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
     elif selected_rank == 'superacao':
-        st.write('Quanto cada jogador supera a expectativa de KPR para seu nível de 1 a 5 estrelas.')
-        st.caption('Superação é uma referência por estrelas, não evolução histórica. Requer 2 partidas para premiação.')
-        scoreboard_table(board.sort_values('Superação %',ascending=False) if not board.empty else board,focus='Superação %')
+        st.write('Quanto cada jogador supera a expectativa de KPR para seu nível congelado de 1 a 5 estrelas.')
+        st.caption('Superação usa os 6 melhores mapas para cada atleta e exige 6 mapas disputados para premiação (Temporada 0 conserva a regra anterior).')
+        scoreboard_table(board_superacao,focus='Superação %')
         st.markdown('#### Evolução real: últimas 2 partidas versus as 2 anteriores')
         changes=historical_progress(selected)
         if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
         else:st.dataframe(changes,use_container_width=True,hide_index=True)
     elif selected_rank == 'resenha':
-        st.write('XP de participação, vitórias e missões proporcionais às estrelas. Até quatro partidas por semana contam para o XP.')
-        scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
+        st.write('XP por participação, vitória e missão semanal. Desde a Temporada 1 contam apenas 6 mapas por jogador, priorizando vitórias. A Temporada 0 conserva a regra anterior.')
+        scoreboard_table(board_xp,focus='XP')
 
 elif page=='Comparar jogadores':
     hero('Comparar jogadores','Análise lado a lado: desempenho, vitórias e confrontos da liga.')
@@ -329,10 +356,29 @@ elif page=='Jogadores':
             st,px,who,player_summary(profile_id,career_records),all_time_records,
             player_medals.get(profile_id,[])
         )
+        won_titles=[x for x in all_season_titles if str(x['player_id'])==str(profile_id)]
+        if won_titles:
+            st.markdown('### Títulos oficiais da EDB LEAGUE')
+            names={'elite':'MVP da Temporada','superacao':'Revelação da Temporada','xp':'Xinxa da Temporada'}
+            for award in sorted(won_titles,key=lambda x:int(x['season_number']),reverse=True):
+                st.write(f"🏆 Temporada {award['season_number']} — {names.get(award['rank_type'],award['rank_type'])}")
 
 elif page=='Hall da Fama':
     hero('Hall da Fama','Grandes jogadores constroem momentos. Lendas deixam um legado.')
     render_hall_of_fame(st,all_time_records,len(all_matches),all_players,career_records)
+    st.markdown('### Campeões oficiais por temporada')
+    if all_season_titles:
+        players_by_id={str(p['id']):p for p in all_players}
+        awards_labels={'elite':'MVP','superacao':'Revelação','xp':'Xinxa'}
+        winners=[{'Temporada':int(x['season_number']),
+                  'Título':awards_labels.get(x['rank_type'],x['rank_type']),
+                  'Jogador':player_label(players_by_id[str(x['player_id'])]['nickname'])
+                            if str(x['player_id']) in players_by_id else 'Não identificado',
+                  'Pontuação':round(float(x['score']),2)}
+                 for x in all_season_titles]
+        st.dataframe(pd.DataFrame(winners).sort_values(['Temporada','Título'],ascending=[False,True]),
+                     use_container_width=True,hide_index=True)
+    else: st.caption('A primeira premiação oficial será homologada após a Temporada 1.')
 
 elif page=='Partidas':
     hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
@@ -489,17 +535,10 @@ elif page=='Missões & XP':
         with col:
             st.metric(f"{'★'*i}",f"{TARGET_KPR[i]:.2f} KPR")
     st.caption('Concluir uma partida de pelo menos 8 rounds com KPR acima da meta rende 100 XP, uma vez por semana.')
-    st.caption('Presença: +40 XP por jogo; vitória informada: +20 XP; limite de 4 jogos com XP por semana.')
+    st.caption('Presença: +40 XP por mapa; vitória: +20 XP; até 6 mapas na temporada, além de até 100 XP de missão por semana. Na Temporada 0 vale o limite histórico de 4 mapas/semana.')
     st.markdown('### Ranking de experiência')
-    scoreboard_table(board.sort_values('XP',ascending=False) if not board.empty else board,focus='XP')
-    st.markdown('### Prêmios estatísticos')
-    awards=weekly_awards(selected)
-    if awards:
-        cols=st.columns(min(4,len(awards)))
-        for i,(k,v) in enumerate(awards.items()):
-            with cols[i%len(cols)]:tile(k.upper(),v,'Calculado a partir das partidas registradas')
-    else:st.info('As premiações começam quando houver dados suficientes.')
-    st.caption('Jogada da Semana e Bagre de Ouro são prêmios por votação externa, ainda não automatizados.')
+    scoreboard_table(board_xp,focus='XP')
+    st.caption('Os únicos títulos competitivos oficiais são MVP Elite, Revelação Superação e Xinxa XP. Os resultados serão homologados após o encerramento.')
 
 elif page=='Administração':
     hero('Central de administração','Cadastre jogadores e importe partidas sem preencher os rankings manualmente.')
@@ -520,6 +559,59 @@ elif page=='Administração':
         st.stop()
     if st.button('Sair do modo administrador'):
         st.session_state.is_admin=False;st.rerun()
+    if store.cloud:
+        st.markdown('#### Homologação de temporadas encerradas')
+        pending_seasons=[
+            row for row in all_seasons
+            if int(row['number'])>=1 and row.get('ends_on')
+            and date.fromisoformat(str(row['ends_on'])[:10])<today
+            and not row.get('homologated_at')
+        ]
+        if pending_seasons:
+            target=st.selectbox('Temporada para conferir',pending_seasons,
+                                format_func=lambda row: row['label'],key='homologate_target')
+            target_number=int(target['number'])
+            if st.button('Conferir e homologar resultados',type='primary',key='homologate_submit'):
+                try:
+                    target_series=[r for r in all_bo3 if int(r['season_number'])==target_number]
+                    if any(r['status']!='completed' for r in target_series):
+                        raise ValueError('Há BO3 incompletas nesta temporada.')
+                    ids=season_match_ids(target_number,all_bo3,all_bo3_maps)
+                    period=frame[frame['match_id'].astype(str).isin(ids)].copy()
+                    frozen={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
+                            if int(r['season_number'])==target_number}
+                    missing=set(period['player_id'].astype(str))-set(frozen) if not period.empty else set()
+                    if missing:
+                        raise ValueError('Existem atletas sem estrelas congeladas; revise antes da homologação.')
+                    official=season_boards(period,target_number,frozen)
+                    any_eligible=any(not df.empty and df['Elegível'].any() for df in official.values())
+                    for rank_type,df in official.items():
+                        if has_technical_tie(df,rank_type):
+                            raise ValueError('Empate técnico no ranking '+rank_type+'; resolva administrativamente.')
+                    ranks=[]
+                    titles=[]
+                    field={'elite':'Elite','superacao':'Superação %','xp':'XP'}
+                    for rank_type,df in official.items():
+                        for row in json.loads(df.to_json(orient='records')):
+                            ranks.append({'rank_type':rank_type,
+                                          'player_id':str(row['player_id']),
+                                          'rank_data':row})
+                        qualified=df[df['Elegível']==True] if not df.empty else df
+                        if not qualified.empty:
+                            champion=qualified.iloc[0]
+                            titles.append({'rank_type':rank_type,'player_id':str(champion['player_id']),
+                                           'score':float(champion['__score_precise'])})
+                    if any_eligible and len(titles)!=3:
+                        raise ValueError('Os três títulos exigem campeões elegíveis.')
+                    store._api('POST','rpc/homologate_edb_season',payload={
+                        'p_season':target_number,'p_rankings':ranks,'p_titles':titles
+                    })
+                    st.success('Classificação, estrelas e títulos oficiais homologados.')
+                    st.rerun()
+                except Exception as exc:
+                    st.error('Homologação não realizada: '+str(exc))
+        else:
+            st.caption('Não há temporadas encerradas pendentes de homologação.')
     players_tab,imports_tab,backup_tab=st.tabs(['👥 Jogadores','📁 Importar demo / CSV','⬇️ Exportar dados'])
     with players_tab:
         st.markdown('#### Adicionar jogador')
@@ -542,126 +634,7 @@ elif page=='Administração':
                     try:store.save_player(nn,star,ss or None,existing['id']);st.success('Alteração salva.');st.rerun()
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
-        with st.expander('🎮 Importar BO3 completa · Temporada 0', expanded=True):
-            st.caption('Processe as três demos .dem ou .dem.gz uma de cada vez para evitar sobrecarga de memória. Depois confira os dez atletas, o resultado dos mapas e a ordem da BO3. Os dados antigos só serão substituídos quando tudo estiver validado.')
-            staged_bo3=st.session_state.get('edb_pending_bo3',[])
-            if staged_bo3 and st.button('Reiniciar análise da BO3',key='edb_reset_bo3'):
-                st.session_state.pop('edb_pending_bo3',None)
-                st.rerun()
-            if len(staged_bo3)<3:
-                st.caption(f"Mapas analisados: {len(staged_bo3)} de 3")
-                bo3_file=st.file_uploader(
-                    f"Envie a demo do mapa {len(staged_bo3)+1}",
-                    type=['dem','gz'],key=f'edb_bo3_demo_{len(staged_bo3)+1}'
-                )
-                if bo3_file and st.button('Analisar esta demo',key=f'edb_analyze_bo3_{len(staged_bo3)+1}'):
-                    try:
-                        with st.spinner('Lendo eventos e estatísticas da demo enviada...'):
-                            new_demo=analyze_one_bo3_upload(bo3_file)
-                        if any(d['id']==new_demo['id'] or d['filename']==new_demo['filename'] for d in staged_bo3):
-                            st.error('Esta demo já foi analisada. Envie outra.')
-                        elif staged_bo3 and (
-                            {str(p['steamid']) for p in new_demo['players']}
-                            != {str(p['steamid']) for p in staged_bo3[0]['players']}
-                        ):
-                            st.error('Esta demo não tem os mesmos dez SteamIDs do primeiro mapa. Nenhum dado foi apagado.')
-                        else:
-                            st.session_state['edb_pending_bo3']=[*staged_bo3,new_demo]
-                            st.rerun()
-                    except Exception as exc:
-                        st.error('A análise desta demo falhou, sem alterar o banco: '+str(exc))
-            if len(staged_bo3)==3:
-                try:
-                    validate_three_bo3_demos(staged_bo3)
-                except Exception as exc:
-                    st.error('A BO3 não passou na validação: '+str(exc))
-                else:
-                    st.markdown('##### Prévia extraída das demos')
-                    st.dataframe(pd.DataFrame([
-                        {'Arquivo':d['filename'],'Mapa':d['map'],
-                         'Rounds identificados':d['rounds_total'],
-                         'Jogadores':len(d['players'])}
-                        for d in staged_bo3]),hide_index=True,use_container_width=True)
-                    for d in staged_bo3:
-                        for warning in d.get('warnings',[]):
-                            st.caption(d['map']+': '+warning)
-                    open_slots=[int(s['sequence_number']) for s in all_bo3
-                                if int(s['season_number'])==0 and s['status']=='draft'
-                                and int(s['sequence_number'])<=3]
-                    if not open_slots:
-                        st.info('Os três confrontos da Temporada 0 já estão preenchidos.')
-                    else:
-                        slot=st.selectbox('Qual BO3 da Temporada 0?',sorted(open_slots),
-                                          format_func=lambda n:f'BO3 #{n}',key='edb_bo3_slot')
-                        game_indices=list(range(3))
-                        show_demo=lambda i:staged_bo3[i]['map']+' · '+staged_bo3[i]['filename'][:22]+'…'
-                        order=[
-                            st.selectbox(f'{num}º mapa da BO3',game_indices,index=num-1,
-                                         format_func=show_demo,key=f'edb_map_order_{num}')
-                            for num in range(1,4)
-                        ]
-                        roster=roster_for_preview(staged_bo3)
-                        roster_keys=sorted(roster,key=lambda sid:roster[sid].casefold())
-                        team1=st.multiselect(
-                            'Cinco jogadores do Team 1 (os restantes serão o Team 2)',
-                            options=roster_keys,format_func=lambda sid:roster[sid]+' · '+sid[-6:],
-                            max_selections=5,key='edb_bo3_team1'
-                        )
-                        winners=[
-                            st.selectbox(f'Vencedor do mapa {num}', ['Team 1','Team 2'],
-                                         index=None,placeholder='Selecione o vencedor',
-                                         key=f'edb_bo3_winner_{num}')
-                            for num in range(1,4)
-                        ]
-                        when_bo3=st.date_input(
-                            'Data real da BO3',value=date(2026,10,18),
-                            max_value=date(2026,10,18),key='edb_bo3_date'
-                        )
-                        replace_old=(slot==1)
-                        if replace_old:
-                            st.warning('Ao confirmar a primeira BO3, todos os mapas e estatísticas antigos serão substituídos em uma única transação. Os jogadores cadastrados permanecerão.')
-                            confirm_replace=st.checkbox(
-                                'Confirmo a substituição das partidas antigas somente após validar as três demos',
-                                key='edb_bo3_confirm_replace'
-                            )
-                        else:
-                            confirm_replace=True
-                        if st.button('Confirmar e importar BO3 completa',type='primary',key='edb_bo3_commit'):
-                            if not confirm_replace:
-                                st.error('Confirme a substituição do histórico antes de prosseguir.')
-                            elif len(set(order))!=3:
-                                st.error('Escolha cada arquivo apenas uma vez para os mapas 1, 2 e 3.')
-                            elif len(team1)!=5 or any(w is None for w in winners):
-                                st.error('Defina os cinco atletas do Team 1 e o vencedor de cada mapa.')
-                            else:
-                                try:
-                                    # IDs estáveis: jogadores atuais são preservados; faltantes
-                                    # são cadastrados. Nenhuma partida antiga é excluída aqui.
-                                    existing_by_sid={str(p['steamid']):p for p in store.players()
-                                                     if p.get('steamid')}
-                                    existing_by_nick={p['nickname'].casefold():p for p in store.players()}
-                                    ids_by_sid={}
-                                    for sid in roster_keys:
-                                        nick=roster[sid]
-                                        candidate=existing_by_sid.get(sid) or existing_by_nick.get(nick.casefold())
-                                        if candidate:
-                                            ids_by_sid[sid]=store.save_player(
-                                                candidate['nickname'],int(candidate['stars']),sid)
-                                        else:
-                                            ids_by_sid[sid]=store.save_player(nick,3,sid)
-                                    sides=['a' if w=='Team 1' else 'b' for w in winners]
-                                    bundle=build_bo3_bundle(
-                                        staged_bo3,order,team1,sides,when_bo3,slot,
-                                        ids_by_sid,replace_old=replace_old
-                                    )
-                                    # A RPC garante validação e tudo-ou-nada para mapas,
-                                    # estatísticas e eliminação dos registros anteriores.
-                                    store._api('POST','rpc/import_edb_bo3_bundle',payload={'p_bundle':bundle})
-                                    st.session_state.pop('edb_pending_bo3',None)
-                                    st.success('BO3 importada e vinculada à Temporada 0. O histórico anterior foi substituído quando solicitado.')
-                                    st.rerun()
-                                except Exception as exc:
-                                    st.error('A substituição não foi executada: '+str(exc))
+        st.info('A Temporada 0 está encerrada e bloqueada para importação de novas BO3. O histórico foi preservado.')
         with st.expander('Importação avulsa · somente mapa isolado',expanded=False):
             st.caption('Para uma BO3 de três mapas, use a importação completa acima. Esta opção é destinada exclusivamente a mapas avulsos.')
             st.markdown('#### Importar uma partida')
