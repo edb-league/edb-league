@@ -145,7 +145,7 @@ def render_compare(st, px, first, second, comparison):
     markup=['<div class="edb-duel-comparison">']
     markup.append(
         '<div class="edb-duel-metric edb-duel-header">'
-        '<div class="edb-duel-metric-label">Métrica</div>'
+        '<div class="edb-duel-metric-label">Jogador</div>'
         '<div class="edb-duel-value edb-duel-column-name edb-duel-column--blue">' + escape(names[0]) + '</div>'
         '<div class="edb-duel-value edb-duel-column-name edb-duel-column--red">' + escape(names[1]) + '</div>'
         '</div>'
