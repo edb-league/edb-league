@@ -12,7 +12,7 @@ def test_elite_explanation_follows_ranking_cards():
         "with st.expander('Como funciona o Índice Elite')"
     )
     assert ranks.index("with st.expander('Como funciona o Índice Elite')") < ranks.index(
-        "with b:"
+        "elif selected_rank == 'superacao':"
     )
     assert "Índice = 100" in ranks
 
