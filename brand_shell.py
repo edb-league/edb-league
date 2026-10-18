@@ -278,10 +278,10 @@ def sidebar_header(players, matches, kills, period):
     )
 
 
-@lru_cache(maxsize=3)
+@lru_cache(maxsize=8)
 def _art_data(name):
     """Carrega as artes WEBP incluídas no repositório e embute na página."""
-    if name not in {"duel", "medals", "trophy", "rankings"}:
+    if name not in {"duel", "medals", "trophy", "rankings", "matches", "xp"}:
         return ""
     path = Path(__file__).resolve().parent / "assets" / f"{name}.webp.b64"
     if not path.is_file():
@@ -301,6 +301,8 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
         "Medalhas": "medals",
         "Hall da Fama": "trophy",
         "Rankings": "rankings",
+        "Partidas": "matches",
+        "Missões & XP": "xp",
     }.get(page)
     source = _art_data(art_name) if art_name else ""
     if source:
@@ -320,7 +322,7 @@ def hero_banner(title, subtitle, players, matches, maps, page=None):
         " edb-hero--illustrated" +
         (" edb-hero--duel" if page == "Comparar jogadores" else
          " edb-hero--hall" if page == "Hall da Fama" else
-         " edb-hero--showcase" if page in {"Rankings", "Medalhas"} else "")
+         " edb-hero--showcase" if page in {"Rankings", "Medalhas", "Partidas", "Missões & XP"} else "")
     ) if source else ""
     return (
         '<section class="hero edb-hero' + artwork_class + '">'
