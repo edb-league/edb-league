@@ -7,7 +7,8 @@ APP=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
 
 def test_career_stats_not_calculated_on_home_or_ranking_start():
     assert "def get_career_records():" in APP
-    assert "return match_records(all_players,all_matches,all_stats,get_scope_stats())" in APP
+    assert "return cached_career_records(all_players,all_matches,all_stats,scope_stats)" in APP
+    assert "return match_records(all_players,all_matches,all_stats,scope_stats)" in APP
     assert "career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)" not in APP
     assert APP.count("career_records=get_career_records()")==4
     sections=APP.split("elif page=='")
@@ -21,8 +22,10 @@ def test_career_stats_not_calculated_on_home_or_ranking_start():
 
 def test_season_ranking_is_computed_only_on_three_ranking_pages():
     assert "if page in ('Visão geral','Rankings','Missões & XP'):" in APP
-    assert APP.count("boards=season_boards(selected,season_number,season_stars)")==1
-    assert APP.count("frame=enrich(all_players,all_matches,all_stats)")==2
+    assert "cached_season_boards(selected,season_number,tuple(sorted(season_stars.items())))" in APP
+    assert "if store.cloud else season_boards(selected,season_number,season_stars)" in APP
+    assert "return enrich(players,matches,stats)" in APP
+    assert "frame=enrich(all_players,all_matches,all_stats)" in APP
     top_level=ast.parse(APP).body
     for node in top_level:
         if isinstance(node,ast.Assign):
