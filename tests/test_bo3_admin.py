@@ -61,7 +61,8 @@ def test_block_invalid_bo3_before_any_destructive_database_action():
 def test_admin_has_transactional_confirmation_not_automatic_delete():
     from pathlib import Path
     app=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
-    assert "analyze_bo3_uploads(bo3_uploads)" in app
+    assert "analyze_one_bo3_upload(bo3_file)" in app
+    assert "validate_three_bo3_demos(staged_bo3)" in app
     assert "st.checkbox(" in app and "edb_bo3_confirm_replace" in app
     assert "st.session_state['edb_pending_bo3']" in app
     assert "build_bo3_bundle(" in app
