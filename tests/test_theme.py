@@ -12,7 +12,7 @@ def test_primary_color_is_blue_in_streamlit_and_app():
     assert 'primaryColor="#78B8E8"' in CONFIG
     assert 'backgroundColor="#0A1220"' in CONFIG
     assert '#78B8E8' in APP
-    assert "st.markdown(TOP_NAV_CSS,unsafe_allow_html=True)" in APP
+    assert "CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)" in APP
 
 
 def test_ranking_uses_subtle_champagne_not_neon_green():
