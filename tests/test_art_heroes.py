@@ -21,7 +21,7 @@ def test_three_hero_images_are_valid_embedded_webp_files():
 
 
 def test_all_three_pages_use_their_distinct_artwork():
-    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama"):
+    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings"):
         markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
         assert '<img class="edb-art-image"' in markup
         assert 'data:image/webp;base64,' in markup
@@ -29,7 +29,7 @@ def test_all_three_pages_use_their_distinct_artwork():
                     if page == "Comparar jogadores"
                     else 'class="hero edb-hero edb-hero--illustrated edb-hero--hall"'
                     if page == "Hall da Fama"
-                    else 'class="hero edb-hero edb-hero--illustrated"')
+                    else 'class="hero edb-hero edb-hero--illustrated edb-hero--showcase"')
         assert expected in markup
         assert '<div class="edb-radar"' not in markup
     assert ".edb-hero--illustrated" in BRAND_CSS
@@ -37,7 +37,7 @@ def test_all_three_pages_use_their_distinct_artwork():
 
 
 def test_unrelated_pages_keep_default_radar_without_using_artwork():
-    markup = hero_banner("Rankings", "Índice", 11, 3, 3, page="Rankings")
+    markup = hero_banner("Partidas", "Confrontos", 11, 3, 3, page="Partidas")
     assert '<div class="edb-radar"' in markup
     assert 'data:image/webp;base64,' not in markup
 
@@ -83,3 +83,24 @@ def test_desktop_hall_uses_full_resolution_trophy_and_full_bleed():
     assert "edb-hero--hall .edb-art-image" in BRAND_CSS
     assert ".edb-hero--hall .edb-hero-copy" in BRAND_CSS
     assert "edb-hero--hall" not in hero_banner("Medalhas", "Conquistas", 11, 3, 3, page="Medalhas")
+
+
+def test_medals_and_rankings_use_new_2172x724_desktop_art():
+    for asset, page in (("medals", "Medalhas"), ("rankings", "Rankings")):
+        raw = base64.b64decode(
+            (ROOT / "assets" / f"{asset}.webp.b64").read_text(encoding="ascii"),
+            validate=True,
+        )
+        assert len(raw) > 200_000
+        assert raw[:4] == b"RIFF"
+        assert raw[8:12] == b"WEBP"
+        markup = hero_banner(page, "Texto de demonstração", 11, 3, 3, page=page)
+        assert 'edb-hero--illustrated edb-hero--showcase' in markup
+        assert '<img class="edb-art-image"' in markup
+        assert "data:image/webp;base64," in markup
+    assert ".edb-hero--showcase .edb-hero-art" in BRAND_CSS
+    assert ".edb-hero--showcase .edb-art-image" in BRAND_CSS
+    assert "object-fit:cover;object-position:center center;" in BRAND_CSS
+    assert "flex:0 1 40%;max-width:40%" in BRAND_CSS
+    assert "edb-hero--duel" not in hero_banner("Medalhas", "", 11, 3, 3, page="Medalhas")
+    assert "edb-hero--hall" not in hero_banner("Rankings", "", 11, 3, 3, page="Rankings")
