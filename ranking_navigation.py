@@ -52,7 +52,7 @@ RANK_SWITCH_CSS = """
 """
 
 
-def rank_switch(selected: str) -> str:
+def rank_switch(selected: str, season=None) -> str:
     """Renderiza links angulares reais, sem <button> nem st.tabs."""
     if selected not in {slug for slug, _ in RANK_OPTIONS}:
         selected = "elite"
@@ -76,9 +76,12 @@ def rank_switch(selected: str) -> str:
             f'background:{background};color:{"#fff" if active else "#D1DEEB"};'
             f'{shadow}'
         )
+        link='?page=rankings&amp;ranking=' + slug
+        if season is not None:
+            link+='&amp;season='+str(int(season))
         out.append(
             '<a class="edb-rank-option' + cls + '"'
-            ' href="?page=rankings&amp;ranking=' + slug + '" target="_self"'
+            ' href="' + link + '" target="_self"'
             ' aria-label="Ranking ' + escape(label, quote=True) + '"'
             ' aria-current="' + ('page' if active else 'false') + '"'
             ' style="' + inline + '">' + escape(label) + '</a>'
