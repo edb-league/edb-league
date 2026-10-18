@@ -139,4 +139,4 @@ def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
     assert 'data:image/webp;base64,' in markup
     assert '<div class="edb-radar"' not in markup
     assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
-    assert "hero('A resenha agora tem ranking.'" in APP
+    assert "hero('Os Xinxas agora têm ranking.'" in APP
