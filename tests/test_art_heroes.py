@@ -1,0 +1,56 @@
+"""Verifica banners ilustrados e preservação de dados reais nas telas EDB."""
+import base64
+from pathlib import Path
+
+from brand_shell import BRAND_CSS, hero_banner
+
+
+ROOT = Path(__file__).resolve().parents[1]
+APP = (ROOT / "app.py").read_text(encoding="utf-8")
+SOCIAL = (ROOT / "social_views.py").read_text(encoding="utf-8")
+FAME = (ROOT / "legacy_views.py").read_text(encoding="utf-8")
+
+
+def test_three_hero_images_are_valid_embedded_webp_files():
+    for name in ("duel", "medals", "trophy"):
+        path = ROOT / "assets" / f"{name}.webp.b64"
+        raw = base64.b64decode(path.read_text(encoding="ascii"), validate=True)
+        assert len(raw) > 2000
+        assert raw[:4] == b"RIFF"
+        assert raw[8:12] == b"WEBP"
+
+
+def test_all_three_pages_use_their_distinct_artwork():
+    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama"):
+        markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
+        assert '<img class="edb-art-image"' in markup
+        assert 'data:image/webp;base64,' in markup
+        assert 'class="hero edb-hero edb-hero--illustrated"' in markup
+        assert '<div class="edb-radar"' not in markup
+    assert ".edb-hero--illustrated" in BRAND_CSS
+    assert "@media(max-width:650px)" in BRAND_CSS
+
+
+def test_unrelated_pages_keep_default_radar_without_using_artwork():
+    markup = hero_banner("Rankings", "Índice", 11, 3, 3, page="Rankings")
+    assert '<div class="edb-radar"' in markup
+    assert 'data:image/webp;base64,' not in markup
+
+
+def test_comparison_and_medals_keep_real_data():
+    assert "render_compare(st,px,by_id[first_id],by_id[second_id]" in APP
+    assert "compare_players(first_id,second_id,career_records)" in APP
+    assert "render_medal_catalogue(st,all_players,player_medals)" in APP
+    assert "Medalhas conquistadas" in SOCIAL
+    assert 'len(earned)' in SOCIAL
+    assert "Jogadores premiados" in SOCIAL
+    assert "Temporada 3" not in FAME
+    assert 'top = sorted(by_player.values()' in FAME
+    assert "Destaque da liga" in FAME
+    assert "total_kills = sum(int(row" in FAME
+
+
+def test_comparison_selectors_follow_approved_copy():
+    assert "st.selectbox('Selecionar jogador 1'" in APP
+    assert "st.selectbox('Selecionar jogador 2'" in APP
+    assert '<div class="edb-duel-metric-label">Jogador</div>' in SOCIAL
