@@ -542,7 +542,7 @@ elif page=='Administração':
                     try:store.save_player(nn,star,ss or None,existing['id']);st.success('Alteração salva.');st.rerun()
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
-        with st.expander('🎮 Importar BO3 completa · Temporada 0', expanded=False):
+        with st.expander('🎮 Importar BO3 completa · Temporada 0', expanded=True):
             st.caption('Processe as três demos .dem ou .dem.gz uma de cada vez para evitar sobrecarga de memória. Depois confira os dez atletas, o resultado dos mapas e a ordem da BO3. Os dados antigos só serão substituídos quando tudo estiver validado.')
             staged_bo3=st.session_state.get('edb_pending_bo3',[])
             if staged_bo3 and st.button('Reiniciar análise da BO3',key='edb_reset_bo3'):
@@ -662,108 +662,120 @@ elif page=='Administração':
                                     st.rerun()
                                 except Exception as exc:
                                     st.error('A substituição não foi executada: '+str(exc))
-        st.markdown('#### Importar uma partida')
-        method=st.radio('Origem dos dados',['Demo da xplay (.dem ou .dem.gz)','CSV de placar','Exemplo do print do SCOPE.GG'],horizontal=True)
-        st.info('A importação de demo gera uma prévia editável antes de salvar. Verifique participantes, rounds e eliminações; o parser depende da versão e estrutura da demo.')
-        if method=='Demo da xplay (.dem ou .dem.gz)':
-            upload=st.file_uploader('Arquivo da demo',type=['dem','gz'],key='demo_up')
-            if upload and st.button('Analisar demo',type='primary'):
-                folder=None
-                try:
-                    with st.spinner('Descompactando e lendo eventos do CS2...'):
-                        folder,path,fingerprint=prepare_upload(upload)
-                        result=parse_demo(path,fingerprint)
+        with st.expander('Importação avulsa · somente mapa isolado',expanded=False):
+            st.caption('Para uma BO3 de três mapas, use a importação completa acima. Esta opção é destinada exclusivamente a mapas avulsos.')
+            st.markdown('#### Importar uma partida')
+            method=st.radio('Origem dos dados',['Demo da xplay (.dem ou .dem.gz)','CSV de placar','Exemplo do print do SCOPE.GG'],horizontal=True)
+            st.info('A importação de demo gera uma prévia editável antes de salvar. Verifique participantes, rounds e eliminações; o parser depende da versão e estrutura da demo.')
+            if method=='Demo da xplay (.dem ou .dem.gz)':
+                upload=st.file_uploader('Arquivo da demo',type=['dem','gz'],key='demo_up')
+                if upload and st.button('Analisar demo',type='primary'):
+                    folder=None
+                    try:
+                        with st.spinner('Descompactando e lendo eventos do CS2...'):
+                            folder,path,fingerprint=prepare_upload(upload)
+                            result=parse_demo(path,fingerprint)
+                            st.session_state['pending_import']={
+                                'fingerprint':result.fingerprint,'map':result.map_name,
+                                'rounds_total':result.rounds_total,'players':result.players,
+                                'warnings':result.warnings,'source':'Demo da xplay / demoparser2'}
+                        st.success('Demo analisada. Revise os dados abaixo.')
+                    except Exception as exc:st.error('Não foi possível processar a demo: '+str(exc))
+                    finally:
+                        if folder:folder.cleanup()
+            elif method=='CSV de placar':
+                data=st.file_uploader('CSV com colunas nickname, kills, deaths, assists, rounds e opcionalmente damage, won etc.',type=['csv'],key='csv_up')
+                if data and st.button('Ler CSV',type='primary'):
+                    try:
+                        blob=data.getvalue()
+                        df=pd.read_csv(pd.io.common.BytesIO(blob))
+                        required={'nickname','kills','deaths','assists','rounds'}
+                        if not required.issubset(df.columns):raise ValueError('Colunas obrigatórias: '+', '.join(sorted(required)))
                         st.session_state['pending_import']={
-                            'fingerprint':result.fingerprint,'map':result.map_name,
-                            'rounds_total':result.rounds_total,'players':result.players,
-                            'warnings':result.warnings,'source':'Demo da xplay / demoparser2'}
-                    st.success('Demo analisada. Revise os dados abaixo.')
-                except Exception as exc:st.error('Não foi possível processar a demo: '+str(exc))
-                finally:
-                    if folder:folder.cleanup()
-        elif method=='CSV de placar':
-            data=st.file_uploader('CSV com colunas nickname, kills, deaths, assists, rounds e opcionalmente damage, won etc.',type=['csv'],key='csv_up')
-            if data and st.button('Ler CSV',type='primary'):
-                try:
-                    blob=data.getvalue()
-                    df=pd.read_csv(pd.io.common.BytesIO(blob))
-                    required={'nickname','kills','deaths','assists','rounds'}
-                    if not required.issubset(df.columns):raise ValueError('Colunas obrigatórias: '+', '.join(sorted(required)))
-                    st.session_state['pending_import']={
-                        'fingerprint':'csv_'+hashlib.sha256(blob).hexdigest(),'map':'Não informado',
-                        'rounds_total':int(df['rounds'].max()),'players':df.where(pd.notna(df),None).to_dict('records'),
-                        'warnings':['Dados recebidos por CSV: confirme o placar antes de salvar.'],
-                        'source':'CSV de placar'}
-                except Exception as exc:st.error('Erro no CSV: '+str(exc))
-        else:
-            st.caption('Os dados abaixo vieram do print enviado na conversa. Rounds são estimados por dano ÷ ADR; a data da partida deve ser informada.')
-            if st.button('Carregar amostra do SCOPE.GG'):
-                df=pd.read_csv(ROOT/'sample_scoreboard.csv')
-                st.session_state['pending_import']={
-                    'fingerprint':'scope_1648990866439220','map':'Inferno','rounds_total':17,
-                    'players':df.where(pd.notna(df),None).to_dict('records'),
-                    'warnings':['Dado transcrito do print do SCOPE.GG; rounds estimados, não validados pela demo.'],
-                    'source':'SCOPE.GG — transcrição do print'}
-        if st.session_state.get('pending_import'):
-            pending=st.session_state['pending_import']
-            st.divider()
-            st.markdown('#### Conferência antes de gravar')
-            for warning in pending.get('warnings',[]):st.warning(warning)
-            if store.match_exists(pending['fingerprint']):
-                st.error('Este ID de partida já está salvo. Importação duplicada bloqueada.')
+                            'fingerprint':'csv_'+hashlib.sha256(blob).hexdigest(),'map':'Não informado',
+                            'rounds_total':int(df['rounds'].max()),'players':df.where(pd.notna(df),None).to_dict('records'),
+                            'warnings':['Dados recebidos por CSV: confirme o placar antes de salvar.'],
+                            'source':'CSV de placar'}
+                    except Exception as exc:st.error('Erro no CSV: '+str(exc))
             else:
-                when=st.date_input('Data real da partida (confirme antes de salvar)',value=today)
-                map_name=st.text_input('Mapa',value=pending['map'],key='map_'+pending['fingerprint'][-16:])
-                total=st.number_input('Rounds totais da partida',min_value=1,max_value=80,
-                                      value=max(1,int(pending['rounds_total'])),step=1)
-                raw=pd.DataFrame(pending['players'])
-                fields=['nickname','steamid','kills','deaths','assists','damage','rounds',
-                        'headshots','plants','defuses','rating','kast','open_kills','trade_kills']
-                for field in fields:
-                    if field not in raw: raw[field]=None
-                raw['steamid']=raw['steamid'].fillna('').astype(str).replace({'nan':'','None':''})
-                raw['nickname']=raw['nickname'].fillna('').astype(str)
-                view=st.data_editor(raw[fields],use_container_width=True,hide_index=True,num_rows='fixed',
-                                    key='editor_'+pending['fingerprint'][-16:])
-                detected=[p['nickname'] for p in pending['players'] if p.get('won') in [True,1,'1']]
-                winners=st.multiselect('Jogadores do time vencedor (opcional — ajuda a calcular vitórias)',
-                                       view['nickname'].tolist(),default=[n for n in detected if n in view['nickname'].tolist()])
-                note=st.text_input('Observação (opcional)',value='',placeholder='Ex.: Racha de sábado')
-                if st.button('Confirmar e salvar partida',type='primary'):
-                    if not view['nickname'].astype(str).str.strip().all():st.error('Todos os participantes devem ter nicknames.')
-                    elif view['nickname'].duplicated().any():st.error('Não pode haver nicknames duplicados na mesma partida.')
-                    elif len(view)<2:st.error('A partida precisa ter pelo menos dois participantes.')
-                    else:
-                        try:
-                            player_lines=[]
-                            for _,r in view.iterrows():
-                                nick=str(r['nickname']).strip()
-                                sid=str(r.get('steamid') or '').strip() or None
-                                # Conserva estrelas de jogador já cadastrado.
-                                old=next((p for p in store.players() if (sid and p.get('steamid')==sid) or p['nickname'].casefold()==nick.casefold()),None)
-                                pid=store.save_player(nick,int(old['stars']) if old else 3,sid)
-                                def integer(k,nullable=False):
-                                    v=r.get(k)
-                                    return None if nullable and (v is None or pd.isna(v)) else max(0,int(float(v))) if pd.notna(v) and str(v).strip() else (None if nullable else 0)
-                                def float_nullable(k):
-                                    v=r.get(k)
-                                    return None if v is None or pd.isna(v) or str(v).strip()=='' else float(v)
-                                old_win=next((p.get('won') for p in pending['players'] if p.get('nickname')==nick),None)
-                                won=True if nick in winners else (False if winners else (bool(old_win) if old_win is not None and pd.notna(old_win) else None))
-                                player_lines.append({'match_id':pending['fingerprint'],'player_id':pid,
-                                    'kills':integer('kills'),'deaths':integer('deaths'),'assists':integer('assists'),
-                                    'damage':integer('damage',True),'rounds':integer('rounds'),
-                                    'won':won,'headshots':integer('headshots'), 'plants':integer('plants'),
-                                    'defuses':integer('defuses'),'rating':float_nullable('rating'),
-                                    'kast':float_nullable('kast'),'open_kills':integer('open_kills',True),
-                                    'trade_kills':integer('trade_kills',True),'observed_nickname':nick})
-                            store.save_match({'id':pending['fingerprint'],'played_at':str(when),
-                                'map_name':map_name,'source':pending['source'],'rounds_total':int(total),
-                                'notes':note},player_lines)
-                            st.session_state.pop('pending_import',None)
-                            st.success('Partida registrada! Os rankings foram atualizados.')
-                            st.rerun()
-                        except Exception as exc:st.error('Erro ao gravar partida: '+str(exc))
+                st.caption('Os dados abaixo vieram do print enviado na conversa. Rounds são estimados por dano ÷ ADR; a data da partida deve ser informada.')
+                if st.button('Carregar amostra do SCOPE.GG'):
+                    df=pd.read_csv(ROOT/'sample_scoreboard.csv')
+                    st.session_state['pending_import']={
+                        'fingerprint':'scope_1648990866439220','map':'Inferno','rounds_total':17,
+                        'players':df.where(pd.notna(df),None).to_dict('records'),
+                        'warnings':['Dado transcrito do print do SCOPE.GG; rounds estimados, não validados pela demo.'],
+                        'source':'SCOPE.GG — transcrição do print'}
+            if st.session_state.get('pending_import'):
+                pending=st.session_state['pending_import']
+                demo_stats_invalid=(
+                    str(pending.get('source','')).startswith('Demo da xplay') and
+                    sum(int(p.get('kills') or 0) for p in pending.get('players',[]))==0 and
+                    sum(int(p.get('deaths') or 0) for p in pending.get('players',[]))==0
+                )
+                if demo_stats_invalid:
+                    st.error('Esta prévia antiga não tem kills nem mortes: erro de leitura da demo. NÃO SALVE. Limpe a prévia e analise o arquivo novamente com o parser corrigido.')
+                    if st.button('Descartar prévia inválida',key='edb_invalid_demo_clear'):
+                        st.session_state.pop('pending_import',None)
+                        st.rerun()
+                st.divider()
+                st.markdown('#### Conferência antes de gravar')
+                for warning in pending.get('warnings',[]):st.warning(warning)
+                if store.match_exists(pending['fingerprint']):
+                    st.error('Este ID de partida já está salvo. Importação duplicada bloqueada.')
+                else:
+                    when=st.date_input('Data real da partida (confirme antes de salvar)',value=today)
+                    map_name=st.text_input('Mapa',value=pending['map'],key='map_'+pending['fingerprint'][-16:])
+                    total=st.number_input('Rounds totais da partida',min_value=1,max_value=80,
+                                          value=max(1,int(pending['rounds_total'])),step=1)
+                    raw=pd.DataFrame(pending['players'])
+                    fields=['nickname','steamid','kills','deaths','assists','damage','rounds',
+                            'headshots','plants','defuses','rating','kast','open_kills','trade_kills']
+                    for field in fields:
+                        if field not in raw: raw[field]=None
+                    raw['steamid']=raw['steamid'].fillna('').astype(str).replace({'nan':'','None':''})
+                    raw['nickname']=raw['nickname'].fillna('').astype(str)
+                    view=st.data_editor(raw[fields],use_container_width=True,hide_index=True,num_rows='fixed',
+                                        key='editor_'+pending['fingerprint'][-16:])
+                    detected=[p['nickname'] for p in pending['players'] if p.get('won') in [True,1,'1']]
+                    winners=st.multiselect('Jogadores do time vencedor (opcional — ajuda a calcular vitórias)',
+                                           view['nickname'].tolist(),default=[n for n in detected if n in view['nickname'].tolist()])
+                    note=st.text_input('Observação (opcional)',value='',placeholder='Ex.: Racha de sábado')
+                    if st.button('Confirmar e salvar partida',type='primary',disabled=demo_stats_invalid):
+                        if not view['nickname'].astype(str).str.strip().all():st.error('Todos os participantes devem ter nicknames.')
+                        elif view['nickname'].duplicated().any():st.error('Não pode haver nicknames duplicados na mesma partida.')
+                        elif len(view)<2:st.error('A partida precisa ter pelo menos dois participantes.')
+                        else:
+                            try:
+                                player_lines=[]
+                                for _,r in view.iterrows():
+                                    nick=str(r['nickname']).strip()
+                                    sid=str(r.get('steamid') or '').strip() or None
+                                    # Conserva estrelas de jogador já cadastrado.
+                                    old=next((p for p in store.players() if (sid and p.get('steamid')==sid) or p['nickname'].casefold()==nick.casefold()),None)
+                                    pid=store.save_player(nick,int(old['stars']) if old else 3,sid)
+                                    def integer(k,nullable=False):
+                                        v=r.get(k)
+                                        return None if nullable and (v is None or pd.isna(v)) else max(0,int(float(v))) if pd.notna(v) and str(v).strip() else (None if nullable else 0)
+                                    def float_nullable(k):
+                                        v=r.get(k)
+                                        return None if v is None or pd.isna(v) or str(v).strip()=='' else float(v)
+                                    old_win=next((p.get('won') for p in pending['players'] if p.get('nickname')==nick),None)
+                                    won=True if nick in winners else (False if winners else (bool(old_win) if old_win is not None and pd.notna(old_win) else None))
+                                    player_lines.append({'match_id':pending['fingerprint'],'player_id':pid,
+                                        'kills':integer('kills'),'deaths':integer('deaths'),'assists':integer('assists'),
+                                        'damage':integer('damage',True),'rounds':integer('rounds'),
+                                        'won':won,'headshots':integer('headshots'), 'plants':integer('plants'),
+                                        'defuses':integer('defuses'),'rating':float_nullable('rating'),
+                                        'kast':float_nullable('kast'),'open_kills':integer('open_kills',True),
+                                        'trade_kills':integer('trade_kills',True),'observed_nickname':nick})
+                                store.save_match({'id':pending['fingerprint'],'played_at':str(when),
+                                    'map_name':map_name,'source':pending['source'],'rounds_total':int(total),
+                                    'notes':note},player_lines)
+                                st.session_state.pop('pending_import',None)
+                                st.success('Partida registrada! Os rankings foram atualizados.')
+                                st.rerun()
+                            except Exception as exc:st.error('Erro ao gravar partida: '+str(exc))
     with backup_tab:
         st.markdown('#### Backup dos registros')
         st.caption('Baixe os três CSVs periodicamente. Especialmente importante no modo SQLite local.')
