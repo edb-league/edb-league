@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 
-from demo_importer import prepare_upload, parse_demo
+from demo_importer import prepare_upload, parse_demo, _validate_combat_stats
 
 STATS_FIELDS = (
     "kills","deaths","assists","damage","rounds","headshots",
@@ -42,6 +42,8 @@ def analyze_one_bo3_upload(file):
 def validate_three_bo3_demos(staged):
     if len(staged) != 3:
         raise ValueError("Selecione as três demos da mesma BO3.")
+    for demo in staged:
+        _validate_combat_stats(demo["players"], demo["rounds_total"])
     if len({d["filename"] for d in staged}) != 3:
         raise ValueError("Os arquivos da BO3 não podem ser repetidos.")
     if len({d["id"] for d in staged}) != 3:
