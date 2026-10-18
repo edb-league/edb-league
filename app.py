@@ -1,4 +1,4 @@
-"""XINXAS LEAGUE — MVP. Executar: streamlit run app.py"""
+"""EDB LEAGUE — Aplicativo Streamlit. Executar: streamlit run app.py"""
 from __future__ import annotations
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -42,6 +42,11 @@ import social_views as _social_views
 _social_views = importlib.reload(_social_views)
 render_compare = _social_views.render_compare
 render_medal_catalogue = _social_views.render_medal_catalogue
+import brand_shell as _brand_shell
+_brand_shell = importlib.reload(_brand_shell)
+BRAND_CSS = _brand_shell.BRAND_CSS
+sidebar_header = _brand_shell.sidebar_header
+hero_banner = _brand_shell.hero_banner
 
 ROOT=Path(__file__).parent
 TZ=ZoneInfo('America/Maceio')
@@ -101,6 +106,7 @@ CSS='''
 }
 </style>'''
 st.markdown(CSS,unsafe_allow_html=True)
+st.markdown(BRAND_CSS,unsafe_allow_html=True)
 
 
 def secret(k):
@@ -138,7 +144,14 @@ def player_label(nickname):
 def esc(value):return html.escape(str(value))
 
 def hero(title,subtitle):
-    st.markdown(f'<div class="hero"><span class="eyebrow">◆ EDB LEAGUE / CS2</span><h1>{esc(title)}</h1><p>{esc(subtitle)}</p></div>',unsafe_allow_html=True)
+    unique_maps = len({
+        str(m.get('map_name')).casefold() for m in all_matches
+        if m.get('map_name')
+    })
+    st.markdown(
+        hero_banner(title,subtitle,len(all_players),len(all_matches),unique_maps),
+        unsafe_allow_html=True
+    )
 
 def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
@@ -155,8 +168,8 @@ def scoreboard_table(rows, focus='Elite'):
     )
 
 
-st.sidebar.markdown('## EDB LEAGUE')
-st.sidebar.caption('Uma temporada, várias formas de vencer.')
+# O placeholder preserva a marca no topo, antes dos botões de navegação.
+_sidebar_header_slot = st.sidebar.empty()
 
 # Cada botão é um destino: sem radio/checklist e com destaque para a seção ativa.
 # O clique atualiza o estado antes do rerun nativo do Streamlit.
@@ -220,7 +233,11 @@ else:selected=frame.copy()
 
 board=leaderboard(selected)
 eligible=board[board['Elegível']] if not board.empty else board
-st.sidebar.caption(f'Jogadores: {len(all_players)}  •  Partidas: {len(all_matches)}')
+season_kills=sum(int(s.get('kills') or 0) for s in all_stats)
+_sidebar_header_slot.markdown(
+    sidebar_header(len(all_players),len(all_matches),season_kills,period),
+    unsafe_allow_html=True
+)
 if not store.cloud:
     st.sidebar.caption('💾 Dados locais (SQLite). Para publicar com persistência, configure Supabase.')
 else:
