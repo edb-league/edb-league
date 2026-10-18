@@ -10,7 +10,8 @@ CONFIG = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
 
 def test_primary_color_is_blue_in_streamlit_and_app():
     assert 'primaryColor="#78B8E8"' in CONFIG
-    assert 'backgroundColor="#0A1220"' in CONFIG
+    assert 'backgroundColor="#252930"' in CONFIG
+    assert 'linear-gradient(170deg,#30343B 0%,#252930 55%,#1F2329 100%)' in APP
     assert '#78B8E8' in APP
     assert "CSS, BRAND_CSS, TOP_NAV_CSS, top_navigation(page)" in APP
 
@@ -44,3 +45,12 @@ def test_minimal_streamlit_toolbar_preserves_blue_theme():
     assert '[data-testid="stToolbar"],' not in APP
     assert 'toolbarMode="minimal"' in CONFIG
     assert '[data-testid="stSidebarCollapsedControl"] button' not in APP
+
+
+def test_only_page_canvas_changes_while_components_stay_blue():
+    # Palette for buttons, hero banners, ranking podiums and team results remains unchanged.
+    assert '#78B8E8' in APP
+    assert '#78B8E8' in CONFIG
+    assert 'secondaryBackgroundColor="#15263B"' in CONFIG
+    assert 'background:#142337' in APP
+    assert 'background:radial-gradient(ellipse at 92% 8%,#254C76' in APP
