@@ -12,7 +12,7 @@ def test_snapshot_uses_short_server_side_ttl_and_all_public_tables():
     assert "_service_role_key" in snapshot
     assert "rpc/ensure_edb_calendar" in snapshot
     for table in (
-        "players", "matches", "player_stats", "player_scope_stats",
+        "players", "matches", "player_stats",
         "league_seasons", "bo3_series", "bo3_maps", "bo3_players",
         "season_player_stars", "season_final_rankings", "season_titles",
     ):
@@ -26,11 +26,16 @@ def test_snapshot_uses_short_server_side_ttl_and_all_public_tables():
             assert f"cloud_store._list('{table}')" in snapshot
     assert "if store.cloud:\n    snapshot=load_league_snapshot(store.url,store.key)" in APP
     assert "snapshot={" in APP  # SQLite local permanece sem cache.
+    assert "'scope_stats': cloud_store._list('player_scope_stats')" not in snapshot
+    assert "def load_scope_stats(" in APP
+    assert "Store(url=supabase_url,key=_service_role_key)._list('player_scope_stats')" in APP
+    assert "def get_scope_stats():" in APP
 
 
 def test_admin_changes_invalidate_before_rerun():
     assert "def invalidate_league_cache():" in APP
     assert "load_league_snapshot.clear()" in APP
+    assert "load_scope_stats.clear()" in APP
     # Duas gravacoes de jogadores, uma de mapa, uma homologacao.
     assert APP.count("invalidate_league_cache()") == 5
     assert "store.save_player(nick,stars,steam or None)\n                    invalidate_league_cache()" in APP
