@@ -27,6 +27,8 @@ def test_all_three_pages_use_their_distinct_artwork():
         assert 'data:image/webp;base64,' in markup
         expected = ('class="hero edb-hero edb-hero--illustrated edb-hero--duel"'
                     if page == "Comparar jogadores"
+                    else 'class="hero edb-hero edb-hero--illustrated edb-hero--hall"'
+                    if page == "Hall da Fama"
                     else 'class="hero edb-hero edb-hero--illustrated"')
         assert expected in markup
         assert '<div class="edb-radar"' not in markup
@@ -69,3 +71,15 @@ def test_desktop_comparison_uses_full_resolution_art_and_full_bleed():
     assert "object-fit:cover;object-position:center center;" in BRAND_CSS
     assert "flex:0 1 40%;max-width:40%" in BRAND_CSS
     assert "edb-hero--duel" not in hero_banner("Medalhas", "Conquistas", 11, 3, 3, page="Medalhas")
+
+
+def test_desktop_hall_uses_full_resolution_trophy_and_full_bleed():
+    image_data = (ROOT / "assets" / "trophy.webp.b64").read_text(encoding="ascii")
+    raw = base64.b64decode(image_data, validate=True)
+    assert len(raw) > 180_000
+    assert raw[:4] == b"RIFF"
+    assert raw[8:12] == b"WEBP"
+    assert "edb-hero--hall .edb-hero-art" in BRAND_CSS
+    assert "edb-hero--hall .edb-art-image" in BRAND_CSS
+    assert ".edb-hero--hall .edb-hero-copy" in BRAND_CSS
+    assert "edb-hero--hall" not in hero_banner("Medalhas", "Conquistas", 11, 3, 3, page="Medalhas")
