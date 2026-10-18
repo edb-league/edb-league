@@ -3,10 +3,13 @@ from __future__ import annotations
 
 from html import escape
 from math import isfinite
+from urllib.parse import quote
 import pandas as pd
 
 RANKING_CSS = """
 <style>
+.edb-rank-link{display:block;text-decoration:none !important;color:inherit !important}
+.edb-rank-link:hover .edb-rank-card{border-color:#6F91B0;background:linear-gradient(135deg,#203A54,#16283B)}
 .edb-rank-list{display:flex;flex-direction:column;gap:12px;margin:16px 0 22px}
 .edb-rank-card{
   border:1px solid #2C4258;border-radius:18px;
@@ -84,7 +87,13 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
             for title, value in stats
         )
         lower = " · ".join(f"{labels[key]}: {value}" for key, value in other)
+        player_id = row.get("player_id")
+        link_start = ('<a class="edb-rank-link" href="?player=' +
+                      quote(str(player_id),safe="") + '" target="_self">'
+                      if player_id else "")
+        link_end = '</a>' if player_id else ""
         pieces.append(
+            link_start +
             '<article class="edb-rank-card">'
             '<div class="edb-rank-heading">'
             '<div class="edb-rank-player">'
@@ -99,7 +108,8 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
             '</div></div>'
             f'<div class="edb-rank-divider"></div><div class="edb-rank-metrics">{metrics}</div>'
             f'<div class="edb-rank-secondary">{lower}{provisional}</div>'
-            '</article>'
+            '<div class="edb-rank-secondary">Ver perfil completo →</div>' if player_id else '' 
+            '</article>' + link_end
         )
     pieces.append("</div>")
     return "\n".join(pieces)
