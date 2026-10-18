@@ -42,7 +42,12 @@ TOP_NAV_CSS = """
 [data-testid="stHeader"], [data-testid="stToolbar"], #MainMenu {
   display:none !important;
 }
-.block-container {padding-top:0.25rem !important;padding-bottom:5.5rem !important;}
+/* Zero offset real no corpo principal. O header já é o primeiro bloco. */
+[data-testid="stMainBlockContainer"], .block-container {
+  padding-top:0 !important;
+  padding-bottom:5.5rem !important;
+}
+[data-testid="stMain"] {margin-top:0 !important;}
 .edb-topbar {
   display:flex;align-items:center;gap:20px;
   min-height:66px;padding:5px 15px 5px 13px;margin:0 0 12px;
@@ -123,7 +128,7 @@ TOP_NAV_CSS = """
   .edb-topnav a {font-size:.75rem;padding:8px 10px 11px;}
 }
 @media(max-width:650px) {
-  .block-container {padding-top:0.1rem !important;}
+  [data-testid="stMainBlockContainer"], .block-container {padding-top:0 !important;}
   .edb-topbar {gap:8px;min-height:54px;padding:4px 7px;margin-bottom:8px;border-radius:9px;}
   .edb-topbrand {gap:4px;}
   .edb-topbrand img {width:36px;height:36px;}
