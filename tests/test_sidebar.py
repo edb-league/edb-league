@@ -79,7 +79,7 @@ def test_sidebar_brand_precedes_navigation_and_uses_real_stats():
 
 
 def test_native_header_compact_without_losing_sidebar_button():
-    assert '[data-testid="stToolbar"]' in APP
+    assert '[data-testid="stToolbar"],' not in APP
     assert '[data-testid="stHeader"]' in APP
     assert '[data-testid="stSidebarCollapsedControl"]' in APP
     assert '#MainMenu' in APP
