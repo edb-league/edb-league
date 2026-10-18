@@ -41,5 +41,6 @@ def test_minimal_streamlit_toolbar_preserves_blue_theme():
     assert '[client]' in CONFIG
     assert 'toolbarMode="minimal"' in CONFIG
     assert '#78B8E8' in APP
-    assert '[data-testid="stToolbar"]' in APP
-    assert '[data-testid="stSidebarCollapsedControl"]' in APP
+    assert '[data-testid="stToolbar"],' not in APP
+    assert 'toolbarMode="minimal"' in CONFIG
+    assert '[data-testid="stSidebarCollapsedControl"] button' in APP
