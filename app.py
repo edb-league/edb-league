@@ -159,7 +159,6 @@ def load_league_snapshot(supabase_url: str, _service_role_key: str) -> dict:
         'players': cloud_store.players(),
         'matches': cloud_store.matches(),
         'stats': cloud_store.stats(),
-        'scope_stats': cloud_store._list('player_scope_stats'),
         'seasons': cloud_store._list('league_seasons'),
         'bo3': cloud_store._list('bo3_series'),
         'bo3_maps': cloud_store._list('bo3_maps'),
@@ -170,6 +169,12 @@ def load_league_snapshot(supabase_url: str, _service_role_key: str) -> dict:
     }
 
 
+@st.cache_data(ttl=60, max_entries=4, show_spinner=False)
+def load_scope_stats(supabase_url: str, _service_role_key: str) -> list[dict]:
+    """Consulta os detalhes do SCOPE.GG somente em páginas que os exibem."""
+    return Store(url=supabase_url,key=_service_role_key)._list('player_scope_stats')
+
+
 store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
 
 
@@ -177,6 +182,7 @@ def invalidate_league_cache():
     """Limpa imediatamente o cache publico apos uma gravacao administrativa."""
     if store.cloud:
         load_league_snapshot.clear()
+        load_scope_stats.clear()
 
 
 if store.cloud:
@@ -187,7 +193,6 @@ else:
         'players':store.players(),
         'matches':store.matches(),
         'stats':store.stats(),
-        'scope_stats':[],
         'seasons':DEFAULT_SEASONS,
         'bo3':[],
         'bo3_maps':[],
@@ -199,7 +204,6 @@ else:
 all_players=snapshot['players']
 all_matches=snapshot['matches']
 all_stats=snapshot['stats']
-all_scope_stats=snapshot['scope_stats']
 all_seasons=snapshot['seasons']
 all_bo3=snapshot['bo3']
 all_bo3_maps=snapshot['bo3_maps']
@@ -207,14 +211,15 @@ all_bo3_players=snapshot['bo3_players']
 all_frozen_stars=snapshot['frozen_stars']
 all_final_rankings=snapshot['final_rankings']
 all_season_titles=snapshot['season_titles']
-frame=enrich(all_players,all_matches,all_stats)
-# Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
-career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
-all_time_records=hall_of_fame(career_records)
-player_medals={
-    str(p['id']):achievements(str(p['id']),career_records)
-    for p in all_players
-}
+# Nenhuma estatistica historica e calculada na abertura do site.
+# O cache principal continua com 60 segundos; o SCOPE.GG e sob demanda.
+def get_scope_stats():
+    return load_scope_stats(store.url,store.key) if store.cloud else []
+
+
+def get_career_records():
+    return match_records(all_players,all_matches,all_stats,get_scope_stats())
+
 
 # Exibe nomes reais sem perder a identificação estável por nickname.
 NAMES_BY_NICK = {p['nickname']: p.get('real_name') for p in all_players}
@@ -329,21 +334,24 @@ season_series=[s for s in all_bo3 if int(s['season_number'])==season_number]
 season_completed=confirmed_bo3_count(season_number,all_bo3,all_bo3_maps)
 season_record=next((s for s in all_seasons if int(s['number'])==season_number),{})
 season_homologated=bool(season_record.get('homologated_at'))
-# Mapas sem associacao a BO3 nao entram na classificacao oficial.
-selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
-season_stars={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
-              if int(r['season_number'])==season_number}
-boards=season_boards(selected,season_number,season_stars)
-# Rankings homologados sao snapshots: alteracoes posteriores nao mudam o historico.
-if season_homologated:
-    for rank_type in ('elite','superacao','xp'):
-        archived=[r['rank_data'] for r in all_final_rankings
-                  if int(r['season_number'])==season_number and r['rank_type']==rank_type]
-        boards[rank_type]=pd.DataFrame(archived).sort_values('__order') if archived else boards[rank_type].iloc[0:0]
-board=boards['elite']
-board_superacao=boards['superacao']
-board_xp=boards['xp']
-eligible=board[board['Elegível']==True] if not board.empty else board
+# Enriquecimento e classificacao sao necessarios apenas nestas tres telas.
+if page in ('Visão geral','Rankings','Missões & XP'):
+    frame=enrich(all_players,all_matches,all_stats)
+    # Mapas sem associacao a BO3 nao entram na classificacao oficial.
+    selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
+    season_stars={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
+                  if int(r['season_number'])==season_number}
+    boards=season_boards(selected,season_number,season_stars)
+    # Rankings homologados sao snapshots: alteracoes posteriores nao mudam o historico.
+    if season_homologated:
+        for rank_type in ('elite','superacao','xp'):
+            archived=[r['rank_data'] for r in all_final_rankings
+                      if int(r['season_number'])==season_number and r['rank_type']==rank_type]
+            boards[rank_type]=pd.DataFrame(archived).sort_values('__order') if archived else boards[rank_type].iloc[0:0]
+    board=boards['elite']
+    board_superacao=boards['superacao']
+    board_xp=boards['xp']
+    eligible=board[board['Elegível']==True] if not board.empty else board
 if page=='Visão geral':
     hero('Os Xinxas agora têm ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
     k1,k2,k3,k4=st.columns(4)
@@ -433,11 +441,14 @@ elif page=='Comparar jogadores':
         if first_id==second_id:
             st.warning('Escolha dois jogadores diferentes para comparar os resultados.')
         else:
+            career_records=get_career_records()
             render_compare(st,px,by_id[first_id],by_id[second_id],
                            compare_players(first_id,second_id,career_records))
 
 elif page=='Medalhas':
     hero('Medalhas','Reconhecimento para quem faz a diferença. Conquiste, evolua e deixe sua marca.')
+    career_records=get_career_records()
+    player_medals={str(p['id']):achievements(str(p['id']),career_records) for p in all_players}
     render_medal_catalogue(st,all_players,player_medals)
 
 elif page=='Jogadores':
@@ -458,9 +469,11 @@ elif page=='Jogadores':
             on_change=clear_profile_link
         )
         who=by_id[profile_id]
+        career_records=get_career_records()
+        all_time_records=hall_of_fame(career_records)
         render_player_profile(
             st,px,who,player_summary(profile_id,career_records),all_time_records,
-            player_medals.get(profile_id,[])
+            achievements(str(profile_id),career_records)
         )
         won_titles=[x for x in all_season_titles if str(x['player_id'])==str(profile_id)]
         if won_titles:
@@ -471,6 +484,8 @@ elif page=='Jogadores':
 
 elif page=='Hall da Fama':
     hero('Hall da Fama','Grandes jogadores constroem momentos. Lendas deixam um legado.')
+    career_records=get_career_records()
+    all_time_records=hall_of_fame(career_records)
     render_hall_of_fame(st,all_time_records,len(all_matches),all_players,career_records)
     st.markdown('### Campeões oficiais por temporada')
     if all_season_titles:
@@ -526,6 +541,8 @@ elif page=='Partidas':
         st.markdown(selected_match_header(match,season_number,active_bo3_id),
                     unsafe_allow_html=True)
         with st.container(key='edb_match_detail'):
+                # Detalhes de mira e granadas somente apos selecionar um mapa.
+                all_scope_stats=get_scope_stats()
                 coverage=match_stat_coverage(match['id'],all_stats,all_scope_stats)
                 match_notes=match.get('notes') or ''
                 verified=(bool(match.get('result_verified'))
@@ -536,7 +553,8 @@ elif page=='Partidas':
                     ' venceu por ' in match_notes and ' sobre ' in match_notes
                 )
                 source=match.get('source') or 'Não informada'
-                t=frame[frame['match_id']==match['id']]
+                match_stats=[stat for stat in all_stats if str(stat.get('match_id'))==str(match['id'])]
+                t=enrich(all_players,[match],match_stats)
                 if not t.empty:
                     supplement=[x for x in all_scope_stats if x['match_id']==match['id']]
                     extra=pd.DataFrame(supplement)
@@ -683,6 +701,7 @@ elif page=='Administração':
                     if any(r['status']!='completed' for r in target_series):
                         raise ValueError('Há BO3 incompletas nesta temporada.')
                     ids=season_match_ids(target_number,all_bo3,all_bo3_maps)
+                    frame=enrich(all_players,all_matches,all_stats)
                     period=frame[frame['match_id'].astype(str).isin(ids)].copy()
                     frozen={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
                             if int(r['season_number'])==target_number}
