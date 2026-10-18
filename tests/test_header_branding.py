@@ -33,10 +33,16 @@ def test_brand_is_left_of_categories_and_header_moves_up():
     assert markup.index('class="edb-topbrand"') < markup.index('class="edb-topnav"')
     assert markup.index("edb-topbrand-name") < markup.index('aria-label="Visão geral"')
     assert 'class="edb-admin-float' in markup
-    assert "padding-top:0.25rem !important" in TOP_NAV_CSS
+    assert "padding-top:0 !important" in TOP_NAV_CSS
     assert "overflow-x:auto" in TOP_NAV_CSS
     assert "@media(max-width:650px)" in TOP_NAV_CSS
     assert [label for _, label, _ in NAV_ITEMS] == [
         "Visão geral", "Rankings", "Partidas", "Comparar jogadores",
         "Hall da Fama", "Medalhas", "Missões & XP",
     ]
+
+
+def test_top_has_no_default_streamlit_gutter():
+    assert '[data-testid="stMainBlockContainer"], .block-container' in TOP_NAV_CSS
+    assert "padding-top:0 !important" in TOP_NAV_CSS
+    assert 'margin-top:0 !important' in TOP_NAV_CSS
