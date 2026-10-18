@@ -6,8 +6,9 @@ A Temporada 0 usa o calculo legado e nao sofre recalculo retroativo.
 from __future__ import annotations
 
 import pandas as pd
+from datetime import date, timedelta
 
-from core import TARGET_KPR, leaderboard, xp_for_games
+from core import TARGET_KPR, leaderboard
 
 RANK_TYPES = ("elite", "superacao", "xp")
 MAX_MAPS = 6
@@ -29,7 +30,24 @@ def _score_elite(kills, rounds, damage):
     return 100.0 * (0.6 * kpr / 0.75 + 0.4 * adr / 75.0)
 
 
-def _aggregate(g, stars):
+def _xp_quinzenal(g, stars, season_number):
+    """Sao duas semanas por temporada, mesmo que a ultima BO3 atravesse a meia-noite."""
+    xp = 40 * len(g) + 20 * int((g["won"] == True).sum())
+    if g.empty:
+        return int(xp)
+    start = date(2026, 10, 19) + timedelta(days=14*(int(season_number)-1))
+    chosen = g.copy()
+    chosen["kpr"] = chosen["kills"] / chosen["rounds"]
+    days = (pd.to_datetime(chosen["played_at"]) - pd.Timestamp(start)).dt.days
+    chosen["season_week"] = (days // 7).clip(lower=0, upper=1)
+    for _, weekly in chosen.groupby("season_week"):
+        if ((weekly["kpr"] >= TARGET_KPR[int(stars)])
+                & (weekly["rounds"] >= 8)).any():
+            xp += 100
+    return int(xp)
+
+
+def _aggregate(g, stars, season_number):
     kills = int(g["kills"].sum())
     deaths = int(g["deaths"].sum())
     rounds = max(float(g["rounds"].sum()), 1.0)
@@ -40,14 +58,12 @@ def _aggregate(g, stars):
     elite = _score_elite(kills, rounds, damage)
     supera = 100.0 * (kpr / TARGET_KPR[int(stars)] - 1)
     wins = int((g["won"] == True).sum())
-    mission_games=g.copy()
-    mission_games["kpr"]=mission_games["kills"] / mission_games["rounds"]
     return {
         "Kills": kills, "K/D": round(kills / max(deaths, 1), 2),
         "KPR": round(kpr, 3), "ADR": round(adr, 1) if pd.notna(adr) else None,
         "Vitórias": wins, "Elite": round(elite, 1),
         "Superação %": round(supera, 1),
-        "XP": int(xp_for_games(mission_games, int(stars))),
+        "XP": _xp_quinzenal(g, stars, season_number),
         "_kpr": kpr, "_adr": adr if pd.notna(adr) else -1.0,
         "_elite": elite, "_supera": supera,
     }
@@ -106,7 +122,7 @@ def season_boards(frame, season_number, frozen_stars=None):
         stars = max(1, min(5, int(first["stars"])))
         eligible = len(g) >= MIN_MAPS
         groups = {key: _best(g, key, stars) for key in RANK_TYPES}
-        values = {key: _aggregate(sub, stars) for key, sub in groups.items()}
+        values = {key: _aggregate(sub, stars, season_number) for key, sub in groups.items()}
         for key in RANK_TYPES:
             current = values[key]
             row = {
