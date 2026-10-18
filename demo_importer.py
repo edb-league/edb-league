@@ -89,29 +89,76 @@ def _event(parser, name, other=None, player=None):
 
 
 def _trim_warmup(df, match_tick=None):
-    """Exclui eventos marcados como aquecimento e anteriores ao início oficial."""
+    """Prioriza o marcador do próprio evento, evitando reinícios tardios de round.
+
+    Em demos xplay/CS2 o evento match_start pode ocorrer mais de uma vez.
+    Aplicar também um tick posterior a eventos já marcados como oficiais
+    apagava eliminações legítimas, enquanto player_spawn ainda dava rounds.
+    """
     if df.empty:
         return df
     if 'is_warmup_period' in df.columns:
         flag = df['is_warmup_period'].astype(str).str.lower().str.strip()
-        df = df[~flag.isin(('true', '1'))]
+        recognized = flag.isin(('true', 'false', '1', '0'))
+        if recognized.any():
+            return df[~flag.isin(('true', '1'))].copy()
     if match_tick is not None and 'tick' in df.columns:
         df = df[pd.to_numeric(df['tick'], errors='coerce') >= match_tick]
     return df.copy()
 
 
 def _trim_outside_rounds(df, starts, ends):
-    """Descarta ações após o fim de um round ou fora dos rounds finalizados."""
-    if df.empty or not ends or 'tick' not in df.columns or 'total_rounds_played' not in df.columns:
+    """Filtra rounds sem pressupor que round_start/death/end usam o mesmo índice.
+
+    O total_rounds_played pode avançar exatamente no round_end: um filtro por
+    número de round descartaria *todas* as kills apesar do match ser válido.
+    Reconstruímos também intervalos pelos ticks reais dos eventos.
+    """
+    if df.empty or not ends or 'tick' not in df.columns:
         return df
-    round_no = pd.to_numeric(df['total_rounds_played'], errors='coerce')
+    from bisect import bisect_left
     ticks = pd.to_numeric(df['tick'], errors='coerce')
-    end_ticks = round_no.map(ends)
-    keep = end_ticks.notna() & ticks.le(end_ticks)
-    if starts:
-        start_ticks = round_no.map(starts)
-        keep &= start_ticks.isna() | ticks.ge(start_ticks)
+
+    # Intervalos oficiais: próximo round_end posterior a cada round_start.
+    start_ticks = sorted(set(int(x) for x in starts.values()))
+    end_ticks = sorted(set(int(x) for x in ends.values()))
+    intervals = []
+    for beginning in start_ticks:
+        pos = bisect_left(end_ticks, beginning)
+        if pos < len(end_ticks):
+            intervals.append((beginning, end_ticks[pos]))
+    by_tick = pd.Series(False, index=df.index)
+    for beginning, ending in intervals:
+        by_tick |= ticks.ge(beginning) & ticks.le(ending)
+
+    # Forma antiga, usada apenas se o índice dos três tipos de evento coincidir.
+    by_round = pd.Series(False, index=df.index)
+    if 'total_rounds_played' in df.columns:
+        round_no = pd.to_numeric(df['total_rounds_played'], errors='coerce')
+        end_for_round = round_no.map(ends)
+        by_round = end_for_round.notna() & ticks.le(end_for_round)
+        if starts:
+            begin_for_round = round_no.map(starts)
+            by_round &= begin_for_round.isna() | ticks.ge(begin_for_round)
+
+    # Não alargar para aquecimento nem escolher por mera coincidência de round.
+    # Se a indexação por round estiver deslocada, os ticks preservam as kills.
+    keep = by_tick if int(by_tick.sum()) >= int(by_round.sum()) else by_round
     return df[keep].copy()
+
+
+def _validate_combat_stats(players, rounds_total):
+    """Recusa um placar impossível em vez de fabricar dez jogadores 0/0/0."""
+    if int(rounds_total) < 1:
+        raise ValueError('Nenhum round oficial identificado na demo.')
+    kills = sum(int(p.get('kills') or 0) for p in players)
+    deaths = sum(int(p.get('deaths') or 0) for p in players)
+    if kills <= 0 or deaths <= 0:
+        raise ValueError(
+            'A demo identificou os jogadores/rounds, mas não foi possível extrair '
+            'as eliminações e mortes (K/D = 0). O resultado não foi salvo. '
+            'A versão ou a numeração dos eventos pode ser incompatível.'
+        )
 
 
 def _header_map(header):
@@ -255,6 +302,7 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
             p['nickname']='Steam '+p['steamid'][-6:]
         p['damage']=int(p['damage']) if not hurts.empty and 'dmg_health' in hurts else None
         result.append(dict(p))
+    _validate_combat_stats(result, total)
     if not 8<=len(result)<=12:
         warns.append(f'{len(result)} participantes reconhecidos; reveja trocas de jogadores ou eventos de aquecimento.')
     return DemoOutput(fingerprint,_header_map(header),total,result,warns)
