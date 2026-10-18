@@ -8,7 +8,7 @@ COMPARISON = (ROOT / "social_views.py").read_text(encoding="utf-8")
 
 def test_elite_explanation_follows_ranking_cards():
     ranks=APP.split("elif page=='Rankings':",1)[1].split("elif page=='Comparar jogadores':",1)[0]
-    assert ranks.index("scoreboard_table(board.sort_values('Elite'") < ranks.index(
+    assert ranks.index("scoreboard_table(board,focus='Elite')") < ranks.index(
         "with st.expander('Como funciona o Índice Elite')"
     )
     assert ranks.index("with st.expander('Como funciona o Índice Elite')") < ranks.index(
