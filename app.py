@@ -99,6 +99,37 @@ CSS='''
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
 
+.edb-season-rules {
+  margin:22px 0 20px;padding:21px 23px;border-radius:17px;
+  border:1px solid #376181;
+  background:linear-gradient(120deg,#16344F 0%,#112A42 58%,#102237 100%);
+  box-shadow:0 10px 26px rgba(0,0,0,.12);
+}
+.edb-season-rules-top {display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.edb-season-rules-kicker {
+  color:#94D0FB;font-size:.68rem;font-weight:850;
+  letter-spacing:2px;text-transform:uppercase;
+}
+.edb-season-rules-title {
+  color:#F0F8FF;font-size:1.2rem;font-weight:850;line-height:1.25;margin:7px 0 6px;
+}
+.edb-season-rules-description {color:#BAD1E5;font-size:.81rem;line-height:1.55;margin:0 0 15px;}
+.edb-season-rules-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+.edb-season-rules-item {
+  padding:13px;border:1px solid rgba(141,195,238,.22);
+  border-radius:11px;background:rgba(8,24,43,.44);
+}
+.edb-season-rules-item strong {display:block;color:#EFCB94;font-size:1.18rem;font-weight:900;}
+.edb-season-rules-item span {display:block;color:#BFD5E7;font-size:.73rem;line-height:1.45;margin-top:3px;}
+.edb-season-rules-foot {color:#9EB9CF;font-size:.73rem;line-height:1.5;margin:13px 0 0;}
+@media(max-width:650px){
+  .edb-season-rules{padding:17px 15px;}
+  .edb-season-rules-title{font-size:1.08rem;}
+  .edb-season-rules-grid{grid-template-columns:1fr;gap:7px;}
+  .edb-season-rules-item{padding:10px 12px;}
+  .edb-season-rules-item strong{font-size:1.02rem;}
+}
+
 /* A navegação e o botão de administrador usam TOP_NAV_CSS. */
 </style>'''
 # CSS será aplicado junto com a barra superior para não criar
@@ -167,6 +198,37 @@ def hero(title,subtitle):
         st.markdown(season_bar(all_seasons,season_number,routes[page],
                                season_completed,rank=rank,on_date=today),
                     unsafe_allow_html=True)
+
+
+
+def season_rules_banner(selected_season):
+    """Resumo permanente das regras oficiais antes do grafico da pagina inicial."""
+    legacy = int(selected_season) == 0
+    subtitle = (
+        'A Temporada 0 é experimental e permanece encerrada, com seus resultados originais preservados.'
+        if legacy else
+        'A cada quinzena, os rankings recomeçam. Os mapas não selecionados continuam nas estatísticas de carreira.'
+    )
+    foot = (
+        'As regras abaixo entram em vigor a partir da Temporada 1; não alteram os rankings históricos da Temporada 0.'
+        if legacy else
+        'É preciso disputar pelo menos 6 mapas para concorrer aos títulos MVP, Revelação e Xinxa. Ao final, os resultados são conferidos e homologados.'
+    )
+    return (
+        '<section class="edb-season-rules" aria-label="Como funcionam as temporadas da EDB LEAGUE">'
+        '<div class="edb-season-rules-top">'
+        '<span class="edb-season-rules-kicker">REGULAMENTO · EDB LEAGUE</span></div>'
+        '<div class="edb-season-rules-title">Como funcionam as temporadas?</div>'
+        '<p class="edb-season-rules-description">'+esc(subtitle)+'</p>'
+        '<div class="edb-season-rules-grid">'
+        '<div class="edb-season-rules-item"><strong>14 dias</strong>'
+        '<span>Temporadas quinzenais, de segunda a domingo</span></div>'
+        '<div class="edb-season-rules-item"><strong>BO3 livres</strong>'
+        '<span>Sem limite de confrontos por temporada</span></div>'
+        '<div class="edb-season-rules-item"><strong>Top 6 mapas</strong>'
+        '<span>Os 6 melhores mapas de cada jogador contam em cada ranking</span></div>'
+        '</div><p class="edb-season-rules-foot">'+esc(foot)+'</p></section>'
+    )
 
 def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
@@ -265,6 +327,7 @@ if page=='Visão geral':
             r=qualified.iloc[0]
             tile('🏅 XINXA · RANKING XP',player_label(r['Jogador']),f"{int(r['XP'])} XP")
         else:tile('🏅 XINXA','A definir','Aguardando elegíveis')
+    st.markdown(season_rules_banner(season_number),unsafe_allow_html=True)
     st.markdown('### Classificação Elite')
     if not board.empty:
         top=board.sort_values('Elite',ascending=False).head(10)
