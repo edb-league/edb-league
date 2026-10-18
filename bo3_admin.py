@@ -16,32 +16,34 @@ STATS_FIELDS = (
 )
 
 
-def analyze_bo3_uploads(uploaded_files):
-    if len(uploaded_files) != 3:
+def analyze_one_bo3_upload(file):
+    """Analisa apenas um arquivo por vez para reduzir o pico de memória."""
+    folder, path, fingerprint = prepare_upload(file)
+    try:
+        demo = parse_demo(path, fingerprint)
+    finally:
+        folder.cleanup()
+    ids = [str(p.get("steamid") or "").strip() for p in demo.players]
+    if len(ids) != 10 or len(set(ids)) != 10 or not all(ids):
+        raise ValueError(
+            f"{file.name}: foram identificados {len(ids)} jogadores, "
+            "mas são necessários 10 SteamIDs únicos para uma BO3 5v5. "
+            "Confira a demo e possíveis substituições antes da importação."
+        )
+    if not 1 <= int(demo.rounds_total) <= 80:
+        raise ValueError(f"{file.name}: quantidade de rounds inválida.")
+    return {
+        "filename":file.name,"id":demo.fingerprint,"map":demo.map_name,
+        "rounds_total":int(demo.rounds_total),"players":demo.players,
+        "warnings":demo.warnings,
+    }
+
+
+def validate_three_bo3_demos(staged):
+    if len(staged) != 3:
         raise ValueError("Selecione as três demos da mesma BO3.")
-    if len({f.name for f in uploaded_files}) != 3:
+    if len({d["filename"] for d in staged}) != 3:
         raise ValueError("Os arquivos da BO3 não podem ser repetidos.")
-    staged = []
-    for file in uploaded_files:
-        folder, path, fingerprint = prepare_upload(file)
-        try:
-            demo = parse_demo(path, fingerprint)
-        finally:
-            folder.cleanup()
-        ids = [str(p.get("steamid") or "").strip() for p in demo.players]
-        if len(ids) != 10 or len(set(ids)) != 10 or not all(ids):
-            raise ValueError(
-                f"{file.name}: foram identificados {len(ids)} jogadores, "
-                "mas são necessários 10 SteamIDs únicos para uma BO3 5v5. "
-                "Confira a demo e possíveis substituições antes da importação."
-            )
-        if not 1 <= int(demo.rounds_total) <= 80:
-            raise ValueError(f"{file.name}: quantidade de rounds inválida.")
-        staged.append({
-            "filename":file.name, "id":demo.fingerprint,"map":demo.map_name,
-            "rounds_total":int(demo.rounds_total),"players":demo.players,
-            "warnings":demo.warnings,
-        })
     if len({d["id"] for d in staged}) != 3:
         raise ValueError("As demos contêm arquivos duplicados.")
     rosters = [{str(p["steamid"]) for p in d["players"]} for d in staged]
@@ -54,10 +56,13 @@ def analyze_bo3_uploads(uploaded_files):
     return staged
 
 
+def analyze_bo3_uploads(uploaded_files):
+    return validate_three_bo3_demos([analyze_one_bo3_upload(f) for f in uploaded_files])
+
+
 def roster_for_preview(staged):
     """Relação de SteamID para nickname da última demo enviada."""
-    if len(staged)!=3:
-        raise ValueError("Três mapas necessários.")
+    validate_three_bo3_demos(staged)
     return {str(p["steamid"]):str(p.get("nickname") or "Sem nickname")
             for p in staged[-1]["players"]}
 
