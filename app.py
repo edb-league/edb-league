@@ -11,6 +11,7 @@ import plotly.express as px
 import streamlit as st
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
+from bo3_admin import analyze_bo3_uploads, roster_for_preview, build_bo3_bundle
 from storage import Store
 # O Streamlit mantém módulos importados em cache entre reruns.
 # Recarregar o módulo evita ImportError após deploys que adicionam funções.
@@ -541,6 +542,114 @@ elif page=='Administração':
                     try:store.save_player(nn,star,ss or None,existing['id']);st.success('Alteração salva.');st.rerun()
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
+        with st.expander('🎮 Importar BO3 completa · Temporada 0', expanded=False):
+            st.caption('Importe os três arquivos .dem ou .dem.gz de uma mesma BO3. A Temporada 0 tem três confrontos no total. Nenhuma partida antiga será excluída até que os três mapas, os dez jogadores e os vencedores sejam confirmados.')
+            bo3_uploads=st.file_uploader(
+                'As três demos da BO3 (uma por mapa)',
+                type=['dem','gz'],accept_multiple_files=True,key='edb_bo3_demos'
+            )
+            if bo3_uploads and len(bo3_uploads)!=3:
+                st.warning('Selecione exatamente três arquivos para analisar a BO3.')
+            if len(bo3_uploads or [])==3 and st.button('Analisar três demos',key='edb_analyze_three_demos'):
+                try:
+                    with st.spinner('Processando os três mapas e verificando se o elenco é o mesmo...'):
+                        st.session_state['edb_pending_bo3']=analyze_bo3_uploads(bo3_uploads)
+                    st.success('Três demos analisadas. Confira o elenco, a ordem e os vencedores abaixo.')
+                except Exception as exc:
+                    st.session_state.pop('edb_pending_bo3',None)
+                    st.error('Importação interrompida com segurança: '+str(exc))
+            staged_bo3=st.session_state.get('edb_pending_bo3')
+            if staged_bo3:
+                current_filenames={f.name for f in (bo3_uploads or [])}
+                if current_filenames!={d['filename'] for d in staged_bo3}:
+                    st.warning('Os arquivos enviados foram alterados. Analise novamente as três demos.')
+                else:
+                    st.markdown('##### Prévia extraída das demos')
+                    st.dataframe(pd.DataFrame([
+                        {'Arquivo':d['filename'],'Mapa':d['map'],
+                         'Rounds identificados':d['rounds_total'],
+                         'Jogadores':len(d['players'])}
+                        for d in staged_bo3]),hide_index=True,use_container_width=True)
+                    for d in staged_bo3:
+                        for warning in d.get('warnings',[]):
+                            st.caption(d['map']+': '+warning)
+                    open_slots=[int(s['sequence_number']) for s in all_bo3
+                                if int(s['season_number'])==0 and s['status']=='draft'
+                                and int(s['sequence_number'])<=3]
+                    if not open_slots:
+                        st.info('Os três confrontos da Temporada 0 já estão preenchidos.')
+                    else:
+                        slot=st.selectbox('Qual BO3 da Temporada 0?',sorted(open_slots),
+                                          format_func=lambda n:f'BO3 #{n}',key='edb_bo3_slot')
+                        game_indices=list(range(3))
+                        show_demo=lambda i:staged_bo3[i]['map']+' · '+staged_bo3[i]['filename'][:22]+'…'
+                        order=[
+                            st.selectbox(f'{num}º mapa da BO3',game_indices,index=num-1,
+                                         format_func=show_demo,key=f'edb_map_order_{num}')
+                            for num in range(1,4)
+                        ]
+                        roster=roster_for_preview(staged_bo3)
+                        roster_keys=sorted(roster,key=lambda sid:roster[sid].casefold())
+                        team1=st.multiselect(
+                            'Cinco jogadores do Team 1 (os restantes serão o Team 2)',
+                            options=roster_keys,format_func=lambda sid:roster[sid]+' · '+sid[-6:],
+                            max_selections=5,key='edb_bo3_team1'
+                        )
+                        winners=[
+                            st.selectbox(f'Vencedor do mapa {num}', ['Team 1','Team 2'],
+                                         index=None,placeholder='Selecione o vencedor',
+                                         key=f'edb_bo3_winner_{num}')
+                            for num in range(1,4)
+                        ]
+                        when_bo3=st.date_input(
+                            'Data real da BO3',value=date(2026,10,18),
+                            max_value=date(2026,10,18),key='edb_bo3_date'
+                        )
+                        replace_old=(slot==1)
+                        if replace_old:
+                            st.warning('Ao confirmar a primeira BO3, todos os mapas e estatísticas antigos serão substituídos em uma única transação. Os jogadores cadastrados permanecerão.')
+                            confirm_replace=st.checkbox(
+                                'Confirmo a substituição das partidas antigas somente após validar as três demos',
+                                key='edb_bo3_confirm_replace'
+                            )
+                        else:
+                            confirm_replace=True
+                        if st.button('Confirmar e importar BO3 completa',type='primary',key='edb_bo3_commit'):
+                            if not confirm_replace:
+                                st.error('Confirme a substituição do histórico antes de prosseguir.')
+                            elif len(set(order))!=3:
+                                st.error('Escolha cada arquivo apenas uma vez para os mapas 1, 2 e 3.')
+                            elif len(team1)!=5 or any(w is None for w in winners):
+                                st.error('Defina os cinco atletas do Team 1 e o vencedor de cada mapa.')
+                            else:
+                                try:
+                                    # IDs estáveis: jogadores atuais são preservados; faltantes
+                                    # são cadastrados. Nenhuma partida antiga é excluída aqui.
+                                    existing_by_sid={str(p['steamid']):p for p in store.players()
+                                                     if p.get('steamid')}
+                                    existing_by_nick={p['nickname'].casefold():p for p in store.players()}
+                                    ids_by_sid={}
+                                    for sid in roster_keys:
+                                        nick=roster[sid]
+                                        candidate=existing_by_sid.get(sid) or existing_by_nick.get(nick.casefold())
+                                        if candidate:
+                                            ids_by_sid[sid]=store.save_player(
+                                                candidate['nickname'],int(candidate['stars']),sid)
+                                        else:
+                                            ids_by_sid[sid]=store.save_player(nick,3,sid)
+                                    sides=['a' if w=='Team 1' else 'b' for w in winners]
+                                    bundle=build_bo3_bundle(
+                                        staged_bo3,order,team1,sides,when_bo3,slot,
+                                        ids_by_sid,replace_old=replace_old
+                                    )
+                                    # A RPC garante validação e tudo-ou-nada para mapas,
+                                    # estatísticas e eliminação dos registros anteriores.
+                                    store._api('POST','rpc/import_edb_bo3_bundle',payload={'p_bundle':bundle})
+                                    st.session_state.pop('edb_pending_bo3',None)
+                                    st.success('BO3 importada e vinculada à Temporada 0. O histórico anterior foi substituído quando solicitado.')
+                                    st.rerun()
+                                except Exception as exc:
+                                    st.error('A substituição não foi executada: '+str(exc))
         st.markdown('#### Importar uma partida')
         method=st.radio('Origem dos dados',['Demo da xplay (.dem ou .dem.gz)','CSV de placar','Exemplo do print do SCOPE.GG'],horizontal=True)
         st.info('A importação de demo gera uma prévia editável antes de salvar. Verifique participantes, rounds e eliminações; o parser depende da versão e estrutura da demo.')
