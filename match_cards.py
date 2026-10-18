@@ -125,7 +125,7 @@ def _side_class(winner, side):
     return " edb-match-side--loss", "DERROTADO"
 
 
-def match_cards(matches, selected_id=None):
+def match_cards(matches, selected_id=None, season_number=None, bo3_id=None):
     """Cartões totalmente clicáveis; sem placares estimados ou dados inventados."""
     pieces = [MATCH_GRID_CSS, '<div class="edb-match-grid">']
     for match in ordered_matches(matches):
@@ -140,8 +140,12 @@ def match_cards(matches, selected_id=None):
             " edb-match-number--loss" if item["winner"] == "right" else "")
         b_tint = " edb-match-number--win" if item["winner"] == "right" else (
             " edb-match-number--loss" if item["winner"] == "left" else "")
-        url = ("?page=matches" if active else
-               "?page=matches&amp;match=" + quote(match_id, safe=""))
+        context = '?page=matches'
+        if season_number is not None:
+            context+='&amp;season='+str(int(season_number))
+        if bo3_id is not None:
+            context+='&amp;bo3='+quote(str(bo3_id),safe="")
+        url = context if active else context+'&amp;match='+quote(match_id, safe="")
         aria = escape(
             f"{item['map']} {item['date']}: {item['left']} {a} a {b} {item['right']}. "
             + ("Fechar detalhes" if active else "Ver placar e estatísticas"),
@@ -172,10 +176,15 @@ def match_cards(matches, selected_id=None):
     return "".join(pieces) + "</div>"
 
 
-def selected_match_header(match):
+def selected_match_header(match, season_number=None, bo3_id=None):
     info = fixture_overview(match)
     score = f"{info['score_left']} : {info['score_right']}" if info["verified"] else "— : —"
     heading = " · ".join((info["map"], info["date"],
                           f"{info['left']} {score} {info['right']}"))
+    context = "?page=matches"
+    if season_number is not None:
+        context+='&amp;season='+str(int(season_number))
+    if bo3_id is not None:
+        context+='&amp;bo3='+quote(str(bo3_id),safe="")
     return ('<div class="edb-match-expanded-head"><strong>' + escape(heading) +
-            '</strong><a href="?page=matches" target="_self">Fechar detalhes ✕</a></div>')
+            '</strong><a href="'+context+'" target="_self">Fechar detalhes ✕</a></div>')
