@@ -49,7 +49,7 @@ def test_match_metadata_follows_scoreboards_and_stats():
 
 
 def test_player_profiles_and_hall_of_fame_reachable():
-    assert "('Hall da Fama', ':material/emoji_events:')" in APP
+    assert "elif page=='Hall da Fama':" in APP
     assert "linked_player = st.query_params.get('player')" in APP
     assert "render_player_profile(" in APP
     assert "render_hall_of_fame(" in APP
@@ -57,7 +57,7 @@ def test_player_profiles_and_hall_of_fame_reachable():
 
 
 def test_comparison_and_medal_pages_accessible():
-    assert "('Comparar jogadores', ':material/compare_arrows:')" in APP
+    assert "ROUTES = _top_navigation.ROUTES" in APP
     assert "elif page=='Comparar jogadores':" in APP
     assert "elif page=='Medalhas':" in APP
     assert "player_medals=" in APP
