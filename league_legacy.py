@@ -113,9 +113,12 @@ def hall_of_fame(records, min_games=2):
             return None
         value = max(r[metric] for r in available)
         leaders = [r for r in available if r[metric] == value]
+        unique_holders = list({r["player_id"]: {
+            "id": r["player_id"], "name": r["player_name"]
+        } for r in leaders}.values())
         return {
             "title": title, "value": fmt(value),
-            "holders": [{"id": r["player_id"], "name": r["player_name"]} for r in leaders],
+            "holders": unique_holders,
             "detail": " · ".join(dict.fromkeys(
                 f"{r['map']} · {r['date'].strftime('%d/%m/%Y')}" for r in leaders
             )),
@@ -148,7 +151,7 @@ def hall_of_fame(records, min_games=2):
         totals("Mais kills na liga", lambda rows: sum(x["kills"] for x in rows),
                lambda n: f"{int(n)} kills"),
         totals("Mais vitórias", lambda rows: sum(x["won"] is True for x in rows),
-               lambda n: f"{int(n)} vitórias"),
+               lambda n: f"{int(n)} vitória" + ("" if int(n) == 1 else "s")),
         totals("Melhor K/D geral",
                lambda rows: (sum(x["kills"] for x in rows) /
                              max(1, sum(x["deaths"] for x in rows))),
