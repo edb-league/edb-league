@@ -143,27 +143,70 @@ def secret(k):
     except (FileNotFoundError,KeyError):
         return os.getenv(k,'')
 
+@st.cache_data(ttl=60, max_entries=4, show_spinner=False)
+def load_league_snapshot(supabase_url: str, _service_role_key: str) -> dict:
+    """Uma consulta completa por ate 60 s, compartilhada entre reruns.
+
+    A chave privada (parametro com prefixo _) nao integra a chave do cache
+    e nunca e enviada ao navegador. Apenas resultados sao armazenados no
+    processo Streamlit. Todas as leituras permanecem no servidor.
+    """
+    cloud_store=Store(url=supabase_url,key=_service_role_key)
+    # Atualiza o calendario e congela estrelas somente quando o cache expira
+    # ou uma gravacao administrativa provoca invalidacao.
+    cloud_store._api('POST','rpc/ensure_edb_calendar',payload={})
+    return {
+        'players': cloud_store.players(),
+        'matches': cloud_store.matches(),
+        'stats': cloud_store.stats(),
+        'scope_stats': cloud_store._list('player_scope_stats'),
+        'seasons': cloud_store._list('league_seasons'),
+        'bo3': cloud_store._list('bo3_series'),
+        'bo3_maps': cloud_store._list('bo3_maps'),
+        'bo3_players': cloud_store._list('bo3_players'),
+        'frozen_stars': cloud_store._list('season_player_stars'),
+        'final_rankings': cloud_store._list('season_final_rankings'),
+        'season_titles': cloud_store._list('season_titles'),
+    }
+
+
 store=Store(url=secret('SUPABASE_URL'),key=secret('SUPABASE_SERVICE_ROLE_KEY'))
-# Cria automaticamente o calendario quinzenal ate a proxima temporada
-# e congela as estrelas de todos os jogadores na temporada corrente.
+
+
+def invalidate_league_cache():
+    """Limpa imediatamente o cache publico apos uma gravacao administrativa."""
+    if store.cloud:
+        load_league_snapshot.clear()
+
+
 if store.cloud:
-    store._api('POST','rpc/ensure_edb_calendar',payload={})
-all_players=store.players()
-all_matches=store.matches()
-all_stats=store.stats()
-# Leitura compatível com instâncias Streamlit que ainda mantêm a classe Store
-# antiga na memória durante hot-reload do repositório.
-# _list já existia na primeira versão, e usa a chave somente no servidor.
-all_scope_stats=store._list('player_scope_stats') if store.cloud else []
-# Supabase conserva duas temporadas independentes; IDs de mapas só entram
-# nos rankings quando a associação a uma BO3 é confirmada.
-all_seasons=store._list('league_seasons') if store.cloud else DEFAULT_SEASONS
-all_bo3=store._list('bo3_series') if store.cloud else []
-all_bo3_maps=store._list('bo3_maps') if store.cloud else []
-all_bo3_players=store._list('bo3_players') if store.cloud else []
-all_frozen_stars=store._list('season_player_stars') if store.cloud else []
-all_final_rankings=store._list('season_final_rankings') if store.cloud else []
-all_season_titles=store._list('season_titles') if store.cloud else []
+    snapshot=load_league_snapshot(store.url,store.key)
+else:
+    # SQLite local continua lendo ao vivo, sem dados desatualizados.
+    snapshot={
+        'players':store.players(),
+        'matches':store.matches(),
+        'stats':store.stats(),
+        'scope_stats':[],
+        'seasons':DEFAULT_SEASONS,
+        'bo3':[],
+        'bo3_maps':[],
+        'bo3_players':[],
+        'frozen_stars':[],
+        'final_rankings':[],
+        'season_titles':[],
+    }
+all_players=snapshot['players']
+all_matches=snapshot['matches']
+all_stats=snapshot['stats']
+all_scope_stats=snapshot['scope_stats']
+all_seasons=snapshot['seasons']
+all_bo3=snapshot['bo3']
+all_bo3_maps=snapshot['bo3_maps']
+all_bo3_players=snapshot['bo3_players']
+all_frozen_stars=snapshot['frozen_stars']
+all_final_rankings=snapshot['final_rankings']
+all_season_titles=snapshot['season_titles']
 frame=enrich(all_players,all_matches,all_stats)
 # Hall da Fama e perfis usam todas as partidas, independentemente do teto de XP.
 career_records=match_records(all_players,all_matches,all_stats,all_scope_stats)
@@ -669,6 +712,7 @@ elif page=='Administração':
                     store._api('POST','rpc/homologate_edb_season',payload={
                         'p_season':target_number,'p_rankings':ranks,'p_titles':titles
                     })
+                    invalidate_league_cache()
                     st.success('Classificação, estrelas e títulos oficiais homologados.')
                     st.rerun()
                 except Exception as exc:
@@ -684,7 +728,11 @@ elif page=='Administração':
             with col2:steam=st.text_input('SteamID (opcional)')
             with col3:stars=st.selectbox('Nível inicial',range(1,6),index=2)
             if st.form_submit_button('Cadastrar jogador',type='primary'):
-                try:store.save_player(nick,stars,steam or None);st.success('Jogador cadastrado.');st.rerun()
+                try:
+                    store.save_player(nick,stars,steam or None)
+                    invalidate_league_cache()
+                    st.success('Jogador cadastrado.')
+                    st.rerun()
                 except Exception as exc:st.error(str(exc))
         if all_players:
             st.markdown('#### Ajustar estrelas / nickname')
@@ -694,7 +742,11 @@ elif page=='Administração':
                 ss=st.text_input('SteamID',value=existing.get('steamid') or '')
                 star=st.slider('Estrelas',1,5,int(existing['stars']))
                 if st.form_submit_button('Salvar alterações'):
-                    try:store.save_player(nn,star,ss or None,existing['id']);st.success('Alteração salva.');st.rerun()
+                    try:
+                        store.save_player(nn,star,ss or None,existing['id'])
+                        invalidate_league_cache()
+                        st.success('Alteração salva.')
+                        st.rerun()
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
         st.info('A Temporada 0 está encerrada e bloqueada para importação de novas BO3. O histórico foi preservado.')
@@ -809,6 +861,7 @@ elif page=='Administração':
                                     'map_name':map_name,'source':pending['source'],'rounds_total':int(total),
                                     'notes':note},player_lines)
                                 st.session_state.pop('pending_import',None)
+                                invalidate_league_cache()
                                 st.success('Partida registrada! Os rankings foram atualizados.')
                                 st.rerun()
                             except Exception as exc:st.error('Erro ao gravar partida: '+str(exc))
