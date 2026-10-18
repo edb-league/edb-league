@@ -51,7 +51,7 @@ def test_block_invalid_bo3_before_any_destructive_database_action():
     with pytest.raises(ValueError,match="18/10/2026"):
         build_bo3_bundle(s,[0,1,2],team_a,["a","b","a"],
                          date(2026,10,19),1,ids)
-    with pytest.raises(ValueError,match="elenco diferente"):
+    with pytest.raises(ValueError,match="SteamIDs não são idênticos"):
         changed=sample_staged()
         changed[1]["players"][-1]["steamid"]="unknown"
         build_bo3_bundle(changed,[0,1,2],team_a,["a","b","a"],
