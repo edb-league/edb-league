@@ -311,9 +311,11 @@ elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
     a,b,c=st.tabs(['Elite','Superação','Resenha'])
     with a:
-        st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
-        st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
         scoreboard_table(board.sort_values('Elite',ascending=False) if not board.empty else board,focus='Elite')
+        # A metodologia fica ao fim dos cartões, preservando o ranking como foco.
+        with st.expander('Como funciona o Índice Elite'):
+            st.write('Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.')
+            st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
     with b:
         st.write('Quanto cada jogador supera a expectativa de KPR para seu nível de 1 a 5 estrelas.')
         st.caption('Superação é uma referência por estrelas, não evolução histórica. Requer 2 partidas para premiação.')
