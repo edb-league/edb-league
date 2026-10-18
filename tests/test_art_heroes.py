@@ -21,7 +21,7 @@ def test_three_hero_images_are_valid_embedded_webp_files():
 
 
 def test_all_three_pages_use_their_distinct_artwork():
-    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings", "Partidas", "Missões & XP"):
+    for page in ("Comparar jogadores", "Medalhas", "Hall da Fama", "Rankings", "Partidas", "Missões & XP", "Visão geral"):
         markup = hero_banner(page, "Mensagem", 11, 3, 3, page=page)
         assert '<img class="edb-art-image"' in markup
         assert 'data:image/webp;base64,' in markup
@@ -37,7 +37,7 @@ def test_all_three_pages_use_their_distinct_artwork():
 
 
 def test_unrelated_pages_keep_default_radar_without_using_artwork():
-    markup = hero_banner("Visão geral", "Confrontos", 11, 3, 3, page="Visão geral")
+    markup = hero_banner("Jogadores", "Perfis", 11, 3, 3, page="Jogadores")
     assert '<div class="edb-radar"' in markup
     assert 'data:image/webp;base64,' not in markup
 
@@ -125,3 +125,18 @@ def test_partidas_and_missoes_xp_have_distinct_full_bleed_high_resolution_art():
     assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
     assert 'flex:0 1 40%;max-width:40%' in BRAND_CSS
     assert 'object-fit:cover;object-position:center center;' in BRAND_CSS
+
+
+def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
+    raw = base64.b64decode(
+        (ROOT / "assets" / "home.webp.b64").read_text(encoding="ascii"),
+        validate=True,
+    )
+    assert len(raw) > 140_000
+    assert raw[:4] == b"RIFF" and raw[8:12] == b"WEBP"
+    markup = hero_banner("Página inicial", "Uma liga de CS2", 11, 3, 3, page="Visão geral")
+    assert 'class="hero edb-hero edb-hero--illustrated edb-hero--showcase"' in markup
+    assert 'data:image/webp;base64,' in markup
+    assert '<div class="edb-radar"' not in markup
+    assert '.edb-hero--showcase .edb-art-image' in BRAND_CSS
+    assert "hero('A resenha agora tem ranking.'" in APP
