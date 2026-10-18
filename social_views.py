@@ -16,10 +16,26 @@ background:linear-gradient(135deg,#1C3652,#15263A);padding:17px;min-width:0}
 .edb-duel-meta{color:#AFC4D8;font-size:.75rem;margin-top:6px}
 .edb-duel-comparison{border:1px solid #39516B;border-radius:16px;
 background:linear-gradient(135deg,#16283B,#111D2D);padding:10px 15px;margin:14px 0}
-.edb-duel-metric{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
-gap:12px;align-items:center;border-bottom:1px solid #293E55;padding:11px 3px}
-.edb-duel-metric-label{font-size:.85rem;color:#C0D1DF}
-.edb-duel-value{font-weight:800;font-variant-numeric:tabular-nums;font-size:1rem;color:#F0F5FB;min-width:55px;text-align:right}
+.edb-duel-metric{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.55fr) minmax(90px,.55fr);
+ gap:10px;align-items:stretch;border-bottom:1px solid #293E55;padding:0 3px;
+}
+.edb-duel-metric-label{
+ display:flex;align-items:center;font-size:.85rem;color:#C0D1DF;padding:12px 0;
+}
+.edb-duel-value{
+ display:flex;align-items:center;justify-content:flex-end;
+ font-weight:800;font-variant-numeric:tabular-nums;font-size:1rem;
+ color:#F0F5FB;text-align:right;min-width:0;padding:12px 0;
+}
+/* Divisória vertical contínua entre as colunas dos dois jogadores. */
+.edb-duel-metric > .edb-duel-value:last-child{
+ border-left:1px solid #5A7290;padding-left:12px;
+}
+.edb-duel-column-name{
+ font-size:.88rem;color:#C7DFF4;line-height:1.3;
+ font-weight:850;overflow-wrap:anywhere;
+}
 .edb-duel-value-best{color:#D6B98A}
 .edb-duel-note{color:#9FB5C8;font-size:.75rem;margin:12px 0}
 .edb-medal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
@@ -46,8 +62,10 @@ border-bottom:1px solid #6786A6}
 @media(max-width:650px){
  .edb-duel-grid,.edb-medal-grid{grid-template-columns:1fr}
  .edb-duel-player{padding:14px}
- .edb-duel-metric{gap:7px}
- .edb-duel-value{min-width:48px;font-size:.91rem}
+ .edb-duel-metric{grid-template-columns:minmax(0,1fr) minmax(64px,.62fr) minmax(64px,.62fr);gap:6px}
+ .edb-duel-value{font-size:.91rem}
+ .edb-duel-column-name{font-size:.73rem}
+ .edb-duel-metric > .edb-duel-value:last-child{padding-left:7px}
  .edb-medal-card{padding:13px}
 }
 </style>
@@ -96,10 +114,11 @@ def render_compare(st, px, first, second, comparison):
     st.markdown("#### Comparação de carreira")
     markup=['<div class="edb-duel-comparison">']
     markup.append(
-        '<div class="edb-duel-metric"><div class="edb-duel-metric-label">'
-        'Métrica · <span style="color:#78B8E8">' + escape(names[0]) +
-        '</span> / <span style="color:#C2ABC7">' + escape(names[1]) +
-        '</span></div><div class="edb-duel-value">A</div><div class="edb-duel-value">B</div></div>'
+        '<div class="edb-duel-metric edb-duel-header">'
+        '<div class="edb-duel-metric-label">Métrica</div>'
+        '<div class="edb-duel-value edb-duel-column-name">' + escape(names[0]) + '</div>'
+        '<div class="edb-duel-value edb-duel-column-name">' + escape(names[1]) + '</div>'
+        '</div>'
     )
     for title,a,b,dec,suffix in metrics:
         is_a = a is not None and b is not None and a > b
