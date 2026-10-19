@@ -90,8 +90,8 @@ def team_cards_html(team_a, team_b):
         )
 
     return ('<div class="edb-draw-grid">' +
-            card(team_a, "PT", "blue") +
-            card(team_b, "PL", "red") +
+            card(team_a, "PT", "red") +
+            card(team_b, "PL", "blue") +
             '</div>')
 
 
@@ -108,7 +108,7 @@ def draw_message(team_a, team_b):
     b = sum(player_level(p) for p in team_b)
     return (
         "🎲 EDB LEAGUE — SORTEIO DE TIMES\n\n" +
-        lines(team_a, "🔵 PT") + "\n\n" +
-        lines(team_b, "🔴 PL") + "\n\n" +
+        lines(team_a, "🔴 PT") + "\n\n" +
+        lines(team_b, "🔵 PL") + "\n\n" +
         f"⚖️ Diferença: {abs(a - b)} ponto(s) de nível"
     )
