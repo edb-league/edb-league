@@ -45,7 +45,7 @@ def test_unrelated_pages_keep_default_radar_without_using_artwork():
 def test_comparison_and_medals_keep_real_data():
     assert "render_compare(st,px,by_id[first_id],by_id[second_id]" in APP
     assert "compare_players(first_id,second_id,career_records)" in APP
-    assert "render_medal_catalogue(st,all_players,player_medals)" in APP
+    assert "render_medal_catalogue(st,active_players,player_medals)" in APP
     assert "Medalhas conquistadas" in SOCIAL
     assert 'len(earned)' in SOCIAL
     assert "Jogadores premiados" in SOCIAL
