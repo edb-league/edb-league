@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from chart_theme import style_edb_bar
-from team_draw import draw_balanced_teams, draw_message, player_name, player_stars, team_cards_html
+from team_draw import draw_balanced_teams, draw_message, player_name, player_level, team_cards_html
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
@@ -352,7 +352,7 @@ def render_home_team_draw():
     with st.expander('Selecionar jogadores presentes e sortear um 5x5',expanded=False):
         st.caption(
             'Selecione exatamente 10 jogadores. O sorteio escolhe aleatoriamente '
-            'uma das divisões com a menor diferença possível na soma das estrelas.'
+            'uma das divisões com a menor diferença possível na soma dos níveis (1–10).'
         )
         ordered=sorted(all_players,key=lambda p:player_name(p).casefold())
         by_id={str(p['id']):p for p in ordered}
@@ -360,7 +360,7 @@ def render_home_team_draw():
             'Jogadores presentes',
             options=list(by_id),
             format_func=lambda pid:player_name(by_id[pid]) +
-                        '  ·  ' + '★'*player_stars(by_id[pid]),
+                        '  ·  nível ' + str(player_level(by_id[pid])),
             max_selections=10,
             placeholder='Escolha os 10 participantes',
             key='edb_draw_present',
@@ -368,7 +368,7 @@ def render_home_team_draw():
         count=len(selected_ids)
         st.caption(f'{count}/10 jogadores selecionados')
         signature=tuple(sorted(
-            (pid,player_stars(by_id[pid])) for pid in selected_ids
+            (pid,player_level(by_id[pid])) for pid in selected_ids
         ))
         result=st.session_state.get('edb_draw_result')
         if result is not None and result['signature']!=signature:
@@ -388,14 +388,14 @@ def render_home_team_draw():
         if result is not None:
             team_a=[by_id[pid] for pid in result['a']]
             team_b=[by_id[pid] for pid in result['b']]
-            gap=abs(sum(player_stars(p) for p in team_a)-
-                    sum(player_stars(p) for p in team_b))
+            gap=abs(sum(player_level(p) for p in team_a)-
+                    sum(player_level(p) for p in team_b))
             st.markdown(team_cards_html(team_a,team_b),unsafe_allow_html=True)
-            st.caption(f'⚖️ Diferença entre os times: {gap} estrela(s). '
+            st.caption(f'⚖️ Diferença entre os times: {gap} ponto(s) de nível. '
                        'Clique novamente para sortear outra combinação equilibrada.')
             st.markdown('**📋 Resultado para compartilhar no grupo**')
             st.code(draw_message(team_a,team_b),language=None)
-        st.caption('Usa as estrelas do cadastro. Não altera classificações, '
+        st.caption('Usa os níveis 1–10 do cadastro. Não altera classificações, '
                    'não salva equipes nem registra partidas.')
 
 
@@ -488,7 +488,7 @@ if page=='Visão geral':
         if not eligible.empty:
             r=eligible.sort_values('Elite',ascending=False).iloc[0]
             tile('🏆 MVP · RANKING ELITE',player_label(r['Jogador']),f"Índice {r['Elite']:.1f} • {r['Partidas']} partidas")
-        else:tile('🏆 MVP · RANKING ELITE','A definir',f'Exige pelo menos {6 if season_number>=1 else 2} mapas')
+        else:tile('🏆 MVP · RANKING ELITE','A definir','Exige pelo menos 6 mapas')
     with c2:
         qualified=board_superacao[board_superacao['Elegível']==True] if not board_superacao.empty else board_superacao
         if not qualified.empty:
@@ -521,8 +521,7 @@ if page=='Visão geral':
         )
         st.plotly_chart(fig,use_container_width=True)
     else:st.info('O painel está pronto. Cadastre jogadores e registre a primeira partida em Administração.')
-    st.caption('Temporada experimental: mínimo de 2 mapas.' if season_number==0 else
-               'Classificações provisórias até homologação; são necessários 6 mapas para concorrer aos três títulos oficiais.')
+    st.caption('Classificações provisórias até homologação; são necessários 6 mapas para concorrer aos três títulos oficiais.')
 
 elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
@@ -541,14 +540,14 @@ elif page=='Rankings':
             st.caption('Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.')
     elif selected_rank == 'superacao':
         st.write('Quanto cada jogador supera a expectativa de KPR para seu nível congelado de 1 a 5 estrelas.')
-        st.caption('Superação usa os 6 melhores mapas para cada atleta e exige 6 mapas disputados para premiação (Temporada 0 conserva a regra anterior).')
+        st.caption('Superação usa os 6 melhores mapas para cada atleta e exige 6 mapas disputados para premiação.')
         scoreboard_table(board_superacao,focus='Superação %')
         st.markdown('#### Evolução real: últimas 2 partidas versus as 2 anteriores')
         changes=historical_progress(selected)
         if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
         else:st.dataframe(changes,use_container_width=True,hide_index=True)
     elif selected_rank == 'resenha':
-        st.write('XP por participação, vitória e missão semanal. Desde a Temporada 1 contam apenas 6 mapas por jogador, priorizando vitórias. A Temporada 0 conserva a regra anterior.')
+        st.write('XP por participação, vitória e missão semanal. Contam os 6 melhores mapas por jogador, priorizando vitórias.')
         scoreboard_table(board_xp,focus='XP')
 
 elif page=='Comparar jogadores':
@@ -595,7 +594,7 @@ elif page=='Jogadores':
         profile_id=st.selectbox(
             'Selecionar jogador', ids,
             format_func=lambda pid: player_label(by_id[pid]['nickname']) +
-                          '  ·  ' + '★'*int(by_id[pid].get('stars',3)),
+                          '  ·  nível ' + str(int(by_id[pid].get('skill_level',5))),
             key='edb_profile_choice',
             on_change=clear_profile_link
         )
@@ -790,7 +789,7 @@ elif page=='Missões & XP':
         with col:
             st.metric(f"{'★'*i}",f"{TARGET_KPR[i]:.2f} KPR")
     st.caption('Concluir uma partida de pelo menos 8 rounds com KPR acima da meta rende 100 XP, uma vez por semana.')
-    st.caption('Presença: +40 XP por mapa; vitória: +20 XP; até 6 mapas na temporada, além de até 100 XP de missão por semana. Na Temporada 0 vale o limite histórico de 4 mapas/semana.')
+    st.caption('Presença: +40 XP por mapa; vitória: +20 XP; até 6 mapas na temporada, além de até 100 XP de missão por semana.')
     st.markdown('### Ranking de experiência')
     scoreboard_table(board_xp,focus='XP')
     st.caption('Os únicos títulos competitivos oficiais são MVP Elite, Revelação Superação e Xinxa XP. Os resultados serão homologados após o encerramento.')
@@ -876,30 +875,30 @@ elif page=='Administração':
             col1,col2,col3=st.columns([3,2,2])
             with col1:nick=st.text_input('Nickname')
             with col2:steam=st.text_input('SteamID (opcional)')
-            with col3:stars=st.selectbox('Nível inicial',range(1,6),index=2)
+            with col3:level=st.selectbox('Nível (1–10)',range(1,11),index=4)
             if st.form_submit_button('Cadastrar jogador',type='primary'):
                 try:
-                    store.save_player(nick,stars,steam or None)
+                    store.save_player(nick,3,steam or None,skill_level=level)
                     invalidate_league_cache()
                     st.success('Jogador cadastrado.')
                     st.rerun()
                 except Exception as exc:st.error(str(exc))
         if all_players:
-            st.markdown('#### Ajustar estrelas / nickname')
+            st.markdown('#### Ajustar nível / nickname')
             existing=st.selectbox('Jogador cadastrado',all_players,format_func=lambda r:r['nickname'])
             with st.form('edit_player'):
                 nn=st.text_input('Nickname',value=existing['nickname'])
                 ss=st.text_input('SteamID',value=existing.get('steamid') or '')
-                star=st.slider('Estrelas',1,5,int(existing['stars']))
+                level=st.slider('Nível (1–10)',1,10,int(existing.get('skill_level',5)))
                 if st.form_submit_button('Salvar alterações'):
                     try:
-                        store.save_player(nn,star,ss or None,existing['id'])
+                        store.save_player(nn,int(existing['stars']),ss or None,existing['id'],skill_level=level)
                         invalidate_league_cache()
                         st.success('Alteração salva.')
                         st.rerun()
                     except Exception as exc:st.error(str(exc))
     with imports_tab:
-        st.info('A Temporada 0 está encerrada e bloqueada para importação de novas BO3. O histórico foi preservado.')
+        st.info('A Temporada 1 inicia em 19/10/2026. Registre apenas mapas da temporada atual.')
         with st.expander('Importação avulsa · somente mapa isolado',expanded=False):
             st.caption('Para uma BO3 de três mapas, use a importação completa acima. Esta opção é destinada exclusivamente a mapas avulsos.')
             st.markdown('#### Importar uma partida')
