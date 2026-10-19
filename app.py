@@ -96,6 +96,7 @@ CSS='''
   border:1px solid #365A79;border-radius:20px;
   box-shadow:0 12px 28px rgba(0,0,0,.20);
   padding:20px 20px 16px;min-height:610px;
+  margin-top:24px; /* Separa os painéis dos três destaques superiores. */
 }
 .st-key-edb_home_elite{
   border-color:#796548;
