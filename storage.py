@@ -38,6 +38,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS players (
                 id TEXT PRIMARY KEY, nickname TEXT NOT NULL,
                 steamid TEXT UNIQUE, stars INTEGER NOT NULL DEFAULT 3,
+                skill_level INTEGER NOT NULL DEFAULT 5 CHECK(skill_level BETWEEN 1 AND 10),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS matches (
@@ -59,6 +60,9 @@ class Store:
                 PRIMARY KEY (match_id, player_id)
             );
             ''')
+            player_cols = [r[1] for r in con.execute('PRAGMA table_info(players)')]
+            if 'skill_level' not in player_cols:
+                con.execute('ALTER TABLE players ADD COLUMN skill_level INTEGER NOT NULL DEFAULT 5')
             cols = [r[1] for r in con.execute('PRAGMA table_info(player_stats)')]
             if 'observed_nickname' not in cols:
                 con.execute('ALTER TABLE player_stats ADD COLUMN observed_nickname TEXT')
@@ -98,7 +102,7 @@ class Store:
         sql=f"INSERT INTO {table} ({','.join(columns)}) VALUES ({','.join('?'*len(columns))}) ON CONFLICT DO UPDATE SET " + ','.join(f'{c}=excluded.{c}' for c in columns if c not in ('id','match_id','player_id'))
         with self._connect() as con: con.execute(sql,list(row.values()))
 
-    def save_player(self, nickname, stars=3, steamid=None, player_id=None):
+    def save_player(self, nickname, stars=3, steamid=None, player_id=None, skill_level=None):
         """Identidade estável: SteamID primeiro, depois nick oficial ou alias.
 
         O nickname oficial só muda em edição administrativa explícita (player_id).
@@ -108,6 +112,10 @@ class Store:
         if not nickname: raise ValueError('Nickname obrigatório')
         stars = int(stars)
         if not 1 <= stars <= 5: raise ValueError('Estrelas fora do intervalo 1–5')
+        if skill_level is not None:
+            skill_level=int(skill_level)
+            if not 1 <= skill_level <= 10:
+                raise ValueError('Nível fora do intervalo 1–10')
         current = self.players()
         explicit_edit = player_id is not None
         match = next((p for p in current if p['id'] == player_id), None) if explicit_edit else None
@@ -128,17 +136,20 @@ class Store:
             if not explicit_edit:
                 nickname = match['nickname']
                 stars = int(match['stars'])
+        if skill_level is None:
+            skill_level = int(match.get('skill_level',5)) if match else 5
         pid = player_id or str(uuid4())
-        row = {'id': pid, 'nickname': nickname, 'steamid': steamid or None, 'stars': stars}
+        row = {'id': pid, 'nickname': nickname, 'steamid': steamid or None,
+               'stars': stars, 'skill_level': skill_level}
         if self.cloud:
             self._upsert('players', row, 'id')
         else:
             with self._connect() as con:
-                con.execute('''INSERT INTO players (id,nickname,steamid,stars)
-                               VALUES (:id,:nickname,:steamid,:stars)
+                con.execute('''INSERT INTO players (id,nickname,steamid,stars,skill_level)
+                               VALUES (:id,:nickname,:steamid,:stars,:skill_level)
                                ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname,
                                steamid=COALESCE(excluded.steamid,players.steamid),
-                               stars=excluded.stars''', row)
+                               stars=excluded.stars,skill_level=excluded.skill_level''', row)
         return pid
 
     def match_exists(self,mid):
