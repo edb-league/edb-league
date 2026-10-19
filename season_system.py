@@ -6,7 +6,6 @@ from html import escape
 from urllib.parse import quote
 
 DEFAULT_SEASONS = [
-    {"number":0,"label":"Temporada 0","starts_on":None,"ends_on":"2026-10-18","bo3_target":3},
     {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":"2026-11-01","bo3_target":None},
 ]
 
@@ -72,13 +71,13 @@ def current_season_number(seasons, on_date: date):
         end=_parse_date(season.get("ends_on"))
         if (start is None or on_date>=start) and (end is None or on_date<=end):
             return int(season["number"])
-    return int(ordered[0]["number"]) if ordered else 0
+    return int(ordered[0]["number"]) if ordered else 1
 
 
 def chosen_season_number(seasons, on_date: date, requested=None):
     nums={int(s["number"]) for s in seasons}
     try:
-        if requested is not None and int(requested) in nums:
+        if requested is not None and int(requested) >= 1 and int(requested) in nums:
             return int(requested)
     except (TypeError,ValueError): pass
     return current_season_number(seasons,on_date)
@@ -110,10 +109,7 @@ def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_da
     start=_parse_date(chosen.get("starts_on"))
     end=_parse_date(chosen.get("ends_on"))
     archived=bool(chosen.get("homologated_at"))
-    if int(season_number)==0:
-        summary=f"ENCERRADA · EXPERIMENTAL · {completed}/3 BO3 historicas"
-        progress=""
-    elif start is None or end is None:
+    if start is None or end is None:
         summary=f"{completed} BO3 concluidas · calendario a confirmar"
         progress=""
     elif on_date < start:
@@ -133,8 +129,8 @@ def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_da
     if rank is not None and page_slug=="rankings":
         link_extra="&amp;ranking="+quote(str(rank),safe="")
     nums=sorted(by_number)
-    visible={0,int(season_number)}
-    visible.update(n for n in nums if abs(n-int(season_number))<=2)
+    visible={max(1,int(season_number))}
+    visible.update(n for n in nums if n>=1 and abs(n-int(season_number))<=2)
     if nums: visible.add(max(nums))
     buttons=[]
     for n in sorted(visible,reverse=True):
@@ -171,7 +167,6 @@ def bo3_cards(season_number, series, map_links, all_matches, selected_series=Non
                      for m in maps if str(m.get("match_id")) in games]
         summary=" · ".join(str(x) for x in valid_names) if valid_names else "Mapas ainda não cadastrados"
         # O placar exibido acompanha os vencedores reais dos mapas.
-        # A temporada experimental pode registrar 3x0.
         if complete and all(m.get("winner_side") in ("a", "b") for m in maps):
             wins_a=sum(m["winner_side"] == "a" for m in maps)
             wins_b=sum(m["winner_side"] == "b" for m in maps)
