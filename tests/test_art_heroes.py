@@ -142,7 +142,7 @@ def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
     assert "hero('Os Xinxas agora têm ranking.'" in APP
 
 
-def test_home_season_rules_banner_before_elite_chart():
+def test_home_season_rules_banner_below_elite_and_draw():
     assert 'def season_rules_banner(selected_season):' in APP
     assert '14 dias' in APP
     assert 'BO3 livres' in APP
@@ -154,9 +154,14 @@ def test_home_season_rules_banner_before_elite_chart():
     assert 'As regras abaixo entram em vigor a partir da Temporada 1' not in APP
     assert '.edb-season-rules-grid' in APP
     overview = APP.split("if page=='Visão geral':", 1)[1].split("elif page=='Rankings':",1)[0]
-    assert overview.index("st.markdown(season_rules_banner(season_number)") < overview.index(
-        "st.markdown('### Classificação Elite')"
+    assert overview.index("home_elite,home_draw=st.columns(2,gap='large')") < overview.index(
+        "with home_elite:"
     )
-    assert overview.index("st.markdown('### Classificação Elite')") < overview.index(
-        "st.plotly_chart(fig,use_container_width=True)"
+    assert overview.index("with home_elite:") < overview.index("st.plotly_chart(fig,use_container_width=True)")
+    assert overview.index("st.plotly_chart(fig,use_container_width=True)") < overview.index(
+        "with home_draw:"
+    )
+    assert overview.index("with home_draw:") < overview.index("render_home_team_draw()")
+    assert overview.index("render_home_team_draw()") < overview.index(
+        "st.markdown(season_rules_banner(season_number)"
     )
