@@ -95,10 +95,15 @@ def test_cards_are_safe_and_group_copy_matches_balanced_sum():
     assert '&lt;img src=x onerror' in markup
     assert 'edb-draw-team--blue' in markup
     assert 'edb-draw-team--red' in markup
+    assert '<strong>PT</strong>' in markup
+    assert '<strong>PL</strong>' in markup
     assert markup.count('edb-draw-player"')==10
     message=draw_message(a,b)
     assert "EDB LEAGUE" in message
     assert "Diferença:" in message
+    assert "🔵 PT" in message
+    assert "🔴 PL" in message
+    assert "TIME A" not in message and "TIME B" not in message
     assert message.count("• ")==10
     assert player_name(roster[0]) in message
 
@@ -119,6 +124,8 @@ def test_home_integrates_sorteio_without_touching_rankings_or_database():
     assert "max_selections=10" in APP
     assert "disabled=count!=10" in APP
     assert "st.session_state['edb_draw_result']=result" in APP
+    assert "st.button('Sortear times',type='primary'" in APP
+    assert "🎲 Sortear times equilibrados" not in APP
     assert "st.code(draw_message(team_a,team_b),language=None)" in APP
     module=(ROOT/"team_draw.py").read_text(encoding="utf-8")
     assert "supabase" not in module.lower()
