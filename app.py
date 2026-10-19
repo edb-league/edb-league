@@ -317,6 +317,9 @@ else:
         'season_titles':[],
     }
 all_players=snapshot['players']
+# Histórico e rankings continuam usando todos; listas públicas usam somente ativos.
+active_players=[p for p in all_players if bool(p.get('is_active',True))]
+inactive_players=[p for p in all_players if not bool(p.get('is_active',True))]
 all_matches=snapshot['matches']
 all_stats=snapshot['stats']
 all_seasons=snapshot['seasons']
@@ -355,7 +358,7 @@ def hero(title,subtitle):
         if m.get('map_name')
     })
     st.markdown(
-        hero_banner(title,subtitle,len(all_players),len(all_matches),unique_maps,page=page),
+        hero_banner(title,subtitle,len(active_players),len(all_matches),unique_maps,page=page),
         unsafe_allow_html=True
     )
     if page in ('Visão geral','Rankings','Partidas','Missões & XP'):
@@ -410,8 +413,14 @@ def render_home_team_draw():
         'Selecione exatamente 10 jogadores. O sorteio escolhe aleatoriamente '
         'uma das divisões com a menor diferença possível na soma dos níveis (1–10).'
     )
-    ordered=sorted(all_players,key=lambda p:player_name(p).casefold())
+    ordered=sorted(active_players,key=lambda p:player_name(p).casefold())
     by_id={str(p['id']):p for p in ordered}
+    # Descarta jogadores removidos de uma seleção anterior na mesma sessão.
+    old_ids=st.session_state.get('edb_draw_present',[])
+    valid_ids=[pid for pid in old_ids if pid in by_id]
+    if valid_ids!=old_ids:
+        st.session_state['edb_draw_present']=valid_ids
+        st.session_state.pop('edb_draw_result',None)
     selected_ids=st.multiselect(
         'Jogadores presentes',
         options=list(by_id),
@@ -534,7 +543,7 @@ if page in ('Visão geral','Rankings','Missões & XP'):
 if page=='Visão geral':
     hero('Os Xinxas agora têm ranking.','Cada frag conta. Cada evolução importa. A temporada começa aqui.')
     k1,k2,k3,k4=st.columns(4)
-    k1.metric('Jogadores cadastrados',len(all_players))
+    k1.metric('Jogadores ativos',len(active_players))
     k2.metric('Partidas registradas',len(selected['match_id'].unique()) if not selected.empty else 0)
     k3.metric('Kills registradas',int(selected['kills'].sum()) if not selected.empty else 0)
     k4.metric('XP distribuído',int(board_xp['XP'].sum()) if not board_xp.empty else 0)
@@ -638,11 +647,11 @@ elif page=='Rankings':
 
 elif page=='Comparar jogadores':
     hero('Comparar jogadores','Análise lado a lado: desempenho, vitórias e confrontos da liga.')
-    if len(all_players) < 2:
-        st.info('Cadastre pelo menos dois jogadores para começar a comparação.')
+    if len(active_players) < 2:
+        st.info('É necessário ter pelo menos dois jogadores ativos para comparar resultados.')
     else:
-        by_id={str(p['id']):p for p in all_players}
-        ordered=sorted(all_players,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
+        by_id={str(p['id']):p for p in active_players}
+        ordered=sorted(active_players,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
         ids=[str(p['id']) for p in ordered]
         for key,default in [('edb_duel_first',ids[0]),('edb_duel_second',ids[1])]:
             if st.session_state.get(key) not in ids:
@@ -664,16 +673,23 @@ elif page=='Comparar jogadores':
 elif page=='Medalhas':
     hero('Medalhas','Reconhecimento para quem faz a diferença. Conquiste, evolua e deixe sua marca.')
     career_records=get_career_records()
-    player_medals={str(p['id']):achievements(str(p['id']),career_records) for p in all_players}
-    render_medal_catalogue(st,all_players,player_medals)
+    player_medals={str(p['id']):achievements(str(p['id']),career_records) for p in active_players}
+    render_medal_catalogue(st,active_players,player_medals)
 
 elif page=='Jogadores':
     hero('Perfil dos jogadores','Identidade, carreira, evolução e conquistas individuais.')
-    if not all_players:
+    # Um link direto antigo ainda pode abrir um perfil arquivado para consulta.
+    player_options=list(active_players)
+    if linked_player:
+        archived=next((p for p in inactive_players
+                       if str(p['id'])==str(linked_player)),None)
+        if archived is not None:
+            player_options.append(archived)
+    if not player_options:
         st.info('Cadastre os participantes na aba Administração.')
     else:
-        by_id={str(p['id']):p for p in all_players}
-        ordered=sorted(all_players,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
+        by_id={str(p['id']):p for p in player_options}
+        ordered=sorted(player_options,key=lambda p:(p.get('real_name') or p['nickname']).casefold())
         ids=[str(p['id']) for p in ordered]
         if st.session_state.get('edb_profile_choice') not in ids:
             st.session_state['edb_profile_choice']=ids[0]
@@ -969,9 +985,9 @@ elif page=='Administração':
                     st.success('Jogador cadastrado.')
                     st.rerun()
                 except Exception as exc:st.error(str(exc))
-        if all_players:
+        if active_players:
             st.markdown('#### Ajustar nível / nickname')
-            existing=st.selectbox('Jogador cadastrado',all_players,format_func=lambda r:r['nickname'])
+            existing=st.selectbox('Jogador cadastrado',active_players,format_func=lambda r:r['nickname'])
             with st.form('edit_player'):
                 nn=st.text_input('Nickname',value=existing['nickname'])
                 ss=st.text_input('SteamID',value=existing.get('steamid') or '')
@@ -983,6 +999,56 @@ elif page=='Administração':
                         st.success('Alteração salva.')
                         st.rerun()
                     except Exception as exc:st.error(str(exc))
+
+        st.markdown('#### Remover jogador do elenco')
+        st.caption(
+            'Remove o jogador das listas de participantes e do sorteador. '
+            'O cadastro e o histórico de partidas, estatísticas e títulos '
+            'são preservados. É possível reativá-lo depois.'
+        )
+        if active_players:
+            with st.form('edb_archive_player'):
+                remove_target=st.selectbox(
+                    'Selecionar jogador para remover',
+                    sorted(active_players,key=lambda p:player_name(p).casefold()),
+                    format_func=lambda p:player_name(p),
+                    key='edb_archive_target',
+                )
+                remove_confirm=st.checkbox(
+                    'Confirmo que desejo remover este jogador do elenco ativo.',
+                    key='edb_archive_confirm'
+                )
+                if st.form_submit_button('Remover jogador',type='primary'):
+                    if not remove_confirm:
+                        st.warning('Marque a confirmação antes de remover.')
+                    else:
+                        try:
+                            store.set_player_active(remove_target['id'],False)
+                            invalidate_league_cache()
+                            st.success('Jogador removido do elenco. Histórico preservado.')
+                            st.rerun()
+                        except Exception as exc:
+                            st.error('Não foi possível remover: '+str(exc))
+        else:
+            st.caption('Nenhum jogador ativo para remover.')
+
+        if inactive_players:
+            st.markdown('#### Reativar jogador removido')
+            with st.form('edb_reactivate_player'):
+                reactivate_target=st.selectbox(
+                    'Jogador removido',
+                    sorted(inactive_players,key=lambda p:player_name(p).casefold()),
+                    format_func=lambda p:player_name(p),
+                    key='edb_reactivate_target',
+                )
+                if st.form_submit_button('Reativar jogador'):
+                    try:
+                        store.set_player_active(reactivate_target['id'],True)
+                        invalidate_league_cache()
+                        st.success('Jogador reativado no elenco.')
+                        st.rerun()
+                    except Exception as exc:
+                        st.error('Não foi possível reativar: '+str(exc))
     with imports_tab:
         st.info('A Temporada 1 inicia em 19/10/2026. Registre apenas mapas da temporada atual.')
         with st.expander('Importação avulsa · somente mapa isolado',expanded=False):
