@@ -49,8 +49,8 @@ def test_scope_details_load_only_with_page_consumers():
 
 def test_hall_and_medal_values_remain_real_and_lazy():
     assert "all_time_records=hall_of_fame(career_records)" in APP
-    assert "player_medals={str(p['id']):achievements(str(p['id']),career_records) for p in all_players}" in APP
-    assert "render_medal_catalogue(st,all_players,player_medals)" in APP
+    assert "player_medals={str(p['id']):achievements(str(p['id']),career_records) for p in active_players}" in APP
+    assert "render_medal_catalogue(st,active_players,player_medals)" in APP
     assert "render_hall_of_fame(st,all_time_records,len(all_matches),all_players,career_records)" in APP
     assert "achievements(str(profile_id),career_records)" in APP
     assert "compare_players(first_id,second_id,career_records)" in APP
