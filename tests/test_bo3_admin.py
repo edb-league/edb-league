@@ -61,7 +61,7 @@ def test_block_invalid_bo3_before_any_destructive_database_action():
 def test_admin_has_transactional_confirmation_not_automatic_delete():
     from pathlib import Path
     app=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
-    assert "A Temporada 0 está encerrada e bloqueada" in app
+    assert "A Temporada 1 inicia em 19/10/2026." in app
     assert "'POST','rpc/ensure_edb_calendar',payload={}" in app
     assert "def ensure_current_calendar(" in app
     assert "rpc/import_edb_bo3_bundle" not in app
