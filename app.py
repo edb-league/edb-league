@@ -422,14 +422,14 @@ def season_rules_banner(selected_season):
 
 def render_president_banner():
     """Homenagem permanente, com retrato incorporado localmente ao site."""
-    portrait=(ROOT/'assets'/'president_dudu.webp.b64').read_text(
+    portrait=(ROOT/'assets'/'president_dudu_hd.avif.b64').read_text(
         encoding='ascii'
     ).strip()
     st.markdown(
         '<section class="edb-president-tribute" '
         'aria-label="Inauguração da EDB LEAGUE na gestão do Presidente Dudu">'
         '<div class="edb-president-photo">'
-        '<img src="data:image/webp;base64,'+portrait+'" '
+        '<img src="data:image/avif;base64,'+portrait+'" '
         'alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta"/>'
         '</div><div class="edb-president-plaque">'
         '<div class="edb-president-kicker">MARCO HISTÓRICO · EDB LEAGUE</div>'
