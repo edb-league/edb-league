@@ -4,16 +4,19 @@ import base64
 
 ROOT=Path(__file__).resolve().parents[1]
 APP=(ROOT/"app.py").read_text(encoding="utf-8")
-PHOTO=ROOT/"assets"/"president_dudu.webp.b64"
+PHOTO=ROOT/"assets"/"president_dudu_hd.avif.b64"
 
 
-def test_president_photo_is_complete_embedded_webp():
+def test_president_photo_is_complete_embedded_hd_avif():
     encoded=PHOTO.read_text(encoding="ascii").strip()
     data=base64.b64decode(encoded,validate=True)
-    assert len(data)>4500
-    assert data[:4]==b"RIFF"
-    assert data[8:12]==b"WEBP"
-    assert int.from_bytes(data[4:8],"little")+8==len(data)
+    assert len(data)>20000
+    assert b"ftypavif" in data[:32]
+    ispe=data.find(b"ispe")
+    assert 0<ispe<500
+    width=int.from_bytes(data[ispe+8:ispe+12],"big")
+    height=int.from_bytes(data[ispe+12:ispe+16],"big")
+    assert (width,height)==(540,810)
 
 
 def test_home_keeps_highlights_above_panels_and_regulations_below():
@@ -41,8 +44,8 @@ def test_home_keeps_highlights_above_panels_and_regulations_below():
 
 def test_president_art_and_plaque_are_in_app_not_remote_link():
     assert "def render_president_banner():" in APP
-    assert "(ROOT/'assets'/'president_dudu.webp.b64').read_text(" in APP
-    assert '<img src="data:image/webp;base64,' in APP
+    assert "(ROOT/'assets'/'president_dudu_hd.avif.b64').read_text(" in APP
+    assert '<img src="data:image/avif;base64,' in APP
     assert "Inaugurada na gestão do Presidente Dudu" in APP
     assert "19 de outubro de 2026" in APP
     assert ".st-key-edb_home_president" in APP
