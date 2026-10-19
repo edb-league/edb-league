@@ -38,8 +38,8 @@ def test_admin_changes_invalidate_before_rerun():
     assert "def invalidate_league_cache():" in APP
     assert "load_league_snapshot.clear()" in APP
     assert "load_scope_stats.clear()" in APP
-    # Duas gravacoes de jogadores, uma de mapa, uma homologacao.
-    assert APP.count("invalidate_league_cache()") == 5
+    # Duas gravacoes, duas alteracoes no elenco, uma de mapa, uma homologacao.
+    assert APP.count("invalidate_league_cache()") == 7
     assert "store.save_player(nick,3,steam or None,skill_level=level)\n                    invalidate_league_cache()" in APP
     assert "store.save_player(nn,int(existing['stars']),ss or None,existing['id'],skill_level=level)\n                        invalidate_league_cache()" in APP
     assert "st.session_state.pop('pending_import',None)\n                                invalidate_league_cache()" in APP
