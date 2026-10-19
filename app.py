@@ -88,6 +88,55 @@ CSS='''
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
 
+
+/* Dois painéis verticais da página inicial: Elite e sorteador. */
+.st-key-edb_home_elite,.st-key-edb_home_draw{
+  background:radial-gradient(ellipse at 95% 0%,rgba(85,146,201,.16),transparent 50%),
+             linear-gradient(145deg,#142D45 0%,#102237 60%,#0D1B2B 100%);
+  border:1px solid #365A79;border-radius:20px;
+  box-shadow:0 12px 28px rgba(0,0,0,.20);
+  padding:20px 20px 16px;min-height:610px;
+}
+.st-key-edb_home_elite{
+  border-color:#796548;
+  background:radial-gradient(ellipse at 95% 0%,rgba(214,185,138,.13),transparent 50%),
+             linear-gradient(145deg,#192C40 0%,#102237 60%,#0D1B2B 100%);
+}
+.st-key-edb_home_draw{border-color:#416D90;}
+.edb-home-panel-head{display:flex;align-items:flex-start;gap:13px;
+  padding:1px 0 16px;border-bottom:1px solid rgba(173,201,224,.17);
+  margin-bottom:14px;min-height:110px;}
+.edb-home-panel-icon{display:grid;place-items:center;flex:0 0 48px;
+  width:48px;height:48px;border-radius:14px;font-size:23px;color:#F0CE91;
+  background:rgba(214,185,138,.10);border:1px solid rgba(214,185,138,.27);}
+.edb-home-panel-head--draw .edb-home-panel-icon{color:#A6D9FF;
+  background:rgba(120,184,232,.12);border-color:rgba(120,184,232,.32);}
+.edb-home-panel-eyebrow{color:#D6B98A;letter-spacing:1.8px;
+  font-size:.64rem;font-weight:850;text-transform:uppercase;}
+.edb-home-panel-head--draw .edb-home-panel-eyebrow{color:#88C9F7;}
+.edb-home-panel-title{font-size:1.32rem;font-weight:850;color:#F1F7FC;
+  line-height:1.2;margin:5px 0 7px;}
+.edb-home-panel-subtitle{color:#ACC6DB;font-size:.81rem;line-height:1.5;}
+.edb-draw-intro{background:rgba(6,19,34,.38);border:1px solid #36516B;
+  padding:16px;border-radius:14px;margin:10px 0 18px;}
+.edb-draw-intro-main{display:flex;align-items:center;justify-content:space-between;
+  gap:8px;color:#E9F4FF;font-weight:850;font-size:1.28rem;}
+.edb-draw-intro-main span{color:#81C4F5;font-size:.76rem;
+  font-weight:800;letter-spacing:2px;}
+.edb-draw-intro-desc{color:#A9C6DC;font-size:.75rem;
+  margin-top:7px;line-height:1.45;}
+.st-key-edb_home_elite div[data-testid="stPlotlyChart"]{
+  background:rgba(5,18,31,.42);border-color:rgba(214,185,138,.24);
+  border-radius:14px;padding:7px 5px 1px;box-shadow:none;
+}
+.edb-elite-link{display:inline-block;color:#E3C597!important;
+  text-decoration:none!important;font-weight:800;font-size:.82rem;padding:10px 0;}
+.edb-elite-link:hover{text-decoration:underline!important;color:#FFE1B5!important;}
+@media(max-width:900px){
+  .st-key-edb_home_elite,.st-key-edb_home_draw{min-height:0;padding:17px 15px 14px;}
+  .edb-home-panel-head{min-height:0;}
+}
+
 /* Sorteador de times da pagina inicial. */
 .edb-draw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
   gap:14px;margin:12px 0 18px;}
@@ -347,56 +396,62 @@ def season_rules_banner(selected_season):
     )
 
 def render_home_team_draw():
-    """Sorteio temporario 5x5, sem gravacoes e com resultado por sessao."""
-    st.markdown('### 🎲 Sorteador de times')
-    with st.expander('Selecionar jogadores presentes e sortear um 5x5',expanded=False):
-        st.caption(
-            'Selecione exatamente 10 jogadores. O sorteio escolhe aleatoriamente '
-            'uma das divisões com a menor diferença possível na soma dos níveis (1–10).'
+    """Sorteio temporario 5x5 na vitrine da home, sem gravar partidas."""
+    st.markdown(
+        '<div class="edb-draw-intro">'
+        '<div class="edb-draw-intro-main">5 jogadores'
+        '<span>VS</span>5 jogadores</div>'
+        '<div class="edb-draw-intro-desc">Selecione os 10 presentes e gere '
+        'dois times com níveis equilibrados, prontos para compartilhar.</div>'
+        '</div>',unsafe_allow_html=True
+    )
+    st.caption(
+        'Selecione exatamente 10 jogadores. O sorteio escolhe aleatoriamente '
+        'uma das divisões com a menor diferença possível na soma dos níveis (1–10).'
+    )
+    ordered=sorted(all_players,key=lambda p:player_name(p).casefold())
+    by_id={str(p['id']):p for p in ordered}
+    selected_ids=st.multiselect(
+        'Jogadores presentes',
+        options=list(by_id),
+        format_func=lambda pid:player_name(by_id[pid]) +
+                    '  ·  nível ' + str(player_level(by_id[pid])),
+        max_selections=10,
+        placeholder='Escolha os 10 participantes',
+        key='edb_draw_present',
+    )
+    count=len(selected_ids)
+    st.caption(f'{count}/10 jogadores selecionados')
+    signature=tuple(sorted(
+        (pid,player_level(by_id[pid])) for pid in selected_ids
+    ))
+    result=st.session_state.get('edb_draw_result')
+    if result is not None and result['signature']!=signature:
+        st.session_state.pop('edb_draw_result',None)
+        result=None
+    if st.button('🎲 Sortear times equilibrados',type='primary',
+                 use_container_width=True,disabled=count!=10):
+        team_a,team_b=draw_balanced_teams(
+            [by_id[pid] for pid in selected_ids]
         )
-        ordered=sorted(all_players,key=lambda p:player_name(p).casefold())
-        by_id={str(p['id']):p for p in ordered}
-        selected_ids=st.multiselect(
-            'Jogadores presentes',
-            options=list(by_id),
-            format_func=lambda pid:player_name(by_id[pid]) +
-                        '  ·  nível ' + str(player_level(by_id[pid])),
-            max_selections=10,
-            placeholder='Escolha os 10 participantes',
-            key='edb_draw_present',
-        )
-        count=len(selected_ids)
-        st.caption(f'{count}/10 jogadores selecionados')
-        signature=tuple(sorted(
-            (pid,player_level(by_id[pid])) for pid in selected_ids
-        ))
-        result=st.session_state.get('edb_draw_result')
-        if result is not None and result['signature']!=signature:
-            st.session_state.pop('edb_draw_result',None)
-            result=None
-        if st.button('🎲 Sortear times equilibrados',type='primary',
-                     use_container_width=True,disabled=count!=10):
-            team_a,team_b=draw_balanced_teams(
-                [by_id[pid] for pid in selected_ids]
-            )
-            result={
-                'signature':signature,
-                'a':[str(p['id']) for p in team_a],
-                'b':[str(p['id']) for p in team_b],
-            }
-            st.session_state['edb_draw_result']=result
-        if result is not None:
-            team_a=[by_id[pid] for pid in result['a']]
-            team_b=[by_id[pid] for pid in result['b']]
-            gap=abs(sum(player_level(p) for p in team_a)-
-                    sum(player_level(p) for p in team_b))
-            st.markdown(team_cards_html(team_a,team_b),unsafe_allow_html=True)
-            st.caption(f'⚖️ Diferença entre os times: {gap} ponto(s) de nível. '
-                       'Clique novamente para sortear outra combinação equilibrada.')
-            st.markdown('**📋 Resultado para compartilhar no grupo**')
-            st.code(draw_message(team_a,team_b),language=None)
-        st.caption('Usa os níveis 1–10 do cadastro. Não altera classificações, '
-                   'não salva equipes nem registra partidas.')
+        result={
+            'signature':signature,
+            'a':[str(p['id']) for p in team_a],
+            'b':[str(p['id']) for p in team_b],
+        }
+        st.session_state['edb_draw_result']=result
+    if result is not None:
+        team_a=[by_id[pid] for pid in result['a']]
+        team_b=[by_id[pid] for pid in result['b']]
+        gap=abs(sum(player_level(p) for p in team_a)-
+                sum(player_level(p) for p in team_b))
+        st.markdown(team_cards_html(team_a,team_b),unsafe_allow_html=True)
+        st.caption(f'⚖️ Diferença entre os times: {gap} ponto(s) de nível. '
+                   'Clique novamente para sortear outra combinação equilibrada.')
+        st.markdown('**📋 Resultado para compartilhar no grupo**')
+        st.code(draw_message(team_a,team_b),language=None)
+    st.caption('Usa os níveis 1–10 do cadastro. Não altera classificações, '
+               'não salva equipes nem registra partidas.')
 
 
 def tile(eyebrow,player,detail,symbol='✦'):
@@ -501,27 +556,57 @@ if page=='Visão geral':
             r=qualified.iloc[0]
             tile('🏅 XINXA · RANKING XP',player_label(r['Jogador']),f"{int(r['XP'])} XP")
         else:tile('🏅 XINXA','A definir','Aguardando elegíveis')
+    # Vitrine responsiva: Elite à esquerda, sorteador à direita.
+    home_elite,home_draw=st.columns(2,gap='large')
+    with home_elite:
+        with st.container(key='edb_home_elite'):
+            st.markdown(
+                '<div class="edb-home-panel-head">'
+                '<div class="edb-home-panel-icon" aria-hidden="true">🏆</div>'
+                '<div><div class="edb-home-panel-eyebrow">DISPUTA DA TEMPORADA</div>'
+                '<div class="edb-home-panel-title">Classificação Elite</div>'
+                '<div class="edb-home-panel-subtitle">Os líderes do índice Elite '
+                'com base no desempenho dos mapas da temporada.</div>'
+                '</div></div>',unsafe_allow_html=True
+            )
+            if not board.empty:
+                top=board.sort_values('Elite',ascending=False).head(10)
+                fig=px.bar(top.sort_values('Elite'),x='Elite',y='Jogador',orientation='h',
+                           text='Elite',color_discrete_sequence=['#D6B98A'])
+                style_edb_bar(fig,horizontal=True)
+                fig.update_traces(
+                    texttemplate='%{x:.1f}',
+                    hovertemplate='<b>%{y}</b><br>Índice Elite: %{x:.1f}<extra></extra>'
+                )
+                fig.update_layout(
+                    height=max(325,len(top)*42),
+                    xaxis_title='Índice de desempenho · KPR + ADR',
+                    yaxis_title='',showlegend=False,
+                    margin=dict(l=10,r=45,t=18,b=44)
+                )
+                st.plotly_chart(fig,use_container_width=True)
+            else:
+                st.info('O ranking será exibido após o registro das primeiras partidas.')
+            st.caption('Classificação provisória até homologação; '
+                       'são necessários 6 mapas para concorrer aos títulos oficiais.')
+            st.markdown(
+                '<a class="edb-elite-link" href="?page=rankings&amp;ranking=elite" '
+                'target="_self">Ver ranking completo →</a>',unsafe_allow_html=True
+            )
+    with home_draw:
+        with st.container(key='edb_home_draw'):
+            st.markdown(
+                '<div class="edb-home-panel-head edb-home-panel-head--draw">'
+                '<div class="edb-home-panel-icon" aria-hidden="true">🎲</div>'
+                '<div><div class="edb-home-panel-eyebrow">PARTIDA 5 × 5</div>'
+                '<div class="edb-home-panel-title">Sorteador de times</div>'
+                '<div class="edb-home-panel-subtitle">Divisão automática usando '
+                'os níveis de 1 a 10 cadastrados na EDB LEAGUE.</div>'
+                '</div></div>',unsafe_allow_html=True
+            )
+            render_home_team_draw()
+    # Regulamento permanece inalterado, abaixo dos dois painéis.
     st.markdown(season_rules_banner(season_number),unsafe_allow_html=True)
-    render_home_team_draw()
-    st.markdown('### Classificação Elite')
-    if not board.empty:
-        top=board.sort_values('Elite',ascending=False).head(10)
-        fig=px.bar(top.sort_values('Elite'),x='Elite',y='Jogador',orientation='h',
-                   text='Elite',color_discrete_sequence=['#D6B98A'])
-        style_edb_bar(fig,horizontal=True)
-        fig.update_traces(
-            texttemplate='%{x:.1f}',
-            hovertemplate='<b>%{y}</b><br>Índice Elite: %{x:.1f}<extra></extra>'
-        )
-        fig.update_layout(
-            height=max(325,len(top)*42),
-            xaxis_title='Índice de desempenho · KPR + ADR',
-            yaxis_title='',showlegend=False,
-            margin=dict(l=10,r=45,t=18,b=44)
-        )
-        st.plotly_chart(fig,use_container_width=True)
-    else:st.info('O painel está pronto. Cadastre jogadores e registre a primeira partida em Administração.')
-    st.caption('Classificações provisórias até homologação; são necessários 6 mapas para concorrer aos três títulos oficiais.')
 
 elif page=='Rankings':
     hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
