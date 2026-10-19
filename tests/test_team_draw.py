@@ -97,12 +97,14 @@ def test_cards_are_safe_and_group_copy_matches_balanced_sum():
     assert 'edb-draw-team--red' in markup
     assert '<strong>PT</strong>' in markup
     assert '<strong>PL</strong>' in markup
+    assert '<section class="edb-draw-team edb-draw-team--red"><div class="edb-draw-head"><strong>PT</strong>' in markup
+    assert '<section class="edb-draw-team edb-draw-team--blue"><div class="edb-draw-head"><strong>PL</strong>' in markup
     assert markup.count('edb-draw-player"')==10
     message=draw_message(a,b)
     assert "EDB LEAGUE" in message
     assert "Diferença:" in message
-    assert "🔵 PT" in message
-    assert "🔴 PL" in message
+    assert "🔴 PT" in message
+    assert "🔵 PL" in message
     assert "TIME A" not in message and "TIME B" not in message
     assert message.count("• ")==10
     assert player_name(roster[0]) in message
