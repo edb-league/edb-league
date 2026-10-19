@@ -430,7 +430,7 @@ def render_home_team_draw():
     if result is not None and result['signature']!=signature:
         st.session_state.pop('edb_draw_result',None)
         result=None
-    if st.button('🎲 Sortear times equilibrados',type='primary',
+    if st.button('Sortear times',type='primary',
                  use_container_width=True,disabled=count!=10):
         team_a,team_b=draw_balanced_teams(
             [by_id[pid] for pid in selected_ids]
