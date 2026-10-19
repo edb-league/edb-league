@@ -82,13 +82,13 @@ def render_profile(st, px, player, data, hall, medals=None):
     nick = str(player.get("nickname") or "Jogador")
     name = label if label and label.casefold() != nick.casefold() else nick
     extra = " · ".join([part for part in [f"Nick oficial: {nick}", "Visitante" if player.get("is_guest") else "Integrante"] if part])
-    stars = max(1, min(5, int(player.get("stars") or 3)))
+    level = max(1, min(10, int(player.get("skill_level") or player.get("stars") or 5)))
     info = " · Perfil provisório" if data["games"] < 2 else ""
     st.markdown(LEGACY_CSS, unsafe_allow_html=True)
     st.markdown(
         '<section class="edb-profile-head"><div class="edb-profile-name">' +
         escape(name) + '</div><div class="edb-profile-meta">' + escape(extra) +
-        ' · <span class="edb-profile-stars">' + ("★" * stars) + "</span>" +
+        ' · <span class="edb-profile-stars">Nível ' + str(level) + "</span>" +
         escape(info) + "</div></section>", unsafe_allow_html=True
     )
     metrics = [
