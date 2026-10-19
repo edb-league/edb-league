@@ -89,8 +89,8 @@ CSS='''
 .small-note {color:#94ABC1;font-size:12px;}
 
 
-/* Dois painéis verticais da página inicial: Elite e sorteador. */
-.st-key-edb_home_elite,.st-key-edb_home_draw{
+/* Vitrine: Elite e homenagem lado a lado; sorteador em largura total. */
+.st-key-edb_home_elite,.st-key-edb_home_president,.st-key-edb_home_draw{
   background:radial-gradient(ellipse at 95% 0%,rgba(85,146,201,.16),transparent 50%),
              linear-gradient(145deg,#142D45 0%,#102237 60%,#0D1B2B 100%);
   border:1px solid #365A79;border-radius:20px;
@@ -103,7 +103,27 @@ CSS='''
   background:radial-gradient(ellipse at 95% 0%,rgba(214,185,138,.13),transparent 50%),
              linear-gradient(145deg,#192C40 0%,#102237 60%,#0D1B2B 100%);
 }
-.st-key-edb_home_draw{border-color:#416D90;}
+.st-key-edb_home_president{
+  border-color:#956F44;
+  background:radial-gradient(ellipse at 50% 0%,rgba(184,127,59,.13),transparent 60%),
+             linear-gradient(145deg,#1E1B1B,#171C24 65%,#121A27);
+}
+.st-key-edb_home_draw{border-color:#416D90;min-height:0;}
+.edb-president-photo{
+  height:405px;background:radial-gradient(ellipse at center,#29211D,#121316 76%);
+  border:1px solid rgba(213,174,115,.23);border-radius:15px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+}
+.edb-president-photo img{
+  display:block;width:100%;height:100%;object-fit:contain;object-position:center;
+}
+.edb-president-plaque{text-align:center;padding:19px 8px 7px;color:#F5E7D1;}
+.edb-president-kicker{text-transform:uppercase;letter-spacing:2px;
+  font-size:.64rem;font-weight:850;color:#D7AF75;}
+.edb-president-title{font-weight:850;font-size:1.12rem;line-height:1.35;
+  margin:8px auto;color:#F2E4CD;max-width:380px;}
+.edb-president-date{font-size:.86rem;letter-spacing:.3px;
+  color:#D9B37B;font-weight:750;}
 .edb-home-panel-head{display:flex;align-items:flex-start;gap:13px;
   padding:1px 0 16px;border-bottom:1px solid rgba(173,201,224,.17);
   margin-bottom:14px;min-height:110px;}
@@ -134,7 +154,8 @@ CSS='''
   text-decoration:none!important;font-weight:800;font-size:.82rem;padding:10px 0;}
 .edb-elite-link:hover{text-decoration:underline!important;color:#FFE1B5!important;}
 @media(max-width:900px){
-  .st-key-edb_home_elite,.st-key-edb_home_draw{min-height:0;padding:17px 15px 14px;}
+  .st-key-edb_home_elite,.st-key-edb_home_president,.st-key-edb_home_draw{min-height:0;padding:17px 15px 14px;}
+  .edb-president-photo{height:340px;}
   .edb-home-panel-head{min-height:0;}
 }
 
@@ -399,6 +420,27 @@ def season_rules_banner(selected_season):
         '</div><p class="edb-season-rules-foot">'+esc(foot)+'</p></section>'
     )
 
+def render_president_banner():
+    """Homenagem permanente, com retrato incorporado localmente ao site."""
+    portrait=(ROOT/'assets'/'president_dudu.webp.b64').read_text(
+        encoding='ascii'
+    ).strip()
+    st.markdown(
+        '<section class="edb-president-tribute" '
+        'aria-label="Inauguração da EDB LEAGUE na gestão do Presidente Dudu">'
+        '<div class="edb-president-photo">'
+        '<img src="data:image/webp;base64,'+portrait+'" '
+        'alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta"/>'
+        '</div><div class="edb-president-plaque">'
+        '<div class="edb-president-kicker">MARCO HISTÓRICO · EDB LEAGUE</div>'
+        '<div class="edb-president-title">'
+        'Inaugurada na gestão do Presidente Dudu'
+        '</div><div class="edb-president-date">19 de outubro de 2026</div>'
+        '</div></section>',
+        unsafe_allow_html=True
+    )
+
+
 def render_home_team_draw():
     """Sorteio temporario 5x5 na vitrine da home, sem gravar partidas."""
     st.markdown(
@@ -566,8 +608,8 @@ if page=='Visão geral':
             r=qualified.iloc[0]
             tile('🏅 XINXA · RANKING XP',player_label(r['Jogador']),f"{int(r['XP'])} XP")
         else:tile('🏅 XINXA','A definir','Aguardando elegíveis')
-    # Vitrine responsiva: Elite à esquerda, sorteador à direita.
-    home_elite,home_draw=st.columns(2,gap='large')
+    # Os três destaques permanecem acima. Elite à esquerda e homenagem à direita.
+    home_elite,home_president=st.columns(2,gap='large')
     with home_elite:
         with st.container(key='edb_home_elite'):
             st.markdown(
@@ -603,19 +645,22 @@ if page=='Visão geral':
                 '<a class="edb-elite-link" href="?page=rankings&amp;ranking=elite" '
                 'target="_self">Ver ranking completo →</a>',unsafe_allow_html=True
             )
-    with home_draw:
-        with st.container(key='edb_home_draw'):
-            st.markdown(
-                '<div class="edb-home-panel-head edb-home-panel-head--draw">'
-                '<div class="edb-home-panel-icon" aria-hidden="true">🎲</div>'
-                '<div><div class="edb-home-panel-eyebrow">PARTIDA 5 × 5</div>'
-                '<div class="edb-home-panel-title">Sorteador de times</div>'
-                '<div class="edb-home-panel-subtitle">Divisão automática usando '
-                'os níveis de 1 a 10 cadastrados na EDB LEAGUE.</div>'
-                '</div></div>',unsafe_allow_html=True
-            )
-            render_home_team_draw()
-    # Regulamento permanece inalterado, abaixo dos dois painéis.
+    with home_president:
+        with st.container(key='edb_home_president'):
+            render_president_banner()
+    # Sorteador em largura total, preservando o funcionamento e as equipes PT/PL.
+    with st.container(key='edb_home_draw'):
+        st.markdown(
+            '<div class="edb-home-panel-head edb-home-panel-head--draw">'
+            '<div class="edb-home-panel-icon" aria-hidden="true">🎲</div>'
+            '<div><div class="edb-home-panel-eyebrow">PARTIDA 5 × 5</div>'
+            '<div class="edb-home-panel-title">Sorteador de times</div>'
+            '<div class="edb-home-panel-subtitle">Divisão automática usando '
+            'os níveis de 1 a 10 cadastrados na EDB LEAGUE.</div>'
+            '</div></div>',unsafe_allow_html=True
+        )
+        render_home_team_draw()
+    # O informativo original continua embaixo do sorteador.
     st.markdown(season_rules_banner(season_number),unsafe_allow_html=True)
 
 elif page=='Rankings':
