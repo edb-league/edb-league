@@ -39,6 +39,7 @@ class Store:
                 id TEXT PRIMARY KEY, nickname TEXT NOT NULL,
                 steamid TEXT UNIQUE, stars INTEGER NOT NULL DEFAULT 3,
                 skill_level INTEGER NOT NULL DEFAULT 5 CHECK(skill_level BETWEEN 1 AND 10),
+                is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             CREATE TABLE IF NOT EXISTS matches (
@@ -63,6 +64,8 @@ class Store:
             player_cols = [r[1] for r in con.execute('PRAGMA table_info(players)')]
             if 'skill_level' not in player_cols:
                 con.execute('ALTER TABLE players ADD COLUMN skill_level INTEGER NOT NULL DEFAULT 5')
+            if 'is_active' not in player_cols:
+                con.execute('ALTER TABLE players ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1')
             cols = [r[1] for r in con.execute('PRAGMA table_info(player_stats)')]
             if 'observed_nickname' not in cols:
                 con.execute('ALTER TABLE player_stats ADD COLUMN observed_nickname TEXT')
@@ -151,6 +154,26 @@ class Store:
                                steamid=COALESCE(excluded.steamid,players.steamid),
                                stars=excluded.stars,skill_level=excluded.skill_level''', row)
         return pid
+
+    def set_player_active(self, player_id, active):
+        """Retira ou reativa um jogador sem excluir dados de temporadas e partidas."""
+        pid = str(player_id).strip()
+        if not pid or not isinstance(active, bool):
+            raise ValueError('Jogador e situação válidos são obrigatórios.')
+        if self.cloud:
+            changed = self._api('PATCH', 'players',
+                                params={'id': 'eq.' + pid},
+                                payload={'is_active': active})
+            if len(changed) != 1:
+                raise ValueError('Jogador não encontrado.')
+        else:
+            with self._connect() as con:
+                cursor = con.execute(
+                    'UPDATE players SET is_active=? WHERE id=?',
+                    (int(active), pid),
+                )
+                if cursor.rowcount != 1:
+                    raise ValueError('Jogador não encontrado.')
 
     def match_exists(self,mid):
         if self.cloud:
