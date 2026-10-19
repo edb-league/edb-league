@@ -154,14 +154,20 @@ def test_home_season_rules_banner_below_elite_and_draw():
     assert 'As regras abaixo entram em vigor a partir da Temporada 1' not in APP
     assert '.edb-season-rules-grid' in APP
     overview = APP.split("if page=='Visão geral':", 1)[1].split("elif page=='Rankings':",1)[0]
-    assert overview.index("home_elite,home_draw=st.columns(2,gap='large')") < overview.index(
+    assert overview.index("home_elite,home_president=st.columns(2,gap='large')") < overview.index(
         "with home_elite:"
     )
     assert overview.index("with home_elite:") < overview.index("st.plotly_chart(fig,use_container_width=True)")
     assert overview.index("st.plotly_chart(fig,use_container_width=True)") < overview.index(
-        "with home_draw:"
+        "with home_president:"
     )
-    assert overview.index("with home_draw:") < overview.index("render_home_team_draw()")
+    assert overview.index("with home_president:") < overview.index("render_president_banner()")
+    assert overview.index("render_president_banner()") < overview.index(
+        "with st.container(key='edb_home_draw'):"
+    )
+    assert overview.index("with st.container(key='edb_home_draw'):") < overview.index(
+        "render_home_team_draw()"
+    )
     assert overview.index("render_home_team_draw()") < overview.index(
         "st.markdown(season_rules_banner(season_number)"
     )
