@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from chart_theme import style_edb_bar
+from team_draw import draw_balanced_teams, draw_message, player_name, player_stars, team_cards_html
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
@@ -86,6 +87,31 @@ CSS='''
 .podium .detail {color:#A5B9CE;font-size:12px;}
 .tag {color:#80BCE8;letter-spacing:1.3px;font-size:11px;font-weight:700;}
 .small-note {color:#94ABC1;font-size:12px;}
+
+/* Sorteador de times da pagina inicial. */
+.edb-draw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;margin:12px 0 18px;}
+.edb-draw-team{padding:16px 17px;border-radius:15px;
+  background:linear-gradient(145deg,#142E46,#102236);border:1px solid #426681;
+  min-width:0;}
+.edb-draw-team--red{background:linear-gradient(145deg,#36252F,#211F30);
+  border-color:#875761;}
+.edb-draw-head{display:flex;align-items:center;justify-content:space-between;
+  gap:8px;padding-bottom:11px;border-bottom:1px solid rgba(174,201,224,.18);
+  font-size:.87rem;color:#EAF4FF;}
+.edb-draw-head>span{color:#D6B98A;font-weight:850;font-variant-numeric:tabular-nums;}
+.edb-draw-player{display:flex;align-items:center;justify-content:space-between;
+  gap:9px;padding:9px 0;border-bottom:1px solid rgba(174,201,224,.09);
+  font-size:.8rem;color:#E2EDF6;}
+.edb-draw-player:last-child{border-bottom:0;padding-bottom:0;}
+.edb-draw-player span:first-child{overflow-wrap:anywhere;min-width:0;}
+.edb-draw-stars{color:#D6B98A;font-size:.8rem;letter-spacing:1px;
+  flex:0 0 auto;white-space:nowrap;}
+@media(max-width:650px){
+  .edb-draw-grid{grid-template-columns:1fr;gap:9px;}
+  .edb-draw-team{padding:12px 14px;}
+}
+
 
 /* Painéis Plotly consistentes, sem incorporar imagens no HTML. */
 div[data-testid="stPlotlyChart"] {
@@ -320,6 +346,59 @@ def season_rules_banner(selected_season):
         '</div><p class="edb-season-rules-foot">'+esc(foot)+'</p></section>'
     )
 
+def render_home_team_draw():
+    """Sorteio temporario 5x5, sem gravacoes e com resultado por sessao."""
+    st.markdown('### 🎲 Sorteador de times')
+    with st.expander('Selecionar jogadores presentes e sortear um 5x5',expanded=False):
+        st.caption(
+            'Selecione exatamente 10 jogadores. O sorteio escolhe aleatoriamente '
+            'uma das divisões com a menor diferença possível na soma das estrelas.'
+        )
+        ordered=sorted(all_players,key=lambda p:player_name(p).casefold())
+        by_id={str(p['id']):p for p in ordered}
+        selected_ids=st.multiselect(
+            'Jogadores presentes',
+            options=list(by_id),
+            format_func=lambda pid:player_name(by_id[pid]) +
+                        '  ·  ' + '★'*player_stars(by_id[pid]),
+            max_selections=10,
+            placeholder='Escolha os 10 participantes',
+            key='edb_draw_present',
+        )
+        count=len(selected_ids)
+        st.caption(f'{count}/10 jogadores selecionados')
+        signature=tuple(sorted(
+            (pid,player_stars(by_id[pid])) for pid in selected_ids
+        ))
+        result=st.session_state.get('edb_draw_result')
+        if result is not None and result['signature']!=signature:
+            st.session_state.pop('edb_draw_result',None)
+            result=None
+        if st.button('🎲 Sortear times equilibrados',type='primary',
+                     use_container_width=True,disabled=count!=10):
+            team_a,team_b=draw_balanced_teams(
+                [by_id[pid] for pid in selected_ids]
+            )
+            result={
+                'signature':signature,
+                'a':[str(p['id']) for p in team_a],
+                'b':[str(p['id']) for p in team_b],
+            }
+            st.session_state['edb_draw_result']=result
+        if result is not None:
+            team_a=[by_id[pid] for pid in result['a']]
+            team_b=[by_id[pid] for pid in result['b']]
+            gap=abs(sum(player_stars(p) for p in team_a)-
+                    sum(player_stars(p) for p in team_b))
+            st.markdown(team_cards_html(team_a,team_b),unsafe_allow_html=True)
+            st.caption(f'⚖️ Diferença entre os times: {gap} estrela(s). '
+                       'Clique novamente para sortear outra combinação equilibrada.')
+            st.markdown('**📋 Resultado para compartilhar no grupo**')
+            st.code(draw_message(team_a,team_b),language=None)
+        st.caption('Usa as estrelas do cadastro. Não altera classificações, '
+                   'não salva equipes nem registra partidas.')
+
+
 def tile(eyebrow,player,detail,symbol='✦'):
     st.markdown(f'<div class="podium"><div class="tag">{esc(eyebrow)}</div>'
                 f'<div class="player">{esc(symbol)} {esc(player)}</div><div class="detail">{esc(detail)}</div></div>',unsafe_allow_html=True)
@@ -423,6 +502,7 @@ if page=='Visão geral':
             tile('🏅 XINXA · RANKING XP',player_label(r['Jogador']),f"{int(r['XP'])} XP")
         else:tile('🏅 XINXA','A definir','Aguardando elegíveis')
     st.markdown(season_rules_banner(season_number),unsafe_allow_html=True)
+    render_home_team_draw()
     st.markdown('### Classificação Elite')
     if not board.empty:
         top=board.sort_values('Elite',ascending=False).head(10)
