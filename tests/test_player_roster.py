@@ -18,7 +18,8 @@ def test_archiving_player_preserves_stats_and_prevents_draw_selection(tmp_path):
         {"id":"map-1","played_at":"2026-10-19","map_name":"Mirage",
          "source":"teste","rounds_total":20,"notes":None},
         [{"match_id":"map-1","player_id":player_id,"kills":19,
-          "deaths":13,"assists":5,"rounds":20,"won":1}]
+          "deaths":13,"assists":5,"rounds":20,"won":1,
+          "headshots":8,"plants":0,"defuses":0}]
     )
     assert store.players()[0]["is_active"]==1
     assert store.stats()[0]["kills"]==19
