@@ -106,7 +106,16 @@ def test_cards_are_safe_and_group_copy_matches_balanced_sum():
 def test_home_integrates_sorteio_without_touching_rankings_or_database():
     home=APP.split("if page=='Visão geral':",1)[1].split("elif page=='Rankings':",1)[0]
     assert "render_home_team_draw()" in home
-    assert home.index("render_home_team_draw()") < home.index("st.markdown('### Classificação Elite')")
+    assert home.index("with home_elite:") < home.index("with home_draw:")
+    assert home.index("with home_draw:") < home.index("render_home_team_draw()")
+    assert home.index("render_home_team_draw()") < home.index("st.markdown(season_rules_banner(season_number)")
+    assert "st.container(key='edb_home_elite')" in APP
+    assert "st.container(key='edb_home_draw')" in APP
+    assert ".st-key-edb_home_elite,.st-key-edb_home_draw" in APP
+    assert "def render_home_team_draw():" in APP
+    draw=APP.split("def render_home_team_draw():",1)[1].split("def tile(",1)[0]
+    assert "st.multiselect(" in draw
+    assert "with st.expander(" not in draw
     assert "max_selections=10" in APP
     assert "disabled=count!=10" in APP
     assert "st.session_state['edb_draw_result']=result" in APP
