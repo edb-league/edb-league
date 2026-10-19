@@ -42,7 +42,7 @@ def test_admin_writes_clear_derived_and_source_caches():
     for name in ("load_league_snapshot", "load_scope_stats", "cached_enriched_frame",
                  "cached_season_boards", "cached_career_records"):
         assert f"{name}.clear()" in block
-    assert APP.count("invalidate_league_cache()") == 5
+    assert APP.count("invalidate_league_cache()") == 7
 
 
 def test_art_and_historical_rules_remain_unchanged():
