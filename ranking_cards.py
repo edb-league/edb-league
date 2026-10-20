@@ -58,9 +58,9 @@ def _fmt(value, digits=0, suffix=""):
 
 def ranking_cards(rows, focus="Elite", name_formatter=None):
     """Render each player separately; respect the caller's ranking order."""
-    if focus not in ("Elite", "Superação %", "XP"):
+    if focus not in ("Elite", "Superação %", "XP", "ADR"):
         raise ValueError("Ranking desconhecido")
-    labels = {"Elite": "Índice Elite", "Superação %": "Superação", "XP": "XP"}
+    labels = {"Elite": "Índice Elite", "Superação %": "Superação", "XP": "XP", "ADR": "ADR · pior primeiro"}
     pieces = ['<div class="edb-rank-list">']
     for index, row in enumerate(rows, 1):
         player = row.get("Jogador", "")
@@ -79,14 +79,16 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
         )
         other = [(key, _fmt(row.get(key), 1 if key != "XP" else 0,
                               "%" if key == "Superação %" else ""))
-                 for key in ("Elite", "Superação %", "XP") if key != focus]
-        provisional = " · Provisório (menos de 2 partidas)" if row.get("Elegível") is False else ""
+                 for key in ("Elite", "Superação %", "XP") if key != focus] if focus != "ADR" else []
+        provisional = (" · Provisório (menos de 2 mapas)" if focus == "ADR" else " · Provisório (menos de 2 partidas)") if row.get("Elegível") is False else ""
         metrics = "".join(
             f'<div class="edb-rank-metric"><div class="edb-rank-metric-label">{title}</div>'
             f'<div class="edb-rank-metric-value">{value}</div></div>'
             for title, value in stats
         )
         lower = " · ".join(f"{labels[key]}: {value}" for key, value in other)
+        if focus == "ADR":
+            lower = "Ordenado por menor ADR acumulado nos mapas disputados"
         player_id = row.get("player_id")
         link_start = ('<a class="edb-rank-link" href="?player=' +
                       quote(str(player_id),safe="") + '" target="_self">'
@@ -100,7 +102,9 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
             f'<span class="edb-rank-place">#{index:02d}</span>'
             '<div class="edb-rank-identity">'
             f'<div class="edb-rank-name">{name}</div>'
-            f'<div class="edb-rank-stars">{"★" * stars}</div>'
+            (f'<div class="edb-rank-stars">Nível {int(row["Nível"])}</div>'
+             if focus == "ADR" and row.get("Nível") is not None
+             else f'<div class="edb-rank-stars">{"★" * stars}</div>')
             '</div></div>'
             '<div class="edb-rank-focus">'
             f'<div class="edb-rank-focus-label">{labels[focus]}</div>'
