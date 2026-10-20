@@ -32,8 +32,15 @@ SEASON_CSS = """
 .edb-season-progress{height:6px;border-radius:6px;background:#29435A;overflow:hidden;margin-top:6px;max-width:260px;}
 .edb-season-progress>span{display:block;height:100%;background:#79C6F2;border-radius:inherit;}
 .edb-series-columns{
+ position:relative;
  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
- gap:22px;align-items:start;margin:18px 0 24px;
+ gap:30px;align-items:start;margin:18px 0 24px;
+}
+.edb-series-columns::before{
+ content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;
+ transform:translateX(-1px);border-radius:2px;pointer-events:none;
+ background:linear-gradient(180deg,rgba(227,185,60,0),#E3B93C 10%,#C9972B 90%,rgba(201,151,43,0));
+ box-shadow:0 0 10px rgba(227,185,60,.28);
 }
 .edb-series-column{min-width:0;display:flex;flex-direction:column;gap:12px;}
 .edb-series-group-title{
@@ -41,14 +48,14 @@ SEASON_CSS = """
  gap:12px;margin:2px 0 1px;color:#EBF4FF;font-size:.87rem;font-weight:850;
 }
 .edb-series-group-title span:last-child{color:#86B8DA;font-size:.69rem;font-weight:700;}
-.edb-series-grid{display:grid;grid-template-columns:1fr;gap:13px;}
+.edb-series-grid{display:grid;grid-template-columns:1fr;gap:11px;}
 .edb-series-empty{
  border:1px dashed #37516B;border-radius:14px;
  padding:22px 17px;color:#91ACC3;font-size:.78rem;background:#15283B;
 }
 .edb-series-card{
- display:flex;flex-direction:column;gap:12px;min-height:197px;padding:17px 18px;
- border-radius:16px;border:1px solid #3A5974;
+ display:flex;flex-direction:column;gap:9px;min-height:150px;padding:13px 15px;
+ border-radius:14px;border:1px solid #3A5974;
  background:linear-gradient(135deg,#1B354C,#12253B 85%);
  color:#E9F3FC !important;text-decoration:none !important;
  transition:border-color .15s ease,background .15s ease,transform .15s ease;
@@ -61,7 +68,7 @@ SEASON_CSS = """
  border-color:#8BD0FF;box-shadow:inset 0 0 0 1px #4786B6;
 }
 .edb-series-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.edb-series-heading strong{font-size:.86rem;color:#EAF4FE;}
+.edb-series-heading strong{font-size:.8rem;color:#EAF4FE;}
 .edb-series-status{font-size:.62rem;font-weight:800;color:#A6C4DC;white-space:nowrap;}
 .edb-series-scoreboard{
  display:flex;align-items:center;justify-content:space-between;
@@ -70,15 +77,15 @@ SEASON_CSS = """
 .edb-series-side{display:flex;align-items:center;gap:7px;min-width:0;}
 .edb-series-side--right{flex-direction:row;}
 .edb-series-team{
- font-size:.73rem;font-weight:900;letter-spacing:.4px;
- padding:5px 7px;border-radius:8px;border:1px solid transparent;flex:none;
+ font-size:.68rem;font-weight:900;letter-spacing:.4px;
+ padding:4px 6px;border-radius:8px;border:1px solid transparent;flex:none;
 }
 .edb-series-team--pt{color:#FFA6AB;background:rgba(198,58,75,.12);border-color:rgba(220,78,99,.25);}
 .edb-series-team--pl{color:#A0D6FF;background:rgba(53,133,209,.15);border-color:rgba(74,156,228,.27);}
 .edb-series-number{
  display:inline-flex;align-items:center;justify-content:center;
- padding:9px 12px;border-radius:11px;min-width:52px;
- font-size:1.55rem;line-height:1;font-variant-numeric:tabular-nums;font-weight:900;
+ padding:7px 10px;border-radius:10px;min-width:44px;
+ font-size:1.3rem;line-height:1;font-variant-numeric:tabular-nums;font-weight:900;
  border:1px solid #40566C;color:#B8D0E4;background:#1C354A;
 }
 .edb-series-number--win{
@@ -97,11 +104,21 @@ SEASON_CSS = """
 .edb-series-progress{display:flex;align-items:center;gap:10px;margin:6px 0 11px;color:#A4BED4;font-size:.78rem;}
 .edb-series-progress-track{height:7px;width:190px;max-width:38vw;border-radius:999px;background:#233D54;overflow:hidden;}
 .edb-series-progress-track>span{display:block;height:100%;border-radius:inherit;background:#79C6F2;}
-@media(max-width:860px){.edb-series-columns{grid-template-columns:1fr;gap:24px;}}
+@media(max-width:860px){
+ .edb-series-columns{grid-template-columns:1fr;gap:28px;}
+ .edb-series-columns::before{display:none;}
+ .edb-series-column+.edb-series-column{position:relative;}
+ .edb-series-column+.edb-series-column::before{
+  content:"";position:absolute;left:0;right:0;top:-15px;height:2px;
+  border-radius:2px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(227,185,60,0),#E3B93C 10%,#C9972B 90%,rgba(201,151,43,0));
+  box-shadow:0 0 10px rgba(227,185,60,.28);
+ }
+}
 @media(max-width:650px){
  .edb-season-bar{padding:10px;}
- .edb-series-card{padding:15px 14px;}
- .edb-series-number{font-size:1.4rem;min-width:44px;padding:8px 9px;}
+ .edb-series-card{padding:12px 12px;}
+ .edb-series-number{font-size:1.15rem;min-width:40px;padding:6px 8px;}
  .edb-series-side{gap:5px;}
 }
 </style>
