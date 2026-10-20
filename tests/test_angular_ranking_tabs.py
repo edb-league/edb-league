@@ -7,7 +7,7 @@ APP = (ROOT / "app.py").read_text(encoding="utf-8")
 
 
 def test_three_ranking_buttons_are_real_links_and_keep_order():
-    assert RANK_OPTIONS == (("elite","Elite"),("superacao","Superação"),("resenha","Resenha"))
+    assert RANK_OPTIONS == (("elite","Elite"),("superacao","Superação"),("resenha","BAGRES"))
     for current in ("elite","superacao","resenha"):
         markup=rank_switch(current)
         assert markup.count('class="edb-rank-option') == 3
@@ -17,7 +17,7 @@ def test_three_ranking_buttons_are_real_links_and_keep_order():
         assert 'href="?page=rankings&amp;ranking=superacao"' in markup
         assert 'href="?page=rankings&amp;ranking=resenha"' in markup
         assert f'aria-label="Ranking {dict(RANK_OPTIONS)[current]}" aria-current="page"' in markup
-        assert markup.index('Ranking Elite') < markup.index('Ranking Superação') < markup.index('Ranking Resenha')
+        assert markup.index('Ranking Elite') < markup.index('Ranking Superação') < markup.index('Ranking BAGRES')
 
 
 def test_active_ranking_has_visible_blue_background_and_glow():
@@ -40,7 +40,9 @@ def test_categories_switch_real_content_without_streamlit_tabs():
     assert "elif selected_rank == 'resenha':" in ranking
     assert "focus='Elite'" in ranking
     assert "focus='Superação %'" in ranking
-    assert "focus='XP'" in ranking
+    assert "focus='ADR'" in ranking
+    assert "board_bagres=bagres_board(" in ranking
+    assert "board_xp" not in ranking
     assert "st.tabs(['Geral','Mira','Utilitárias'])" in APP
 
 
