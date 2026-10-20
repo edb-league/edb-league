@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { num } from "@/lib/format";
 
 export type ArtName = "home" | "rankings" | "matches" | "duel" | "trophy" | "medals" | "xp";
@@ -12,11 +13,14 @@ export function PageHeader({
   subtitle,
   art,
   counts,
+  children,
 }: {
   title: string;
   subtitle: string;
   art?: ArtName;
   counts?: { players: number; matches: number; maps: number };
+  /** Faixa inferior do banner (barra de temporada). */
+  children?: ReactNode;
 }) {
   return (
     <header className="relative isolate overflow-hidden rounded-[var(--radius-card)] border border-t-4 border-line-soft border-t-gold-bg bg-surface-2">
@@ -37,12 +41,14 @@ export function PageHeader({
           />
         </>
       )}
-      <div className="max-w-2xl px-5 py-7 md:px-8 md:py-10">
-        <p className="kicker mb-2">EDB LEAGUE · CS2</p>
-        <h1 className="text-5xl leading-none md:text-6xl">{title}</h1>
-        <p className="mt-3 max-w-prose text-xl text-muted">{subtitle}</p>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-5 py-5 md:px-8 md:py-6">
+        <div className="max-w-2xl">
+          <p className="kicker mb-1">EDB LEAGUE · CS2</p>
+          <h1 className="text-4xl leading-none md:text-5xl">{title}</h1>
+          <p className="mt-2 max-w-prose text-lg text-muted">{subtitle}</p>
+        </div>
         {counts && (
-          <ul className="mt-5 flex flex-wrap gap-2" aria-label="Resumo da liga">
+          <ul className="hidden flex-wrap gap-2 md:flex" aria-label="Resumo da liga">
             {(
               [
                 ["Jogadores", counts.players],
@@ -52,15 +58,16 @@ export function PageHeader({
             ).map(([label, value]) => (
               <li
                 key={label}
-                className="rounded-full border border-line-soft bg-surface/90 px-3 py-1 text-base text-muted"
+                className="rounded-full border border-line-soft bg-surface/90 px-3 py-0.5 text-base text-muted"
               >
-                <b className="num mr-1 text-xl text-gold">{num(value)}</b>
+                <b className="num mr-1 text-lg text-gold">{num(value)}</b>
                 {label}
               </li>
             ))}
           </ul>
         )}
       </div>
+      {children && <div className="border-t border-line-soft bg-surface/92 px-5 py-2 md:px-8">{children}</div>}
     </header>
   );
 }

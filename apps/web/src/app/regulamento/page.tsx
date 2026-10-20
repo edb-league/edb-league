@@ -17,10 +17,8 @@ const SECTIONS = [
   ["confrontos", "2. Confrontos"],
   ["pontuacao", "3. Pontuação e rankings"],
   ["titulos", "4. Títulos"],
-  ["xp", "5. XP e missões"],
-  ["niveis", "6. Níveis e estrelas"],
-  ["medalhas", "7. Medalhas"],
-  ["perguntas", "8. Perguntas frequentes"],
+  ["xp", "5. XP, níveis e medalhas"],
+  ["perguntas", "6. Perguntas frequentes"],
 ] as const;
 
 const RANKINGS: { type: RankingType; name: string; min: string }[] = [
@@ -51,8 +49,8 @@ const FAQ = [
   ["O Sorteador muda alguma classificação?", "Não. Ele só divide os presentes em dois times e não registra partidas."],
 ] as const;
 
-const H2 = "flex items-center gap-3 text-4xl";
-const NO = "num inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-gold-bg text-3xl leading-none text-on-gold";
+const H2 = "flex items-center gap-3 text-3xl md:text-4xl";
+const NO = "num inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-gold-bg text-2xl leading-none text-on-gold";
 
 export default async function RulesPage() {
   const [[meta, missions, cat], rankings] = await Promise.all([
@@ -87,10 +85,10 @@ export default async function RulesPage() {
           </ol>
         </nav>
 
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-4">
           <Card aria-labelledby="sobre" className="flex flex-wrap items-center gap-6">
-            <div className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-lg border border-line-soft bg-surface-2">
-              <Image src="/president.avif" alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta" fill sizes="7rem" className="object-contain" />
+            <div className="relative aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-lg border border-line-soft bg-surface-2">
+              <Image src="/president.avif" alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta" fill sizes="5rem" className="object-contain" />
             </div>
             <div className="min-w-0 flex-1 basis-64">
               <p className="kicker">Sobre a liga</p>
@@ -105,7 +103,7 @@ export default async function RulesPage() {
               A cada temporada, uma nova disputa começa e os rankings são reiniciados. Jogue quantas vezes quiser, acompanhe sua
               evolução e tente conquistar as primeiras posições. Cada novo mapa pode melhorar sua classificação.
             </p>
-            <dl className="mt-4 grid gap-3 md:grid-cols-3">
+            <dl className="mt-3 grid gap-2 sm:grid-cols-3 md:gap-3">
               <Stat label="Duração" value="1 mês" hint="Do dia 19 ao dia 18 do mês seguinte" />
               <Stat label="Rankings" value="Reiniciam" hint="Toda nova temporada começa do zero" />
               <Stat label="Mapas que contam" value="Top 6" hint="Os 6 melhores de cada jogador, em cada ranking" />
@@ -134,7 +132,7 @@ export default async function RulesPage() {
               Os confrontos são BO1 e BO3 livres: não há limite de confrontos nem de mapas por temporada. Cada mapa conta
               igualmente na pontuação, seja de um BO1 avulso ou de uma série de três mapas.
             </p>
-            <dl className="mt-4 grid gap-3 md:grid-cols-3">
+            <dl className="mt-3 grid gap-2 sm:grid-cols-3 md:gap-3">
               <Stat label="BO1" value="1 mapa" hint="Partida avulsa" />
               <Stat label="BO3" value="Até 3 mapas" hint="Série com placar de mapas" />
               <Stat label="Limite" value="Nenhum" hint="Confrontos e mapas por temporada" />
@@ -185,7 +183,7 @@ export default async function RulesPage() {
               Para concorrer aos títulos é necessário disputar pelo menos 6 mapas. Os únicos títulos competitivos oficiais são
               os três abaixo, homologados após o encerramento da temporada.
             </p>
-            <dl className="mt-4 grid gap-3 md:grid-cols-3">
+            <dl className="mt-3 grid gap-2 sm:grid-cols-3 md:gap-3">
               <Stat className="border-2 border-gold-bg" label="MVP" value="Elite" hint="Líder do ranking Elite" />
               <Stat label="Revelação" value="Superação" hint="Líder do ranking Superação" />
               <Stat label="Xinxa" value="XP" hint="Líder do ranking XP" />
@@ -196,7 +194,7 @@ export default async function RulesPage() {
           </Card>
 
           <Card id="xp" aria-labelledby="t5" className="scroll-mt-24">
-            <h2 id="t5" className={H2}><span aria-hidden="true" className={NO}>5</span>XP e missões</h2>
+            <h2 id="t5" className={H2}><span aria-hidden="true" className={NO}>5</span>XP, níveis e medalhas</h2>
             <p className="mt-3 max-w-prose text-lg text-muted">
               Todo nível tem uma meta. O prêmio é igual; o desafio é proporcional. Concluir uma partida de pelo menos 8 rounds
               com KPR acima da meta rende 100 XP, uma vez por semana.
@@ -244,56 +242,50 @@ export default async function RulesPage() {
                 <p className="mt-3 text-base text-muted">Contam até 6 mapas na temporada, além de até 100 XP de missão por semana.</p>
               </div>
             </div>
-            <p className="mt-4">
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div id="niveis" className="scroll-mt-24">
+                <h3 className="mb-2 font-display text-2xl font-bold uppercase">Níveis e estrelas</h3>
+                <p className="text-base text-muted">
+                  Cada jogador tem um nível de 1 a 10 no cadastro. O nível equilibra os times no Sorteador; as estrelas, de 1 a 5,
+                  definem a meta semanal de KPR. A cor do selo só agrupa as faixas, o número sempre aparece escrito.
+                </p>
+                <ul className="mt-3 grid grid-cols-2 gap-2">
+                  {LEVEL_BANDS.map((b) => (
+                    <li key={b.label} className="flex items-center gap-2 rounded-xl border border-line-soft bg-surface-2 p-2">
+                      <span className={`num inline-flex h-9 min-w-14 items-center justify-center rounded-lg px-2 text-2xl leading-none ${b.level <= 3 ? LEVEL_TIERS[0] : b.level <= 6 ? LEVEL_TIERS[1] : b.level <= 8 ? LEVEL_TIERS[2] : LEVEL_TIERS[3]}`}>
+                        {b.label.replace(" a ", "–").replace(" e ", "–")}
+                      </span>
+                      <span className="text-base">Níveis {b.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div id="medalhas" className="scroll-mt-24">
+                <h3 className="mb-2 font-display text-2xl font-bold uppercase">Medalhas</h3>
+                <p className="text-base text-muted">
+                  Marcos individuais em três faixas, com barra de progresso no perfil de cada jogador.
+                </p>
+                <ul className="mt-3 grid grid-cols-3 gap-2">
+                  {(["bronze", "silver", "gold"] as const).map((tier) => (
+                    <li key={tier} className="flex flex-col items-center gap-1 rounded-xl border border-line-soft bg-surface-2 p-2 text-center">
+                      <MedalShape tier={tier} earned />
+                      <TierBadge tier={tier} />
+                      <span className="text-sm text-muted">{plural(cat.medals.filter((m) => m.tier === tier).length, "medalha", "medalhas")}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2">
+                  <Link href="/medalhas" className="inline-flex min-h-11 items-center text-base font-bold">Ver todas as medalhas →</Link>
+                </p>
+              </div>
+            </div>
+            <p className="mt-2">
               <Link href="/missoes-xp" className="inline-flex min-h-11 items-center text-base font-bold">Ver as missões da temporada →</Link>
             </p>
           </Card>
 
-          <Card id="niveis" aria-labelledby="t6" className="scroll-mt-24">
-            <h2 id="t6" className={H2}><span aria-hidden="true" className={NO}>6</span>Níveis e estrelas</h2>
-            <p className="mt-3 max-w-prose text-lg text-muted">
-              Cada jogador tem um nível de 1 a 10 no cadastro da liga. O nível é usado no Sorteador de times para equilibrar PT e
-              PL, e as estrelas, de 1 a 5, definem a meta semanal de KPR.
-            </p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {LEVEL_BANDS.map((b) => (
-                <li key={b.label} className="flex items-center gap-3 rounded-xl border border-line-soft bg-surface-2 p-3">
-                  <span className={`num inline-flex h-9 min-w-14 items-center justify-center rounded-lg px-2 text-2xl leading-none ${b.level <= 3 ? LEVEL_TIERS[0] : b.level <= 6 ? LEVEL_TIERS[1] : b.level <= 8 ? LEVEL_TIERS[2] : LEVEL_TIERS[3]}`}>
-                    {b.label.replace(" a ", "–").replace(" e ", "–")}
-                  </span>
-                  <span className="text-lg">Níveis {b.label}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-base text-muted">A cor do selo só agrupa as faixas; o número do nível sempre aparece escrito.</p>
-          </Card>
-
-          <Card id="medalhas" aria-labelledby="t7" className="scroll-mt-24">
-            <h2 id="t7" className={H2}><span aria-hidden="true" className={NO}>7</span>Medalhas</h2>
-            <p className="mt-3 max-w-prose text-lg text-muted">
-              As medalhas reconhecem marcos individuais. Cada uma tem faixa Bronze, Prata ou Ouro e uma barra de progresso no
-              perfil do jogador.
-            </p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-3">
-              {(["bronze", "silver", "gold"] as const).map((tier) => (
-                <li key={tier} className="flex items-center gap-3 rounded-xl border border-line-soft bg-surface-2 p-3">
-                  <MedalShape tier={tier} earned />
-                  <span>
-                    <TierBadge tier={tier} />
-                    <span className="mt-1 block text-base text-muted">
-                      {plural(cat.medals.filter((m) => m.tier === tier).length, "medalha", "medalhas")}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-4">
-              <Link href="/medalhas" className="inline-flex min-h-11 items-center text-base font-bold">Ver todas as medalhas →</Link>
-            </p>
-          </Card>
-
           <Card id="perguntas" aria-labelledby="t8" className="scroll-mt-24">
-            <h2 id="t8" className={H2}><span aria-hidden="true" className={NO}>8</span>Perguntas frequentes</h2>
+            <h2 id="t8" className={H2}><span aria-hidden="true" className={NO}>6</span>Perguntas frequentes</h2>
             <div className="mt-4 flex flex-col gap-2.5">
               {FAQ.map(([q, a]) => (
                 <details key={q} className="rounded-xl border border-line-soft bg-surface-2 px-4">

@@ -29,8 +29,9 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
         subtitle="BO1 e BO3: cada mapa conta igualmente na temporada."
         art="matches"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
-      />
-      <SeasonBar meta={meta} season={season} path="/partidas" />
+      >
+        <SeasonBar meta={meta} season={season} path="/partidas" variant="strip" />
+      </PageHeader>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {(
@@ -75,16 +76,19 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       )}
 
       {list.legacy.length > 0 && (
-        <section aria-labelledby="antigos">
-          <SectionTitle id="antigos" title="Mapas antigos ainda não agrupados">
+        <details className="card p-4">
+          <summary className="cursor-pointer text-lg font-bold">
+            Mapas antigos ainda não agrupados ({list.legacy.length})
+          </summary>
+          <p className="mt-2 text-base text-muted">
             Registros preservados. Vincule os mapas a BO1 ou BO3 na Administração após conferir os placares.
-          </SectionTitle>
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          </p>
+          <ul className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {list.legacy.map((m) => (
               <MapCardItem key={m.id} card={m} href={mapHref(m.id)} />
             ))}
           </ul>
-        </section>
+        </details>
       )}
     </>
   );

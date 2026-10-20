@@ -52,10 +52,17 @@ Navegador ──► Next.js (apps/web)  ── /api/* (rewrite, mesma origem) �
 | Rankings | `/rankings/elite`, `/superacao`, `/xp`, `/bagres` (abas Elite, Superação, XP e BAGRES) |
 | Missões e XP | `/missoes-xp` (grupo Conquistas) |
 | Partidas BO1/BO3 e mapa | `/partidas`, `/partidas/mapa/[id]` |
-| Jogadores e perfil | `/jogadores`, `/jogadores/[id]` |
+| Jogadores e perfil | `/jogadores`, `/jogadores/[id]` (abas por `?aba=`: resumo, partidas, medalhas) |
 | Comparar | `/comparar` (formulário GET, funciona sem JavaScript) |
-| Hall da Fama, Medalhas | `/hall-da-fama`, `/medalhas` (grupo Conquistas, com barra de abas) |
+| Hall da Fama, Medalhas | `/hall-da-fama`, `/medalhas` (grupo Conquistas, com barra de abas; Medalhas filtra por `?faixa=`) |
 | Administração | `/admin` (elenco, importar, confrontos, temporadas, exportar CSV) |
+
+## Banners e espaço na tela
+
+- Cada página de topo usa `PageHeader` (`components/ui/PageHeader.tsx`) com arte de fundo e a barra de temporada embutida. A altura fica perto de 215 px no computador.
+- Para trocar uma imagem, substitua o arquivo em `apps/web/public/art/` mantendo o nome (`home`, `rankings`, `matches`, `duel`, `trophy`, `medals`, `xp`, todos `.webp`). Uma camada sólida fica por cima do texto, então o contraste não depende da imagem.
+- Jogadores, Regulamento e Sorteador ainda não têm arte. Para dar uma, inclua um nome em `ArtName` e passe `art="nome"` no `PageHeader` da página.
+- Regras de espaço: cada dado aparece uma vez por tela. Detalhes longos ficam em `<details>` (gráfico de Comparar, mapas antigos em Partidas, perguntas do Regulamento).
 
 Links antigos (`?page=`, `?player=`, `?match=`, `?bo3=`, `?ranking=`, `?season=`) redirecionam com 308 em `apps/web/src/proxy.ts`.
 

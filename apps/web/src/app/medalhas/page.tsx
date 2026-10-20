@@ -1,25 +1,26 @@
+import clsx from "clsx";
 import Link from "next/link";
 import { TIER_LABEL, TierBadge } from "@/components/players/MedalCard";
 import { Badge } from "@/components/ui/Badge";
 import { SectionTitle } from "@/components/ui/Card";
 import { AchievementTabs } from "@/components/layout/SectionTabs";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Stat, StatGrid } from "@/components/ui/Stat";
 import { api } from "@/lib/api";
 import { num, plural } from "@/lib/format";
 import type { MedalCatalogue, Meta } from "@/lib/types";
 
 export const metadata = { title: "Medalhas" };
 
-const TIER_TEXT = {
-  bronze: "Os primeiros marcos da jornada.",
-  silver: "Constância e destaque nas partidas.",
-  gold: "Feitos raros que merecem reconhecimento.",
-} as const;
-
-export default async function MedalsPage() {
-  const [meta, cat] = await Promise.all([api<Meta>("/meta"), api<MedalCatalogue>("/medals")]);
+export default async function MedalsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [meta, cat, sp] = await Promise.all([api<Meta>("/meta"), api<MedalCatalogue>("/medals"), searchParams]);
   const tiers = ["bronze", "silver", "gold"] as const;
+  const raw = Array.isArray(sp.faixa) ? sp.faixa[0] : sp.faixa;
+  const tier = tiers.find((t) => t === raw) ?? null;
+  const shown = tier ? cat.medals.filter((m) => m.tier === tier) : cat.medals;
+  const filters = [
+    { key: null, label: "Todas", count: cat.medals.length },
+    ...tiers.map((t) => ({ key: t, label: TIER_LABEL[t], count: cat.medals.filter((m) => m.tier === t).length })),
+  ];
 
   return (
     <>
@@ -31,38 +32,35 @@ export default async function MedalsPage() {
       />
       <AchievementTabs current="/medalhas" />
 
-      <section aria-labelledby="resumo">
-        <h2 id="resumo" className="sr-only">Resumo</h2>
-        <StatGrid>
-          <Stat label="Medalhas disponíveis" value={num(cat.summary.available)} />
-          <Stat label="Jogadores premiados" value={num(cat.summary.honored_players)} />
-          <Stat label="Níveis de conquista" value={num(cat.summary.tiers)} />
-          <Stat label="Medalhas conquistadas" value={num(cat.summary.earned_total)} />
-        </StatGrid>
-      </section>
-
-      <section aria-labelledby="categorias">
-        <SectionTitle id="categorias" title="Categorias de medalhas" />
-        <ul className="grid gap-3 md:grid-cols-3">
-          {tiers.map((tier) => (
-            <li key={tier} className="card p-5">
-              <TierBadge tier={tier} />
-              <p className="mt-2 text-lg font-bold">{TIER_LABEL[tier]}</p>
-              <p className="text-base text-muted">
-                {plural(cat.medals.filter((m) => m.tier === tier).length, "medalha", "medalhas")} · {TIER_TEXT[tier]}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
       <section aria-labelledby="catalogo">
         <SectionTitle id="catalogo" title="Medalhas da EDB LEAGUE">
-          Vencedores vinculados ao cadastro dos jogadores. Todos os números refletem partidas registradas.
+          {plural(cat.summary.available, "medalha disponível", "medalhas disponíveis")},{" "}
+          {plural(cat.summary.earned_total, "conquista", "conquistas")} de {plural(cat.summary.honored_players, "jogador", "jogadores")}.
         </SectionTitle>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cat.medals.map((m) => (
-            <li key={m.id} className={`card flex flex-col gap-2 p-5 ${m.holders.length ? "border-gold" : ""}`}>
+        <nav aria-label="Filtrar por faixa" className="mb-4">
+          <ul className="flex flex-wrap gap-2">
+            {filters.map((f) => {
+              const active = f.key === tier;
+              return (
+                <li key={f.label}>
+                  <Link
+                    href={f.key ? `/medalhas?faixa=${f.key}` : "/medalhas"}
+                    aria-current={active ? "page" : undefined}
+                    className={clsx(
+                      "inline-flex min-h-11 items-center rounded-lg border px-4 text-base font-bold no-underline",
+                      active ? "border-gold-bg bg-gold-bg text-on-gold" : "border-line bg-surface text-fg hover:bg-surface-2",
+                    )}
+                  >
+                    {f.label} ({f.count})
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map((m) => (
+            <li key={m.id} className={`card flex flex-col gap-1.5 p-4 ${m.holders.length ? "border-gold" : ""}`}>
               <div className="flex items-center justify-between gap-2">
                 <TierBadge tier={m.tier} />
                 {m.holders.length > 0 && (
@@ -78,13 +76,13 @@ export default async function MedalsPage() {
               </p>
               {m.holders.length > 0 && (
                 <p className="text-base">
-                  {m.holders.slice(0, 8).map((h, i) => (
+                  {m.holders.slice(0, 3).map((h, i) => (
                     <span key={h.id}>
                       {i > 0 && " · "}
                       <Link href={`/jogadores/${encodeURIComponent(h.id)}`}>{h.name}</Link>
                     </span>
                   ))}
-                  {m.holders.length > 8 && ` · e mais ${m.holders.length - 8}`}
+                  {m.holders.length > 3 && ` · e mais ${m.holders.length - 3}`}
                 </p>
               )}
             </li>

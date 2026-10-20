@@ -22,24 +22,33 @@ function Holders({ holders }: { holders: PlayerRef[] }) {
   );
 }
 
-function Spotlight({ kicker, record }: { kicker: string; record: RecordCard | undefined }) {
-  if (!record) return null;
+function Henio({ henio }: { henio: Hall["henio"] }) {
   return (
-    <li className="card flex flex-col gap-1 p-5">
-      <p className="kicker">{kicker}</p>
-      <h3 className="text-lg font-bold">{record.title}</h3>
-      <p className="tabular text-3xl font-extrabold text-gold">{record.value}</p>
-      <p className="text-base font-bold">
-        <Holders holders={record.holders} />
-      </p>
-      <p className="text-sm text-muted">{record.detail}</p>
-    </li>
+    <div className="card flex flex-col gap-1 border-2 border-gold-bg p-4">
+      <p className="kicker">Homenagem da EDB LEAGUE</p>
+      <h3 className="text-lg font-bold">Prêmio Henio · jogador com pior ADR</h3>
+      {henio ? (
+        <>
+          <p className="tabular text-3xl font-extrabold text-gold">{num(henio.adr, 1)} ADR</p>
+          <p className="text-base font-bold">
+            <Holders holders={henio.holders} />
+          </p>
+          <p className="text-sm text-muted">
+            Menor ADR acumulado: dano total dividido pelos rounds de todos os mapas oficiais.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-2xl font-extrabold">A definir</p>
+          <p className="text-sm text-muted">Aguardando jogadores com ao menos 2 mapas e dano registrado.</p>
+        </>
+      )}
+    </div>
   );
 }
 
 export default async function HallPage() {
   const [meta, hall] = await Promise.all([api<Meta>("/meta"), api<Hall>("/hall-of-fame")]);
-  const by = (title: string) => hall.records.find((r) => r.title === title);
 
   return (
     <>
@@ -51,72 +60,48 @@ export default async function HallPage() {
       />
       <AchievementTabs current="/hall-da-fama" />
 
-      <section aria-labelledby="destaques">
-        <h2 id="destaques" className="sr-only">Destaques</h2>
-        <ul className="grid gap-4 md:grid-cols-2">
-          <Spotlight kicker="Destaque da liga" record={by("Mais kills em uma partida")} />
-          <li className="card flex flex-col gap-1 p-5">
-            <p className="kicker">Homenagem da EDB LEAGUE</p>
-            <h3 className="text-lg font-bold">Prêmio Henio · jogador com pior ADR</h3>
-            {hall.henio ? (
-              <>
-                <p className="tabular text-3xl font-extrabold text-gold">{num(hall.henio.adr, 1)} ADR</p>
-                <p className="text-base font-bold">
-                  {hall.henio.holders.map((h, i) => (
-                    <span key={h.id}>
-                      {i > 0 && " · "}
-                      <Link href={`/jogadores/${encodeURIComponent(h.id)}`}>{h.name}</Link>
-                    </span>
-                  ))}
-                </p>
-                <p className="text-sm text-muted">
-                  Menor ADR acumulado: dano total dividido pelos rounds de todos os mapas oficiais.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-2xl font-extrabold">A definir</p>
-                <p className="text-sm text-muted">Aguardando jogadores com ao menos 2 mapas e dano registrado.</p>
-              </>
-            )}
-          </li>
-          <Spotlight kicker="Recorde da liga" record={by("Maior ADR em uma partida")} />
-          <Spotlight kicker="Recorde da liga" record={by("Mais vitórias")} />
-        </ul>
-      </section>
-
       {hall.records.length === 0 ? (
         <EmptyState>Ainda não há estatísticas suficientes para estabelecer recordes.</EmptyState>
       ) : (
-        <>
-          {hall.top_kills.length > 0 && (
-            <section aria-labelledby="top5">
-              <SectionTitle id="top5" title="Top 5: kills acumuladas" />
-              <ol className="card divide-y divide-line-soft">
-                {hall.top_kills.map((t, i) => (
-                  <li key={t.player.id} className="flex items-center justify-between gap-3 px-5 py-3 text-base">
-                    <span>
-                      <b className="tabular mr-3 text-gold">{i + 1}.</b>
-                      <Link href={`/jogadores/${encodeURIComponent(t.player.id)}`}>{t.player.name}</Link>
-                    </span>
-                    <b className="tabular">{num(t.kills)} kills</b>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <div className="flex flex-col gap-6">
+            {hall.top_kills.length > 0 && (
+              <section aria-labelledby="top5">
+                <SectionTitle id="top5" title="Top 5: kills acumuladas" />
+                <ol className="card divide-y divide-line-soft">
+                  {hall.top_kills.map((t, i) => (
+                    <li key={t.player.id} className="flex items-center justify-between gap-3 px-4 py-2 text-base">
+                      <span>
+                        <b className="tabular mr-3 text-gold">{i + 1}.</b>
+                        <Link href={`/jogadores/${encodeURIComponent(t.player.id)}`}>{t.player.name}</Link>
+                      </span>
+                      <b className="tabular">{num(t.kills)} kills</b>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+            <Henio henio={hall.henio} />
+          </div>
 
           <section aria-labelledby="recordes">
             <SectionTitle id="recordes" title="Recordes da EDB LEAGUE" />
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {hall.records.map((r) => (
-                <li key={r.title} className="card flex flex-col gap-1 p-5">
+                <li key={r.title} className="card flex flex-col gap-1 p-4">
                   <h3 className="text-base font-bold text-muted">{r.title}</h3>
                   <p className="tabular text-2xl font-extrabold text-gold">{r.value}</p>
                   <p className="text-base font-bold">
                     <Holders holders={r.holders} />
                   </p>
-                  <p className="text-sm text-muted">{r.detail}</p>
+                  {r.detail.length > 90 ? (
+                    <details className="text-sm text-muted">
+                      <summary className="cursor-pointer">Ver as partidas</summary>
+                      <p className="mt-1">{r.detail}</p>
+                    </details>
+                  ) : (
+                    <p className="text-sm text-muted">{r.detail}</p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -125,7 +110,7 @@ export default async function HallPage() {
               duas partidas.
             </p>
           </section>
-        </>
+        </div>
       )}
 
       <Card aria-labelledby="campeoes">

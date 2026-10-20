@@ -99,7 +99,7 @@ export function SeriesCardItem({
   return (
     <li
       className={clsx(
-        "card group relative flex min-h-40 flex-col gap-3 p-4 hover:bg-surface-2",
+        "card group relative flex flex-col gap-2 p-3 hover:bg-surface-2",
         active && "border-accent ring-2 ring-accent",
       )}
     >
@@ -118,17 +118,19 @@ export function SeriesCardItem({
         </span>
         <Side name={series.right} status={sideStatus(winner, "right")} asTag />
       </div>
-      <p className="text-base text-muted">{series.summary}</p>
-      <Link
-        href={href}
-        aria-current={active ? "true" : undefined}
-        className="mt-auto text-base font-bold after:absolute after:inset-0 after:content-['']"
-      >
-        <span className="sr-only">
-          {fmt} de {series.date_label}: {series.left} {scoreText} {series.right}.{" "}
-        </span>
-        {active ? "Fechar confronto ↑" : "Ver mapas do confronto ↓"}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 text-base">
+        <p className="text-muted">{series.summary}</p>
+        <Link
+          href={href}
+          aria-current={active ? "true" : undefined}
+          className="inline-flex min-h-11 items-center font-bold after:absolute after:inset-0 after:content-['']"
+        >
+          <span className="sr-only">
+            {fmt} de {series.date_label}: {series.left} {scoreText} {series.right}.{" "}
+          </span>
+          {active ? "Fechar ↑" : "Ver mapas ↓"}
+        </Link>
+      </div>
     </li>
   );
 }

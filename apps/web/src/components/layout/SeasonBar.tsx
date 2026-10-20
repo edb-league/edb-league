@@ -10,12 +10,15 @@ export function SeasonBar({
   season,
   path,
   extra,
+  variant = "card",
 }: {
   meta: Meta;
   season: number;
   path: string;
   /** Parâmetros preservados ao trocar de temporada. */
   extra?: Record<string, string | undefined>;
+  /** "strip" não desenha moldura própria: vai dentro do banner da página. */
+  variant?: "card" | "strip";
 }) {
   const current = meta.seasons.find((s) => s.number === season);
   if (!current) return null;
@@ -28,13 +31,18 @@ export function SeasonBar({
   return (
     <section
       aria-label="Temporada"
-      className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border border-line-soft bg-surface px-4 py-3"
+      className={clsx(
+        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2",
+        variant === "card" && "rounded-[var(--radius-card)] border border-line-soft bg-surface px-4 py-3",
+      )}
     >
       <div className="min-w-0 flex-1 basis-64">
-        <p className="font-display text-2xl font-bold uppercase">{current.label}</p>
-        <p className="text-base text-muted">{seasonSummary(current)}</p>
+        <p className="flex flex-wrap items-baseline gap-x-3">
+          <span className="font-display text-2xl font-bold uppercase">{current.label}</span>
+          <span className="text-base text-muted">{seasonSummary(current)}</span>
+        </p>
         {current.status === "active" && current.progress && (
-          <div className="mt-2 max-w-xs">
+          <div className="mt-1 max-w-xs">
             <Progress
               value={(100 * current.progress.day) / current.progress.total_days}
               label={`Dia ${current.progress.day} de ${current.progress.total_days}`}

@@ -140,22 +140,6 @@ function Result({ c }: { c: Compare }) {
               </p>
             )}
 
-            <Card className="mb-4">
-              <h3 className="mb-3 text-xl font-bold">Eliminações por mapa</h3>
-              <PairBars
-                caption={`Kills de ${n1} e ${n2} em cada partida em comum`}
-                nameA={n1}
-                nameB={n2}
-                unit="kills"
-                items={c.shared.map((s) => ({
-                  id: s.match_id,
-                  label: `${s.map} · ${dateBR(s.date)}`,
-                  a: s.first.kills,
-                  b: s.second.kills,
-                }))}
-              />
-            </Card>
-
             <TableWrap caption="Partidas em comum com kills e ADR de cada jogador">
               <thead>
                 <tr>
@@ -187,6 +171,24 @@ function Result({ c }: { c: Compare }) {
             <p className="mt-3 text-sm text-muted">
               Vitória em confronto direto é vitória da equipe, não abates de um jogador contra o outro.
             </p>
+
+            <details className="card mt-4 p-4">
+              <summary className="cursor-pointer text-xl font-bold">Gráfico: eliminações por mapa</summary>
+              <div className="mt-3">
+              <PairBars
+                caption={`Kills de ${n1} e ${n2} em cada partida em comum`}
+                nameA={n1}
+                nameB={n2}
+                unit="kills"
+                items={c.shared.map((s) => ({
+                  id: s.match_id,
+                  label: `${s.map} · ${dateBR(s.date)}`,
+                  a: s.first.kills,
+                  b: s.second.kills,
+                }))}
+              />
+              </div>
+            </details>
           </>
         )}
       </section>

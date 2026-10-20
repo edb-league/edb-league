@@ -155,7 +155,7 @@ export function LineChart({
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} className="h-auto w-full max-w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={summary} className="mx-auto h-auto w-full max-w-3xl">
         {ticks.map((t) => (
           <g key={t}>
             <line x1={m.l} x2={W - m.r} y1={y(t)} y2={y(t)} stroke="var(--border-soft)" strokeWidth="1" />

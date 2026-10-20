@@ -85,7 +85,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
 
-      <form method="get" role="search" aria-label="Buscar jogadores" className="card flex flex-wrap items-end gap-4 p-4 md:p-5">
+      <form method="get" role="search" aria-label="Buscar jogadores" className="card flex flex-wrap items-end gap-4 p-4">
         {sp.temporada !== undefined && <input type="hidden" name="temporada" value={String(first(sp.temporada))} />}
         <div className="flex min-w-56 flex-1 flex-col gap-1.5">
           <label htmlFor="q" className="text-base font-bold">Buscar jogador</label>
@@ -124,13 +124,13 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
             {all.length === 0 ? "Cadastre os participantes na área de Administração." : "Nenhum jogador encontrado com esses filtros."}
           </EmptyState>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map(({ player: p, row }) => {
               const top = row !== null && row.rank <= 3;
               return (
                 <li
                   key={p.id}
-                  className={`card group relative flex flex-col gap-4 p-5 hover:bg-surface-2 ${top ? "border-2 border-gold-bg" : ""}`}
+                  className={`card group relative flex flex-col gap-3 p-4 hover:bg-surface-2 ${top ? "border-2 border-gold-bg" : ""}`}
                 >
                   <div className="flex items-start gap-3">
                     <LevelBadge level={p.level} size="lg" />
@@ -143,7 +143,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
                           {p.nickname}
                         </Link>
                       </h3>
-                      <p className="text-base text-muted">{p.real_name ?? "Nome real não cadastrado"}</p>
+                      {p.real_name && <p className="text-base text-muted">{p.real_name}</p>}
                     </div>
                     {row && (
                       <span className="num rounded-lg border border-line-soft bg-surface-2 px-2 py-1 text-xl leading-none text-gold">

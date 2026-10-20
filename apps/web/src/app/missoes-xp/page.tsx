@@ -25,9 +25,10 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
         subtitle="Todo nível tem uma meta. O prêmio é igual; o desafio é proporcional."
         art="xp"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
-      />
+      >
+        <SeasonBar meta={meta} season={season} path="/missoes-xp" variant="strip" />
+      </PageHeader>
       <AchievementTabs current="/missoes-xp" />
-      <SeasonBar meta={meta} season={season} path="/missoes-xp" />
 
       <Card aria-labelledby="meta-semanal">
         <SectionTitle id="meta-semanal" title="Meta semanal: kills por round">

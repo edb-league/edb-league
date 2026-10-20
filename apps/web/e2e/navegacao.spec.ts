@@ -150,10 +150,10 @@ test("sorteador: escolhe 10 presentes, sorteia e mostra os dois times", async ({
   await expect(page.getByRole("button", { name: "Copiar mensagem" })).toBeVisible();
 });
 
-test("regulamento tem índice lateral e as oito seções", async ({ page }) => {
+test("regulamento tem índice lateral e as seis seções", async ({ page }) => {
   await page.goto("/regulamento");
   const toc = page.getByRole("navigation", { name: "Neste regulamento" });
-  await expect(toc.getByRole("link")).toHaveCount(8);
+  await expect(toc.getByRole("link")).toHaveCount(6);
   for (const id of ["temporadas", "confrontos", "pontuacao", "titulos", "xp", "niveis", "medalhas", "perguntas"]) {
     await expect(page.locator(`#${id}`)).toHaveCount(1);
   }
@@ -165,4 +165,26 @@ test("início não traz mais sorteador nem regulamento, mas tem atalhos", async 
   await expect(page.getByRole("heading", { name: /Como funcionam as temporadas/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Últimas partidas" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Regulamento", exact: true }).first()).toBeVisible();
+});
+
+test("perfil do jogador tem abas e cada uma mostra só o seu conteúdo", async ({ page, request }) => {
+  const { playerA } = await ids(request);
+  await page.goto(`/jogadores/${playerA}`);
+  const nav = page.getByRole("navigation", { name: "Seções do perfil" });
+  await expect(nav.getByRole("link", { name: "Resumo" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { name: /Evolução por partida/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toHaveCount(0);
+  await nav.getByRole("link", { name: "Partidas" }).click();
+  await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toBeVisible();
+  await nav.getByRole("link", { name: "Medalhas e títulos" }).click();
+  await expect(page.getByRole("heading", { name: "Títulos de temporada" })).toBeVisible();
+});
+
+test("medalhas filtra por faixa", async ({ page }) => {
+  await page.goto("/medalhas");
+  const filtro = page.getByRole("navigation", { name: "Filtrar por faixa" });
+  await filtro.getByRole("link", { name: /^Ouro/ }).click();
+  await expect(page).toHaveURL(/faixa=gold/);
+  await expect(page.getByRole("link", { name: /^Ouro/ })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("Bronze", { exact: true })).toHaveCount(0);
 });

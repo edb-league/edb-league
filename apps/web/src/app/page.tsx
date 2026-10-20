@@ -3,7 +3,6 @@ import Link from "next/link";
 import { SeasonBar } from "@/components/layout/SeasonBar";
 import { Badge, TeamTag } from "@/components/ui/Badge";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/Card";
-import { Progress } from "@/components/ui/Charts";
 import { LevelBadge } from "@/components/ui/LevelBadge";
 import { LinkButton } from "@/components/ui/Button";
 import { Stat, StatGrid } from "@/components/ui/Stat";
@@ -31,7 +30,7 @@ function LastSeries({ series, season }: { series: SeriesCard; season: number }) 
   const rightWins = series.winner === "right";
   const text = `${series.format.toUpperCase()} de ${series.date_label}: ${series.left} ${series.score_left} a ${series.score_right} ${series.right}`;
   return (
-    <section aria-labelledby="ultimo" className="card flex flex-col gap-4 bg-surface/90 p-5">
+    <section aria-labelledby="ultimo" className="card flex flex-col gap-3 bg-surface/90 p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 id="ultimo" className="text-base text-muted">Último confronto</h2>
         <Badge tone="accent">{series.format.toUpperCase()}</Badge>
@@ -42,7 +41,7 @@ function LastSeries({ series, season }: { series: SeriesCard; season: number }) 
           <TeamTag name={series.left} />
           <span className="text-sm text-muted">{leftWins ? "✓ Vencedor" : rightWins ? "✕ Derrotado" : ""}</span>
         </span>
-        <span className="num flex items-center gap-2 text-6xl leading-none">
+        <span className="num flex items-center gap-2 text-5xl leading-none">
           <span className={leftWins ? "text-win" : rightWins ? "text-loss" : ""}>{series.score_left}</span>
           <span className="text-3xl text-muted">x</span>
           <span className={rightWins ? "text-win" : leftWins ? "text-loss" : ""}>{series.score_right}</span>
@@ -80,7 +79,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     api<Ranking>(`/rankings/elite${qs({ season })}`),
     api<MatchesList>(`/matches${qs({ season })}`),
   ]);
-  const current = meta.seasons.find((s) => s.number === season);
   const recent = recentSeries(matches);
   const last = recent[0] ?? null;
   const top = elite.rows.slice(0, 8);
@@ -93,39 +91,31 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       >
         <Image src="/art/home.webp" alt="" fill priority sizes="100vw" className="-z-20 object-cover object-right" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-surface-2/92 lg:bg-linear-to-r lg:from-surface-2 lg:from-45% lg:via-surface-2/88 lg:to-surface-2/60" />
-        <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 px-5 py-8 md:px-10 md:py-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 px-5 py-6 md:px-10 md:py-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <div>
             <p className="kicker mb-2">EDB LEAGUE · CS2</p>
-            <h1 id="hero" className="text-6xl leading-none md:text-7xl">Os Xinxas agora têm ranking.</h1>
+            <h1 id="hero" className="text-5xl leading-none md:text-6xl">Os Xinxas agora têm ranking.</h1>
             <p className="mt-4 max-w-prose text-xl text-muted">Cada frag conta. Cada evolução importa. A temporada começa aqui.</p>
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <LinkButton href={`/rankings/elite${seasonQuery(season)}`} variant="gold">Ver o ranking</LinkButton>
               <LinkButton href={`/partidas${seasonQuery(season)}`} variant="secondary">Ver partidas</LinkButton>
             </div>
           </div>
           <div className="flex flex-col gap-4">
             {last && <LastSeries series={last} season={season} />}
-            {current?.status === "active" && current.progress && (
-              <div className="card bg-surface/90 p-4">
-                <p className="mb-2 flex items-baseline justify-between gap-2 text-base">
-                  <b>{current.label}</b>
-                  <span className="text-muted">Dia {current.progress.day} de {current.progress.total_days}</span>
-                </p>
-                <Progress value={(100 * current.progress.day) / current.progress.total_days} label={`${current.label}: dia ${current.progress.day} de ${current.progress.total_days}`} />
-              </div>
-            )}
           </div>
         </div>
+        <div className="border-t border-line-soft bg-surface/92 px-5 py-2 md:px-10">
+          <SeasonBar meta={meta} season={season} path="/" variant="strip" />
+        </div>
       </section>
-
-      <SeasonBar meta={meta} season={season} path="/" />
 
       <section aria-labelledby="numeros">
         <h2 id="numeros" className="sr-only">Números da temporada</h2>
         <StatGrid>
           <Stat label="Jogadores ativos" value={num(home.counts.players)} />
-          <Stat label="Partidas registradas" value={num(home.counts.matches)} />
-          <Stat label="Kills registradas" value={num(home.counts.kills)} />
+          <Stat label="Partidas na temporada" value={num(home.counts.matches)} />
+          <Stat label="Kills na temporada" value={num(home.counts.kills)} />
           <Stat label="XP distribuído" value={num(home.counts.xp_distributed)} />
         </StatGrid>
       </section>
@@ -200,11 +190,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
         <Card aria-labelledby="recentes" className="flex flex-col">
           <SectionTitle id="recentes" kicker="Resultados" title="Últimas partidas">
-            Os confrontos mais recentes da temporada.
+            Os confrontos anteriores ao último, em destaque acima.
           </SectionTitle>
-          {recent.length ? (
+          {recent.length > 1 ? (
             <ul className="flex flex-col gap-3">
-              {recent.slice(0, 3).map((s) => {
+              {recent.slice(1, 4).map((s) => {
                 const leftWins = s.winner === "left";
                 const rightWins = s.winner === "right";
                 return (
@@ -236,7 +226,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               })}
             </ul>
           ) : (
-            <EmptyState>Nenhum confronto com placar nesta temporada.</EmptyState>
+            <EmptyState>Não há outros confrontos com placar nesta temporada.</EmptyState>
           )}
           <p className="mt-auto pt-3">
             <Link href={`/partidas${seasonQuery(season)}`} className="inline-flex min-h-11 items-center text-base font-bold">

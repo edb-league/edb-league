@@ -45,8 +45,9 @@ export default async function RankingPage({
         subtitle="Desempenho Elite, superação pessoal, experiência (XP) e o ranking BAGRES, pior ADR primeiro."
         art="rankings"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
-      />
-      <SeasonBar meta={meta} season={season} path={`/rankings/${type}`} />
+      >
+        <SeasonBar meta={meta} season={season} path={`/rankings/${type}`} variant="strip" />
+      </PageHeader>
 
       <nav aria-label="Tipo de ranking">
         <ul className="flex flex-wrap gap-2">
