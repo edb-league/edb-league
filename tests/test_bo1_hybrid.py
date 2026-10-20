@@ -87,16 +87,20 @@ def test_two_formats_display_correctly_without_altering_old_bo3():
         {"series_id":"old","match_id":"c","map_number":3,"winner_side":"a"},
         {"series_id":"new","match_id":"d","map_number":1,"winner_side":"b"},
     ]
-    visible=matches+[{"id":"d","played_at":"2026-10-22","map_name":"Dust2"}]
+    visible=matches+[{"id":"d","played_at":"2026-10-22","map_name":"Dust2",
+                      "team_a_score":6,"team_b_score":13}]
     assert series_format(series[0])=="bo3"
     assert series_format(series[1])=="bo1"
     assert confirmed_bo3_count(1,series,mapping)==2
     assert season_match_ids(1,series,mapping)=={"a","b","c","d"}
     cards=bo3_cards(1,series,mapping,visible)
-    assert "BO3 #1" in cards
-    assert "BO1 #2" in cards
+    assert "BO3 - 20/10/2026" in cards
+    assert "BO1 - 22/10/2026" in cards
     assert cards.count("FINALIZADA")==2
-    assert "2 : 1" in cards and "0 : 1" in cards
+    assert 'edb-series-number--win">2</span>' in cards
+    assert 'edb-series-number--win">13</span>' in cards
+    assert 'edb-series-number--lose">6</span>' in cards
+    assert cards.index('aria-label="BO1"') < cards.index('aria-label="BO3"')
 
 
 def test_ui_requires_explicit_team_roster_verified_scores_and_cloud_rpc():
