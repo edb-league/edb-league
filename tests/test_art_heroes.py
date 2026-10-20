@@ -144,7 +144,8 @@ def test_home_banner_uses_approved_2172x724_desktop_image_not_radar():
 
 def test_home_season_rules_banner_below_elite_and_draw():
     assert 'def season_rules_banner(selected_season):' in APP
-    assert '14 dias' in APP
+    assert '1 mês' in APP
+    assert 'Do dia 19 ao dia 18 do mês seguinte' in APP
     assert 'BO3 livres' in APP
     assert 'Top 6 mapas' in APP
     assert 'A cada temporada, uma nova disputa começa' in APP
