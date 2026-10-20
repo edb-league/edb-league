@@ -90,7 +90,7 @@ def test_legacy_rules_stay_separate():
 
 
 
-def test_late_third_map_does_not_create_third_week_of_xp():
+def test_first_month_has_five_windows_of_weekly_xp():
     data=_rows(total=6)
     data["played_at"] = pd.to_datetime([
         "2026-10-19", "2026-10-20", "2026-10-26",
@@ -99,5 +99,5 @@ def test_late_third_map_does_not_create_third_week_of_xp():
     data["kills"]=20
     data["won"]=True
     xp=season_boards(data,1)["xp"].iloc[0]["XP"]
-    # Seis vitorias, duas semanas de missao, sem terceira missao em 02/11.
-    assert xp == 6*60+2*100
+    # Seis vitórias; 02/11 já inicia a terceira semana do mês de 19/10 a 18/11.
+    assert xp == 6*60+3*100
