@@ -1,12 +1,12 @@
-"""EDB LEAGUE: temporadas quinzenais e confrontos históricos BO1 / BO3."""
+"""EDB LEAGUE: temporadas mensais e confrontos históricos BO1 / BO3."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from html import escape
 from urllib.parse import quote
 
 DEFAULT_SEASONS = [
-    {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":"2026-11-01","bo3_target":None},
+    {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":"2026-11-18","bo3_target":None},
 ]
 
 SEASON_CSS = """
@@ -53,6 +53,18 @@ SEASON_CSS = """
 @media(max-width:650px){.edb-series-grid{grid-template-columns:1fr;}.edb-season-bar{padding:10px;}}
 </style>
 """
+
+
+def season_dates(season_number):
+    """Período mensal: do dia 19 ao dia 18, desde outubro de 2026."""
+    number=int(season_number)
+    if number<1:
+        raise ValueError("O calendário mensal começa na Temporada 1.")
+    offset=9+number-1
+    start=date(2026+offset//12,offset%12+1,19)
+    following=offset+1
+    end=date(2026+following//12,following%12+1,19)-timedelta(days=1)
+    return start,end
 
 
 def _parse_date(value):
@@ -106,7 +118,7 @@ def confirmed_bo3_count(season_number, series, map_links):
 
 
 def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_date=None):
-    """Mostra dias transcorridos (nao meta de BO3) a partir da temporada 1."""
+    """Mostra progresso real em meses de 28, 30 ou 31 dias."""
     on_date=on_date or date.today()
     by_number={int(s["number"]):s for s in seasons}
     chosen=by_number.get(int(season_number),{})
@@ -126,10 +138,11 @@ def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_da
         progress=""
     else:
         day=(on_date-start).days+1
+        total_days=(end-start).days+1
         remaining=(end-on_date).days
-        summary=f"Dia {day}/14 · {remaining} dias restantes · {completed} confrontos concluídos"
-        progress=(f'<div class="edb-season-progress" aria-label="Dia {day} de 14">'
-                  f'<span style="width:{min(100,100*day/14):.2f}%"></span></div>')
+        summary=f"Dia {day}/{total_days} · {remaining} dias restantes · {completed} confrontos concluídos"
+        progress=(f'<div class="edb-season-progress" aria-label="Dia {day} de {total_days}">'
+                  f'<span style="width:{min(100,100*day/total_days):.2f}%"></span></div>')
     link_extra=""
     if rank is not None and page_slug=="rankings":
         link_extra="&amp;ranking="+quote(str(rank),safe="")
