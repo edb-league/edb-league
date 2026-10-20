@@ -62,7 +62,7 @@ def test_fetch_reads_avatar_name_and_cs_hours_in_hours():
     owned = _Reply({"response": {"games": [{"appid": 730, "playtime_forever": 7380}]}})
     session = _Session(_profile(), owned)
     data = fetch_steam_profile("76561198000000001", KEY, session=session)
-    assert data == {"persona": "Kvra", "hours": 123.0, "hours_visible": True,
+    assert data == {"found": True, "persona": "Kvra", "hours": 123.0, "hours_visible": True,
                     "avatar": "https://avatars.steamstatic.com/abc_full.jpg"}
     assert session.calls[1][1]["appids_filter[0]"] == 730
     assert session.calls[1][1]["include_played_free_games"] == 1
@@ -175,3 +175,51 @@ def test_page_wiring_uses_secret_cache_and_simple_layout():
     assert "def cached_steam_profile(steamid64: str, _api_key: str):" in APP
     assert "@st.cache_data(ttl=21600, max_entries=64, show_spinner=False)\ndef cached_steam_profile" in APP
     assert "render_player_profile" not in APP
+
+
+def _http_error(status):
+    return requests.HTTPError("erro", response=type("R", (), {"status_code": status})())
+
+
+def test_failures_carry_a_safe_reason_and_a_clear_note():
+    cases = {403: "key", 401: "key", 429: "limit", 500: "http"}
+    for status, reason in cases.items():
+        session = _Session(_Reply(error=_http_error(status)), _Reply({}))
+        try:
+            fetch_steam_profile("76561198000000001", KEY, session=session)
+        except SteamUnavailable as exc:
+            assert exc.reason == reason and KEY not in str(exc)
+        else:
+            raise AssertionError("deveria falhar")
+    timeout = _Session(_Reply(error=requests.Timeout("lento")), _Reply({}))
+    try:
+        fetch_steam_profile("76561198000000001", KEY, session=timeout)
+    except SteamUnavailable as exc:
+        assert exc.reason == "timeout"
+
+    def refused(sid, key):
+        raise SteamUnavailable("key")
+
+    def limited(sid, key):
+        raise SteamUnavailable("limit")
+
+    assert "recusada" in steam_view("76561198000000001", KEY, refused)["note"]
+    assert "limitou" in steam_view("76561198000000001", KEY, limited)["note"]
+
+
+def test_missing_profile_is_reported_and_key_is_cleaned():
+    gone = _Session(_Reply({"response": {"players": []}}), _Reply({"response": {}}))
+    data = fetch_steam_profile("76561198000000001", KEY, session=gone)
+    assert data["found"] is False
+    view = steam_view("76561198000000001", KEY, lambda sid, key: data)
+    assert view["state"] == "notfound" and "SteamID" in view["note"]
+    seen = []
+
+    def spy(sid, key):
+        seen.append(key)
+        return {"found": True, "persona": "", "avatar": "", "hours": 1.0, "hours_visible": True}
+
+    steam_view("76561198000000001", ' "abc123" \n', spy)
+    steam_view("76561198000000001", "  'abc123'", spy)
+    assert seen == ["abc123", "abc123"]
+    assert steam_view("76561198000000001", "  ", spy)["state"] == "no_key"

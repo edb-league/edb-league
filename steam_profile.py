@@ -19,7 +19,15 @@ AVATAR_HOSTS = ("steamstatic.com", "akamaihd.net")
 
 
 class SteamUnavailable(Exception):
-    """A Steam não respondeu; nunca carrega a URL nem a chave."""
+    """A Steam não respondeu; nunca carrega a URL nem a chave.
+
+    `reason` é só um código curto: key (chave recusada), limit (muitas consultas),
+    timeout, network, http ou response.
+    """
+
+    def __init__(self, reason="network"):
+        super().__init__("Steam indisponível")
+        self.reason = reason
 
 
 def normalize_steamid64(value):
@@ -66,11 +74,20 @@ def fetch_steam_profile(steamid64, api_key, session=None, timeout=6):
         }, timeout=timeout)
         owned.raise_for_status()
         games = (owned.json().get("response") or {}).get("games") or []
-    except (requests.RequestException, ValueError, AttributeError):
-        raise SteamUnavailable("Steam indisponível") from None
+    except requests.HTTPError as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        reason = "key" if status in (401, 403) else "limit" if status == 429 else "http"
+        raise SteamUnavailable(reason) from None
+    except requests.Timeout:
+        raise SteamUnavailable("timeout") from None
+    except requests.RequestException:
+        raise SteamUnavailable("network") from None
+    except (ValueError, AttributeError):
+        raise SteamUnavailable("response") from None
     profile = players[0] if players else {}
     cs = next((g for g in games if int(g.get("appid", 0)) == CS_APP_ID), None)
     return {
+        "found": bool(profile),
         "persona": str(profile.get("personaname") or ""),
         "avatar": safe_avatar_url(profile.get("avatarfull")),
         "hours": round(int(cs.get("playtime_forever", 0)) / 60, 1) if cs else None,
@@ -78,8 +95,15 @@ def fetch_steam_profile(steamid64, api_key, session=None, timeout=6):
     }
 
 
+ERROR_NOTES = {
+    "key": "Chave da Steam recusada pelo servidor da Steam",
+    "limit": "A Steam limitou as consultas; tente em alguns minutos",
+}
+
+
 def steam_view(steamid_raw, api_key, fetch):
     """Estado exibido no banner: vinculado, sem Steam ou indisponível."""
+    api_key = str(api_key or "").strip().strip("'\"").strip()
     empty = {"state": "", "avatar": "", "persona": "", "hours": 0.0, "note": ""}
     if not str(steamid_raw or "").strip():
         return {**empty, "state": "unlinked"}
@@ -91,9 +115,13 @@ def steam_view(steamid_raw, api_key, fetch):
                 "note": "Steam ainda não conectada ao site"}
     try:
         data = fetch(steamid64, api_key)
-    except SteamUnavailable:
+    except SteamUnavailable as exc:
         return {**empty, "state": "error", "hours": None,
-                "note": "Steam indisponível no momento"}
+                "note": ERROR_NOTES.get(getattr(exc, "reason", ""),
+                                        "Steam indisponível no momento")}
+    if not data.get("found", True):
+        return {**empty, "state": "notfound", "hours": None,
+                "note": "Perfil não encontrado na Steam; confira o SteamID"}
     visible = data.get("hours_visible")
     return {**empty, "state": "linked", "avatar": data.get("avatar", ""),
             "persona": data.get("persona", ""),
