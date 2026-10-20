@@ -39,27 +39,29 @@ Navegador ──► Next.js (apps/web)  ── /api/* (rewrite, mesma origem) �
 | Backend | FastAPI reaproveitando os módulos Python | A regra de negócio (rankings, temporadas, sorteio) não é reescrita nem duplicada. |
 | Contrato | `apps/web/src/lib/types.ts` | Os testes da API leem esse arquivo e falham se faltar ou sobrar campo. |
 | Cookie do admin | Mesma origem via rewrite `/api/*` | Cookie de primeira parte, sem CORS e sem `SameSite=None`. |
-| Fonte | Atkinson Hyperlegible Next, hospedada junto do site | Feita para leitura clara, sem pedir nada ao Google Fonts. |
+| Fonte | Barlow e Barlow Condensed (`@fontsource`), hospedadas junto do site | Sem pedir nada ao Google Fonts. Importadas em `layout.tsx` para o Next resolver os pacotes. |
 | Sem esqueleto de carregamento | Sem `loading.tsx` | O HTML chega completo. Funciona sem JavaScript e devolve 404 real em páginas inexistentes. |
 
 ## Mapa de telas
 
 | Streamlit | Novo site |
 |---|---|
-| Visão geral e sorteador | `/` |
-| Rankings | `/rankings/elite`, `/superacao`, `/xp`, `/bagres` |
-| Missões e XP | `/missoes-xp` |
+| Visão geral | `/` (hero, destaques, Elite, últimas partidas, atalhos) |
+| Sorteador | `/sorteador` |
+| Regras (antes na visão geral) | `/regulamento` |
+| Rankings | `/rankings/elite`, `/superacao`, `/xp`, `/bagres` (abas Elite, Superação, XP e BAGRES) |
+| Missões e XP | `/missoes-xp` (grupo Conquistas) |
 | Partidas BO1/BO3 e mapa | `/partidas`, `/partidas/mapa/[id]` |
 | Jogadores e perfil | `/jogadores`, `/jogadores/[id]` |
 | Comparar | `/comparar` (formulário GET, funciona sem JavaScript) |
-| Hall da Fama, Medalhas | `/hall-da-fama`, `/medalhas` |
+| Hall da Fama, Medalhas | `/hall-da-fama`, `/medalhas` (grupo Conquistas, com barra de abas) |
 | Administração | `/admin` (elenco, importar, confrontos, temporadas, exportar CSV) |
 
 Links antigos (`?page=`, `?player=`, `?match=`, `?bo3=`, `?ranking=`, `?season=`) redirecionam com 308 em `apps/web/src/proxy.ts`.
 
 ## Acessibilidade
 
-- Contraste: `npm run check:contrast` valida 72 pares de cores (claro e escuro) contra WCAG AA. Tokens em `src/app/tokens.css`.
+- Contraste: `npm run check:contrast` valida 100 verificações de cores (claro e escuro) contra WCAG AA. Tokens em `src/app/tokens.css`.
 - Resultado nunca depende só de cor: vitória e derrota têm ícone e texto, times têm letra e forma.
 - Link para pular ao conteúdo, `aria-current`, landmarks com nome, foco de 3 px, alvos de 44 px, `prefers-reduced-motion`, modo de alto contraste do sistema.
 - Tema automático, claro ou escuro, sem piscar no carregamento.

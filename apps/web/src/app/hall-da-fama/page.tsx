@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/Card";
+import { AchievementTabs } from "@/components/layout/SectionTabs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TableWrap, Td, Th } from "@/components/ui/Table";
 import { api } from "@/lib/api";
@@ -48,6 +49,7 @@ export default async function HallPage() {
         art="trophy"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
+      <AchievementTabs current="/hall-da-fama" />
 
       <section aria-labelledby="destaques">
         <h2 id="destaques" className="sr-only">Destaques</h2>

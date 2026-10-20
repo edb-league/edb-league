@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TIER_LABEL, TierBadge } from "@/components/players/MedalCard";
 import { Badge } from "@/components/ui/Badge";
 import { SectionTitle } from "@/components/ui/Card";
+import { AchievementTabs } from "@/components/layout/SectionTabs";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stat, StatGrid } from "@/components/ui/Stat";
 import { api } from "@/lib/api";
@@ -28,6 +29,7 @@ export default async function MedalsPage() {
         art="medals"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
+      <AchievementTabs current="/medalhas" />
 
       <section aria-labelledby="resumo">
         <h2 id="resumo" className="sr-only">Resumo</h2>

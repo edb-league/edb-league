@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { TeamDraw } from "@/components/home/TeamDraw";
 import { SeasonBar } from "@/components/layout/SeasonBar";
 import { Badge, TeamTag } from "@/components/ui/Badge";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/Card";
@@ -18,13 +17,13 @@ export const metadata = { title: "Início" };
 
 const RANKING_NAME = { elite: "Ranking Elite", superacao: "Ranking Superação", xp: "Ranking XP" } as const;
 
-/** Série mais recente já com placar, pela data do último mapa. */
-function lastSeries(list: MatchesList): SeriesCard | null {
-  const dated = [...list.bo1, ...list.bo3]
+/** Séries com placar, da mais recente para a mais antiga, pela data do último mapa. */
+function recentSeries(list: MatchesList): SeriesCard[] {
+  return [...list.bo1, ...list.bo3]
     .filter((s) => s.score_left !== null && s.score_right !== null)
     .map((s) => ({ s, date: s.maps.map((m) => m.date ?? "").sort().at(-1) ?? "" }))
-    .sort((a, b) => b.date.localeCompare(a.date));
-  return dated[0]?.s ?? null;
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((x) => x.s);
 }
 
 function LastSeries({ series, season }: { series: SeriesCard; season: number }) {
@@ -82,7 +81,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     api<MatchesList>(`/matches${qs({ season })}`),
   ]);
   const current = meta.seasons.find((s) => s.number === season);
-  const last = lastSeries(matches);
+  const recent = recentSeries(matches);
+  const last = recent[0] ?? null;
   const top = elite.rows.slice(0, 8);
 
   return (
@@ -198,47 +198,74 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </p>
         </Card>
 
-        <Card aria-labelledby="homenagem-titulo" className="flex flex-col">
-          <SectionTitle id="homenagem-titulo" kicker="Marco histórico · EDB LEAGUE" title="Inaugurada na gestão do Presidente Dudu" level={3} />
-          <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-lg border border-line-soft bg-surface-2">
-            <Image
-              src="/president.avif"
-              alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta"
-              fill
-              sizes="(min-width: 1024px) 24rem, 90vw"
-              className="object-contain"
-            />
-          </div>
-          <p className="num mt-4 text-center text-2xl text-gold">19 de outubro de 2026</p>
+        <Card aria-labelledby="recentes" className="flex flex-col">
+          <SectionTitle id="recentes" kicker="Resultados" title="Últimas partidas">
+            Os confrontos mais recentes da temporada.
+          </SectionTitle>
+          {recent.length ? (
+            <ul className="flex flex-col gap-3">
+              {recent.slice(0, 3).map((s) => {
+                const leftWins = s.winner === "left";
+                const rightWins = s.winner === "right";
+                return (
+                  <li key={s.id} className="relative rounded-xl border border-line-soft bg-surface-2 p-4 hover:bg-surface-3">
+                    <p className="flex items-center justify-between gap-2 text-base text-muted">
+                      <span>{s.format.toUpperCase()} · {s.date_label}</span>
+                      <span>{s.maps.map((m) => m.map).join(", ")}</span>
+                    </p>
+                    <p className="mt-2 flex items-center justify-between gap-3">
+                      <TeamTag name={s.left} />
+                      <span className="num flex items-center gap-2 text-4xl leading-none">
+                        <span className={leftWins ? "text-win" : rightWins ? "text-loss" : ""}>{s.score_left}</span>
+                        <span className="text-xl text-muted">x</span>
+                        <span className={rightWins ? "text-win" : leftWins ? "text-loss" : ""}>{s.score_right}</span>
+                      </span>
+                      <TeamTag name={s.right} />
+                    </p>
+                    <Link
+                      href={`/partidas${seasonQuery(season, { confronto: s.id })}#mapas-do-confronto`}
+                      className="mt-2 inline-flex min-h-11 items-center text-base font-bold after:absolute after:inset-0 after:content-['']"
+                    >
+                      <span className="sr-only">
+                        {s.format.toUpperCase()} de {s.date_label}: {s.left} {s.score_left} a {s.score_right} {s.right}.{" "}
+                      </span>
+                      Ver mapas →
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyState>Nenhum confronto com placar nesta temporada.</EmptyState>
+          )}
+          <p className="mt-auto pt-3">
+            <Link href={`/partidas${seasonQuery(season)}`} className="inline-flex min-h-11 items-center text-base font-bold">
+              Ver todas as partidas →
+            </Link>
+          </p>
         </Card>
       </div>
 
-      <Card aria-labelledby="sorteador">
-        <SectionTitle id="sorteador" kicker="Partida 5 × 5" title="Sorteador de times">
-          Divisão automática usando os níveis de 1 a 10 cadastrados na EDB LEAGUE.
-        </SectionTitle>
-        <TeamDraw roster={home.roster} />
-      </Card>
-
-      <Card aria-labelledby="regras">
-        <p className="kicker mb-1">Regulamento · EDB LEAGUE</p>
-        <h2 id="regras" className="text-4xl">Como funcionam as temporadas?</h2>
-        <p className="mt-2 max-w-prose text-lg text-muted">
-          A cada temporada, uma nova disputa começa e os rankings são reiniciados. Jogue quantas vezes quiser,
-          acompanhe sua evolução e tente conquistar as primeiras posições. Cada novo mapa pode melhorar sua
-          classificação.
-        </p>
-        <dl className="mt-4 grid gap-3 md:grid-cols-3">
-          <Stat label="Duração" value="1 mês" hint="Do dia 19 ao dia 18 do mês seguinte" />
-          <Stat label="Confrontos" value="BO1 e BO3 livres" hint="Sem limite de confrontos ou mapas por temporada" />
-          <Stat label="Pontuação" value="Top 6 mapas" hint="Os 6 melhores mapas de cada jogador contam em cada ranking" />
-        </dl>
-        <p className="mt-4 max-w-prose text-lg text-muted">
-          Para concorrer aos títulos, é necessário disputar pelo menos 6 mapas. Ao final da temporada, os líderes dos
-          rankings Elite, Superação e XP poderão conquistar os títulos de MVP, Revelação e Xinxa. Todos os resultados
-          ficam registrados no histórico da liga.
-        </p>
-      </Card>
+      <section aria-labelledby="atalhos">
+        <h2 id="atalhos" className="sr-only">Atalhos</h2>
+        <ul className="grid gap-4 md:grid-cols-3">
+          {[
+            { href: "/sorteador", kicker: "Ferramentas", title: "Sorteador de times", text: "Divida os 10 presentes em PT e PL com a menor diferença de nível." },
+            { href: "/regulamento", kicker: "Liga", title: "Regulamento", text: "Temporadas, rankings, títulos, XP e medalhas em um só lugar." },
+            { href: "/comparar", kicker: "Ferramentas", title: "Comparar jogadores", text: "Desempenho, vitórias e confrontos lado a lado." },
+          ].map(({ href, kicker, title, text }) => (
+            <li key={href} className="card group relative p-5 hover:bg-surface-2">
+              <p className="kicker">{kicker}</p>
+              <h3 className="mt-1 font-display text-3xl font-bold uppercase">
+                <Link href={href} className="text-fg no-underline group-hover:underline after:absolute after:inset-0 after:content-['']">
+                  {title}
+                </Link>
+              </h3>
+              <p className="mt-1 text-base text-muted">{text}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
     </>
   );
 }

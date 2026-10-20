@@ -46,7 +46,7 @@
   /* Títulos de página e de seção em condensada maiúscula; números grandes usam .num. */
   h1, h2 { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   p, li { text-wrap: pretty; }
-  a { color: var(--accent); text-underline-offset: 0.18em; }
+  a { color: var(--accent); text-decoration-line: underline; text-underline-offset: 0.18em; }
   a:hover { text-decoration-thickness: 2px; }
   ::selection { background: var(--accent-bg); color: var(--on-accent); }
 

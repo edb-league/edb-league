@@ -5,8 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { NAV_ITEMS, isActive, type NavItem } from "@/lib/nav";
-import { ThemeSelect } from "./ThemeSelect";
+import { NAV, isActive, isGroup, type NavGroup, type NavLink } from "@/lib/nav";
 
 function LockIcon() {
   return (
@@ -19,48 +18,107 @@ function LockIcon() {
 
 const itemClass = (active: boolean) =>
   clsx(
-    "flex min-h-11 items-center border-b-[3px] px-3 text-lg no-underline xl:min-h-[4.5rem]",
+    "flex min-h-11 items-center border-b-[3px] px-3 text-lg no-underline xl:min-h-[4.5rem] xl:px-2.5",
     active
       ? "border-gold-bg font-bold text-fg"
       : "border-transparent font-medium text-muted hover:text-fg xl:hover:border-line-soft",
   );
 
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+function Group({
+  group,
+  pathname,
+  open,
+  onToggle,
+}: {
+  group: NavGroup;
+  pathname: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const id = useId();
+  const active = group.items.some((i) => isActive(pathname, i));
+  return (
+    <li data-group className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={onToggle}
+        className={clsx(itemClass(active), "hidden w-full xl:flex xl:gap-1.5")}
+      >
+        {group.label}
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d={open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
+        </svg>
+      </button>
+      {/* No menu aberto do celular o grupo é só um título acima da sua lista. */}
+      <p className="kicker px-3 pt-3 pb-1 xl:hidden">{group.label}</p>
+      <ul
+        id={id}
+        className={clsx(
+          "flex flex-col xl:absolute xl:top-full xl:left-0 xl:z-50 xl:min-w-60 xl:rounded-xl xl:border xl:border-line-soft xl:bg-surface xl:p-1.5 xl:shadow-card",
+          open ? "xl:flex" : "xl:hidden",
+        )}
+      >
+        {group.items.map((item) => {
+          const current = isActive(pathname, item);
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={current ? "page" : undefined}
+                className={clsx(
+                  "flex min-h-11 items-center rounded-lg px-3 text-lg no-underline xl:hover:bg-surface-2",
+                  current ? "font-bold text-fg" : "text-muted hover:text-fg",
+                )}
+              >
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </li>
+  );
+}
+
+function DirectLink({ item, pathname }: { item: NavLink; pathname: string }) {
   const active = isActive(pathname, item);
   return (
-    <Link href={item.href} aria-current={active ? "page" : undefined} className={itemClass(active)}>
-      {item.label}
-    </Link>
+    <li>
+      <Link href={item.href} aria-current={active ? "page" : undefined} className={itemClass(active)}>
+        {item.label}
+      </Link>
+    </li>
   );
 }
 
 /**
- * Menu superior. Em telas largas os itens principais ficam na barra e os demais em "Mais";
- * em telas estreitas tudo vira uma lista aberta pelo botão "Menu" (aria-expanded).
- * Existe um único landmark <nav>.
+ * Menu superior. Em telas largas há itens diretos e dois grupos (Conquistas e Ferramentas) com
+ * lista suspensa; em telas estreitas tudo vira uma lista aberta pelo botão "Menu" (aria-expanded).
+ * Existe um único landmark <nav> principal.
  */
 export function SiteHeader() {
   const pathname = usePathname();
   // Os painéis abertos ficam atrelados à rota em que foram abertos: ao navegar, fecham sozinhos.
   const [openOn, setOpenOn] = useState<string | null>(null);
-  const [moreOn, setMoreOn] = useState<string | null>(null);
+  const [groupOn, setGroupOn] = useState<{ path: string; label: string } | null>(null);
   const open = openOn === pathname;
-  const moreOpen = moreOn === pathname;
+  const openGroup = groupOn?.path === pathname ? groupOn.label : null;
   const panelId = useId();
-  const moreId = useId();
-  const moreButton = useRef<HTMLButtonElement>(null);
-  const moreWrap = useRef<HTMLLIElement>(null);
+  const navRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
-    if (!open && !moreOpen) return;
+    if (!open && !openGroup) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (moreOpen) moreButton.current?.focus();
+      if (openGroup) navRef.current?.querySelector<HTMLButtonElement>('button[aria-expanded="true"]')?.focus();
       setOpenOn(null);
-      setMoreOn(null);
+      setGroupOn(null);
     };
     const onPointer = (event: MouseEvent) => {
-      if (moreOpen && !moreWrap.current?.contains(event.target as Node)) setMoreOn(null);
+      const inside = (event.target as Element | null)?.closest("[data-group]");
+      if (openGroup && !inside) setGroupOn(null);
     };
     window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onPointer);
@@ -68,11 +126,8 @@ export function SiteHeader() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onPointer);
     };
-  }, [open, moreOpen]);
+  }, [open, openGroup]);
 
-  const primary = NAV_ITEMS.filter((i) => i.primary);
-  const secondary = NAV_ITEMS.filter((i) => !i.primary);
-  const moreActive = secondary.some((i) => isActive(pathname, i));
   const adminActive = pathname.startsWith("/admin");
 
   return (
@@ -97,68 +152,41 @@ export function SiteHeader() {
           </button>
         </div>
 
-        <div id={panelId} className={clsx("w-full flex-1 flex-col gap-3 pb-4 xl:flex xl:w-auto xl:flex-row xl:flex-nowrap xl:items-center xl:gap-4 xl:pb-0", open ? "flex" : "hidden")}>
-          <nav aria-label="Principal" className="xl:flex-1 xl:min-w-0">
-            <ul className="flex flex-col xl:flex-row xl:gap-1">
-              {primary.map((item) => (
-                <li key={item.href}>
-                  <NavLink item={item} pathname={pathname} />
-                </li>
-              ))}
-              <li ref={moreWrap} className="relative">
-                <button
-                  ref={moreButton}
-                  type="button"
-                  aria-expanded={moreOpen}
-                  aria-controls={moreId}
-                  onClick={() => setMoreOn(moreOpen ? null : pathname)}
-                  className={clsx(itemClass(moreActive), "hidden xl:flex xl:gap-1.5")}
-                >
-                  Mais
-                  <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={moreOpen ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
-                  </svg>
-                </button>
-                <ul
-                  id={moreId}
-                  className={clsx(
-                    "flex flex-col xl:absolute xl:top-full xl:right-0 xl:z-50 xl:min-w-56 xl:rounded-xl xl:border xl:border-line-soft xl:bg-surface xl:p-1.5 xl:shadow-card",
-                    moreOpen ? "xl:flex" : "xl:hidden",
-                  )}
-                >
-                  {secondary.map((item) => {
-                    const active = isActive(pathname, item);
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          aria-current={active ? "page" : undefined}
-                          className={clsx(
-                            "flex min-h-11 items-center rounded-lg px-3.5 text-lg no-underline xl:hover:bg-surface-2",
-                            active ? "font-bold text-fg" : "text-muted hover:text-fg",
-                          )}
-                        >
-                          {item.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
+        <div
+          id={panelId}
+          className={clsx(
+            "w-full flex-1 flex-col gap-3 pb-4 xl:flex xl:w-auto xl:flex-row xl:flex-nowrap xl:items-center xl:gap-4 xl:pb-0",
+            open ? "flex" : "hidden",
+          )}
+        >
+          <nav aria-label="Principal" className="xl:min-w-0 xl:flex-1">
+            <ul ref={navRef} className="flex flex-col xl:flex-row xl:gap-0.5">
+              {NAV.map((entry) =>
+                isGroup(entry) ? (
+                  <Group
+                    key={entry.label}
+                    group={entry}
+                    pathname={pathname}
+                    open={openGroup === entry.label}
+                    onToggle={() =>
+                      setGroupOn(openGroup === entry.label ? null : { path: pathname, label: entry.label })
+                    }
+                  />
+                ) : (
+                  <DirectLink key={entry.href} item={entry} pathname={pathname} />
+                ),
+              )}
             </ul>
           </nav>
 
-          <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap">
-            <ThemeSelect />
-            <Link
-              href="/admin"
-              aria-current={adminActive ? "page" : undefined}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gold-bg px-4 text-base font-bold text-on-gold no-underline hover:brightness-110"
-            >
-              <LockIcon />
-              Administrador
-            </Link>
-          </div>
+          <Link
+            href="/admin"
+            aria-current={adminActive ? "page" : undefined}
+            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-gold-bg px-4 text-base font-bold text-on-gold no-underline hover:brightness-110"
+          >
+            <LockIcon />
+            Administrador
+          </Link>
         </div>
       </div>
     </header>

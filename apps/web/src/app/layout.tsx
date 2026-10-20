@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { ThemeSelect } from "@/components/layout/ThemeSelect";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { NAV_ITEMS } from "@/lib/nav";
@@ -69,6 +70,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-6 text-base text-muted md:px-8">
               <p className="font-display text-xl font-bold tracking-wider text-fg uppercase">EDB League · CS2</p>
               <p className="max-w-prose">Os números vêm das partidas registradas e são atualizados a cada poucos minutos.</p>
+              <ThemeSelect />
               <nav aria-label="Rodapé">
                 <ul className="flex flex-wrap gap-x-5">
                   {NAV_ITEMS.map((item) => (

@@ -1,14 +1,14 @@
 import clsx from "clsx";
 
 /** Selo de nível (1 a 10). A faixa muda a cor, mas o número sempre aparece em texto. */
-const TIERS = [
+export const LEVEL_TIERS = [
   "bg-[var(--lv1-bg)] text-[var(--lv1-fg)]",
   "bg-[var(--lv2-bg)] text-[var(--lv2-fg)]",
   "bg-[var(--lv3-bg)] text-[var(--lv3-fg)]",
   "bg-[var(--lv4-bg)] text-[var(--lv4-fg)]",
 ] as const;
 
-function tierOf(level: number): number {
+export function tierOf(level: number): number {
   if (level <= 3) return 0;
   if (level <= 6) return 1;
   if (level <= 8) return 2;
@@ -22,7 +22,7 @@ export function LevelBadge({ level, size = "md", className }: { level: number | 
       className={clsx(
         "num inline-flex shrink-0 items-center justify-center rounded-lg leading-none",
         size === "lg" ? "size-9 text-2xl" : "size-8 text-xl",
-        TIERS[tierOf(level)],
+        LEVEL_TIERS[tierOf(level)],
         className,
       )}
     >

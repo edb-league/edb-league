@@ -14,6 +14,7 @@ import type { Ranking, RankingType } from "@/lib/types";
 const TABS: { type: RankingType; label: string }[] = [
   { type: "elite", label: "Elite" },
   { type: "superacao", label: "Superação" },
+  { type: "xp", label: "XP" },
   { type: "bagres", label: "BAGRES" },
 ];
 
@@ -41,7 +42,7 @@ export default async function RankingPage({
     <>
       <PageHeader
         title="Rankings da EDB LEAGUE"
-        subtitle="Desempenho Elite, superação pessoal e o ranking BAGRES, pior ADR primeiro."
+        subtitle="Desempenho Elite, superação pessoal, experiência (XP) e o ranking BAGRES, pior ADR primeiro."
         art="rankings"
         counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
