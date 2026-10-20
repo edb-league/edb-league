@@ -1,4 +1,4 @@
-"""Rankings quinzenais oficiais da EDB LEAGUE (Temporada 1 em diante).
+"""Rankings mensais oficiais da EDB LEAGUE (Temporada 1 em diante).
 
 Os seis melhores mapas sao selecionados independentemente por indicador.
 A Temporada 0 usa o calculo legado e nao sofre recalculo retroativo.
@@ -6,7 +6,7 @@ A Temporada 0 usa o calculo legado e nao sofre recalculo retroativo.
 from __future__ import annotations
 
 import pandas as pd
-from datetime import date, timedelta
+from season_system import season_dates
 
 from core import TARGET_KPR, leaderboard
 
@@ -30,16 +30,20 @@ def _score_elite(kills, rounds, damage):
     return 100.0 * (0.6 * kpr / 0.75 + 0.4 * adr / 75.0)
 
 
-def _xp_quinzenal(g, stars, season_number):
-    """Sao duas semanas por temporada, mesmo que a ultima BO3 atravesse a meia-noite."""
+def _xp_mensal(g, stars, season_number):
+    """Uma missão por semana de sete dias desde o dia 19 (4 ou 5 semanas/mês).
+
+    Só os seis mapas escolhidos no ranking de XP entram no cálculo.
+    """
     xp = 40 * len(g) + 20 * int((g["won"] == True).sum())
     if g.empty:
         return int(xp)
-    start = date(2026, 10, 19) + timedelta(days=14*(int(season_number)-1))
+    start, end = season_dates(season_number)
     chosen = g.copy()
     chosen["kpr"] = chosen["kills"] / chosen["rounds"]
     days = (pd.to_datetime(chosen["played_at"]) - pd.Timestamp(start)).dt.days
-    chosen["season_week"] = (days // 7).clip(lower=0, upper=1)
+    length = (end - start).days + 1
+    chosen["season_week"] = (days // 7).clip(lower=0, upper=(length-1)//7)
     for _, weekly in chosen.groupby("season_week"):
         if ((weekly["kpr"] >= TARGET_KPR[int(stars)])
                 & (weekly["rounds"] >= 8)).any():
@@ -63,7 +67,7 @@ def _aggregate(g, stars, season_number):
         "KPR": round(kpr, 3), "ADR": round(adr, 1) if pd.notna(adr) else None,
         "Vitórias": wins, "Elite": round(elite, 1),
         "Superação %": round(supera, 1),
-        "XP": _xp_quinzenal(g, stars, season_number),
+        "XP": _xp_mensal(g, stars, season_number),
         "_kpr": kpr, "_adr": adr if pd.notna(adr) else -1.0,
         "_elite": elite, "_supera": supera,
     }
