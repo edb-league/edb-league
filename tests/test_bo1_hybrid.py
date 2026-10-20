@@ -61,7 +61,7 @@ def test_rejects_bad_roster_score_missing_data_and_wrong_season():
     with pytest.raises(ValueError,match="empate"):
         prepare_confront_bundle(season,"BO1",["a"],matches,stats,roster,{"a":(10,10)})
     with pytest.raises(ValueError,match="dez"):
-        prepare_confront_bundle(season,"BO1",["a"],matches,stats[:-1],roster,scores)
+        prepare_confront_bundle(season,"BO1",["a"],matches,[row for row in stats if not (row["match_id"]=="a" and row["player_id"]=="p9")],roster,scores)
     with pytest.raises(ValueError,match="fora da temporada"):
         prepare_confront_bundle(
             {**season,"starts_on":"2026-10-22"},"BO1",["a"],matches,stats,roster,scores
