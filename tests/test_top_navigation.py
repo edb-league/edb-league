@@ -6,10 +6,9 @@ from top_navigation import (
 
 def test_categories_have_exact_requested_order():
     assert [page for slug,page,label in NAV_ITEMS] == [
-        "Visão geral", "Rankings", "Partidas", "Comparar jogadores",
+        "Visão geral", "Rankings", "Partidas", "Jogadores", "Comparar jogadores",
         "Hall da Fama", "Medalhas", "Missões & XP"
     ]
-    assert "Jogadores" not in [item[1] for item in NAV_ITEMS]
     assert "Administração" not in [item[1] for item in NAV_ITEMS]
     assert ROUTES["players"] == "Jogadores"
     assert ROUTES["admin"] == "Administração"
@@ -17,7 +16,7 @@ def test_categories_have_exact_requested_order():
 
 def test_only_home_is_icon_only_and_navigation_is_clickable():
     markup = top_navigation("Visão geral")
-    assert markup.count('class="edb-nav-item') == 7
+    assert markup.count('class="edb-nav-item') == 8
     assert markup.count('aria-current="page"') == 1
     assert '<svg viewBox="0 0 24 24"' in markup
     assert 'href="?page=home"' in markup
