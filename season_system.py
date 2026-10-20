@@ -31,26 +31,79 @@ SEASON_CSS = """
 }
 .edb-season-progress{height:6px;border-radius:6px;background:#29435A;overflow:hidden;margin-top:6px;max-width:260px;}
 .edb-season-progress>span{display:block;height:100%;background:#79C6F2;border-radius:inherit;}
-.edb-series-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:15px 0 22px;}
-.edb-series-card{
- display:flex;flex-direction:column;gap:10px;min-height:153px;padding:18px 19px;
- border-radius:15px;border:1px solid #355471;
- background:linear-gradient(130deg,#19334A,#122439);
- text-decoration:none !important;color:#E9F3FC !important;
+.edb-series-columns{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:22px;align-items:start;margin:18px 0 24px;
 }
-.edb-series-card:hover,.edb-series-card:focus-visible{border-color:#8BC7F1;background:#24415A;}
-.edb-series-card.edb-series-selected{border-color:#8BD0FF;box-shadow:inset 0 0 0 1px #4786B6;}
-.edb-series-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;}
-.edb-series-heading strong{font-size:.92rem;color:#EAF4FE;}
-.edb-series-status{font-size:.64rem;font-weight:800;color:#A6C4DC;white-space:nowrap;}
-.edb-series-score{font-size:1.5rem;color:#8CCDFA;font-weight:900;}
-.edb-series-caption{font-size:.72rem;color:#9DB9CF;line-height:1.45;}
-.edb-series-link{margin-top:auto;font-size:.7rem;font-weight:760;color:#8AC9F4;}
+.edb-series-column{min-width:0;display:flex;flex-direction:column;gap:12px;}
+.edb-series-group-title{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;margin:2px 0 1px;color:#EBF4FF;font-size:.87rem;font-weight:850;
+}
+.edb-series-group-title span:last-child{color:#86B8DA;font-size:.69rem;font-weight:700;}
+.edb-series-grid{display:grid;grid-template-columns:1fr;gap:13px;}
+.edb-series-empty{
+ border:1px dashed #37516B;border-radius:14px;
+ padding:22px 17px;color:#91ACC3;font-size:.78rem;background:#15283B;
+}
+.edb-series-card{
+ display:flex;flex-direction:column;gap:12px;min-height:197px;padding:17px 18px;
+ border-radius:16px;border:1px solid #3A5974;
+ background:linear-gradient(135deg,#1B354C,#12253B 85%);
+ color:#E9F3FC !important;text-decoration:none !important;
+ transition:border-color .15s ease,background .15s ease,transform .15s ease;
+}
+.edb-series-card:hover,.edb-series-card:focus-visible{
+ border-color:#8BC7F1;background:linear-gradient(135deg,#24445E,#19334A);
+ transform:translateY(-1px);
+}
+.edb-series-card.edb-series-selected{
+ border-color:#8BD0FF;box-shadow:inset 0 0 0 1px #4786B6;
+}
+.edb-series-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.edb-series-heading strong{font-size:.86rem;color:#EAF4FE;}
+.edb-series-status{font-size:.62rem;font-weight:800;color:#A6C4DC;white-space:nowrap;}
+.edb-series-scoreboard{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:7px;min-width:0;
+}
+.edb-series-side{display:flex;align-items:center;gap:7px;min-width:0;}
+.edb-series-side--right{flex-direction:row;}
+.edb-series-team{
+ font-size:.73rem;font-weight:900;letter-spacing:.4px;
+ padding:5px 7px;border-radius:8px;border:1px solid transparent;flex:none;
+}
+.edb-series-team--pt{color:#FFA6AB;background:rgba(198,58,75,.12);border-color:rgba(220,78,99,.25);}
+.edb-series-team--pl{color:#A0D6FF;background:rgba(53,133,209,.15);border-color:rgba(74,156,228,.27);}
+.edb-series-number{
+ display:inline-flex;align-items:center;justify-content:center;
+ padding:9px 12px;border-radius:11px;min-width:52px;
+ font-size:1.55rem;line-height:1;font-variant-numeric:tabular-nums;font-weight:900;
+ border:1px solid #40566C;color:#B8D0E4;background:#1C354A;
+}
+.edb-series-number--win{
+ color:#A9F9C5;border-color:rgba(79,203,133,.36);
+ background:linear-gradient(120deg,rgba(39,139,84,.43),rgba(40,123,82,.14) 88%);
+ box-shadow:inset 0 0 18px rgba(63,199,123,.11);
+}
+.edb-series-number--lose{
+ color:#FFB6BB;border-color:rgba(221,78,88,.33);
+ background:linear-gradient(120deg,rgba(176,49,69,.37),rgba(155,45,65,.1) 88%);
+ box-shadow:inset 0 0 18px rgba(230,74,97,.09);
+}
+.edb-series-versus{font-size:.88rem;color:#81A1BB;font-weight:850;flex:none;}
+.edb-series-caption{font-size:.73rem;color:#A4C0D4;line-height:1.45;}
+.edb-series-link{margin-top:auto;font-size:.71rem;font-weight:850;color:#8AC9F4;}
 .edb-series-progress{display:flex;align-items:center;gap:10px;margin:6px 0 11px;color:#A4BED4;font-size:.78rem;}
 .edb-series-progress-track{height:7px;width:190px;max-width:38vw;border-radius:999px;background:#233D54;overflow:hidden;}
 .edb-series-progress-track>span{display:block;height:100%;border-radius:inherit;background:#79C6F2;}
-@media(max-width:960px){.edb-series-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:650px){.edb-series-grid{grid-template-columns:1fr;}.edb-season-bar{padding:10px;}}
+@media(max-width:860px){.edb-series-columns{grid-template-columns:1fr;gap:24px;}}
+@media(max-width:650px){
+ .edb-season-bar{padding:10px;}
+ .edb-series-card{padding:15px 14px;}
+ .edb-series-number{font-size:1.4rem;min-width:44px;padding:8px 9px;}
+ .edb-series-side{gap:5px;}
+}
 </style>
 """
 
@@ -165,57 +218,134 @@ def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_da
             ''.join(buttons)+'</nav></div>')
 
 
+def _confront_result(s, maps, games, fmt, complete):
+    """Devolve os placares lado A/B, sem alterar os resultados gravados."""
+    if not complete:
+        return None
+    if fmt == "bo1" and maps:
+        game=games.get(str(maps[0].get("match_id")))
+        if game is None:
+            return None
+        a=game.get("team_a_score")
+        b=game.get("team_b_score")
+        return (int(a),int(b)) if a is not None and b is not None else None
+    if fmt == "bo3" and all(m.get("winner_side") in ("a","b") for m in maps):
+        return (sum(m["winner_side"]=="a" for m in maps),
+                sum(m["winner_side"]=="b" for m in maps))
+    return None
+
+
+def _confront_first_date(s, maps, games):
+    """A BO3 usa a data do mapa 1; BO1 usa a data do único mapa."""
+    if maps:
+        first=games.get(str(maps[0].get("match_id")))
+        if first is not None:
+            played=_parse_date(first.get("played_at"))
+            if played is not None:
+                return played.strftime("%d/%m/%Y")
+    played=_parse_date(s.get("played_on"))
+    return played.strftime("%d/%m/%Y") if played is not None else "Data a definir"
+
+
+def _confront_sides(s, result):
+    """PT fica sempre à esquerda e PL à direita quando identificados no banco."""
+    name_a=str(s.get("team_a_name") or "Time A").strip()
+    name_b=str(s.get("team_b_name") or "Time B").strip()
+    if name_a.casefold()=="pl" and name_b.casefold()=="pt":
+        return "PT","PL",(result[1],result[0]) if result is not None else None,"b","a"
+    if name_a.casefold()=="pt" and name_b.casefold()=="pl":
+        return "PT","PL",result,"a","b"
+    # Histórico legado não identifica PT/PL: manter nomes originais, sem inventar equipes.
+    return name_a,name_b,result,"a","b"
+
+
+def _confront_score_markup(name_left, name_right, values, winner_side,
+                           left_side, right_side):
+    """Cores do resultado (verde/vermelho) separadas das cores dos times."""
+    def team(name):
+        kind="pt" if name.casefold()=="pt" else "pl" if name.casefold()=="pl" else ""
+        suffix=" edb-series-team--"+kind if kind else ""
+        return '<span class="edb-series-team'+suffix+'">'+escape(name)+'</span>'
+    def score(value, side):
+        state=(" edb-series-number--win" if winner_side==side else
+               " edb-series-number--lose" if winner_side in ("a","b") else "")
+        return ('<span class="edb-series-number'+state+'">'+
+                escape(str(value) if value is not None else "–")+'</span>')
+    left,right=values if values is not None else (None,None)
+    return (
+        '<div class="edb-series-scoreboard" aria-label="'+
+        escape(name_left+' '+(str(left) if left is not None else "sem placar")+
+               ', '+name_right+' '+(str(right) if right is not None else "sem placar"),
+               quote=True)+'">'
+        '<div class="edb-series-side">'+team(name_left)+score(left,left_side)+'</div>'
+        '<span class="edb-series-versus" aria-hidden="true">×</span>'
+        '<div class="edb-series-side edb-series-side--right">'+
+        score(right,right_side)+team(name_right)+'</div></div>'
+    )
+
+
 def bo3_cards(season_number, series, map_links, all_matches, selected_series=None):
+    """Cards BO1 à esquerda e BO3 à direita, com seleção existente preservada."""
     games={str(m["id"]):m for m in all_matches}
     linked={}
-    for row in map_links: linked.setdefault(str(row["series_id"]),[]).append(row)
-    eligible=sorted((s for s in series if int(s["season_number"])==int(season_number)),
-                    key=lambda x:int(x["sequence_number"]))
-    pieces=[SEASON_CSS,'<div class="edb-series-grid">']
+    for row in map_links:
+        linked.setdefault(str(row["series_id"]),[]).append(row)
+    eligible=sorted(
+        (s for s in series if int(s["season_number"])==int(season_number)),
+        key=lambda x:int(x["sequence_number"])
+    )
+    grouped={"bo1":[],"bo3":[]}
     for s in eligible:
         sid=str(s["id"])
         maps=sorted(linked.get(sid,[]),key=lambda row:int(row["map_number"]))
+        fmt=series_format(s)
+        minimum=1 if fmt=="bo1" else 2
+        complete=(s.get("status")=="completed" and
+                  s.get("winner_side") in ("a","b") and len(maps)>=minimum)
+        status="FINALIZADA" if complete else ("EM ANDAMENTO" if maps else "AGUARDANDO REGISTRO")
+        valid_names=[
+            games[str(m["match_id"])].get("map_name") or "Mapa"
+            for m in maps if str(m.get("match_id")) in games
+        ]
+        summary=" · ".join(str(x) for x in valid_names) if valid_names else "Mapas ainda não cadastrados"
+        date_label=_confront_first_date(s,maps,games)
+        result=_confront_result(s,maps,games,fmt,complete)
+        name_left,name_right,values,left_side,right_side=_confront_sides(s,result)
         active=sid==str(selected_series)
         css=" edb-series-selected" if active else ""
         href=("?page=matches&amp;season="+str(season_number) if active else
               "?page=matches&amp;season="+str(season_number)+"&amp;bo3="+quote(sid,safe=""))
-        fmt=series_format(s)
-        minimum=1 if fmt=="bo1" else 2
-        complete=s.get("status")=="completed" and s.get("winner_side") in ("a","b") and len(maps)>=minimum
-        status="FINALIZADA" if complete else ("EM ANDAMENTO" if maps else "AGUARDANDO REGISTRO")
-        valid_names=[games[str(m["match_id"])].get("map_name") or "Mapa"
-                     for m in maps if str(m.get("match_id")) in games]
-        summary=" · ".join(str(x) for x in valid_names) if valid_names else "Mapas ainda não cadastrados"
-        # O placar exibido acompanha os vencedores reais dos mapas.
-        if complete and fmt=="bo1" and maps and str(maps[0]["match_id"]) in games:
-            game=games[str(maps[0]["match_id"])]
-            a_score=game.get("team_a_score")
-            b_score=game.get("team_b_score")
-            series_result=(f"{a_score} : {b_score}"
-                           if a_score is not None and b_score is not None else
-                           ("1 : 0" if s["winner_side"]=="a" else "0 : 1"))
-        elif complete and all(m.get("winner_side") in ("a", "b") for m in maps):
-            wins_a=sum(m["winner_side"] == "a" for m in maps)
-            wins_b=sum(m["winner_side"] == "b" for m in maps)
-            series_result=f"{wins_a} : {wins_b}"
-        elif complete:
-            series_result="Resultado a conferir"
-        else:
-            series_result=f"{len(maps)}/{1 if fmt=='bo1' else 3} " + ("Mapa" if fmt=="bo1" else "Mapas")
-        team_names=(str(s.get("team_a_name") or "Time A")+" × "+
-                    str(s.get("team_b_name") or "Time B"))
-        pieces.append(
+        score_html=_confront_score_markup(
+            name_left,name_right,values,
+            s.get("winner_side") if complete else None,left_side,right_side
+        )
+        card=(
             '<a class="edb-series-card'+css+'" href="'+href+'" target="_self"'
-            ' aria-label="'+fmt.upper()+' '+str(int(s["sequence_number"]))+
+            ' aria-label="'+fmt.upper()+' - '+escape(date_label,quote=True)+
             (" - fechar" if active else " - ver mapas")+'">'
-            '<div class="edb-series-heading"><strong>'+fmt.upper()+' #'+str(int(s["sequence_number"]))+
-            '</strong><span class="edb-series-status">'+status+'</span></div>'
-            '<div class="edb-series-score">'+escape(series_result)+'</div>'
-            '<div class="edb-series-caption">'+escape(team_names)+'</div>'
+            '<div class="edb-series-heading"><strong>'+fmt.upper()+' - '+
+            escape(date_label)+'</strong><span class="edb-series-status">'+status+'</span></div>'
+            +score_html+
             '<div class="edb-series-caption">'+escape(summary)+'</div>'
-            '<div class="edb-series-link">'+("FECHAR ↑" if active else "VER CONFRONTO ↓")+'</div></a>')
-    return "".join(pieces)+"</div>"
-
+            '<div class="edb-series-link">'+("FECHAR ↑" if active else "VER CONFRONTO ↓")+'</div></a>'
+        )
+        grouped[fmt].append(card)
+    columns=[SEASON_CSS,'<div class="edb-series-columns">']
+    for fmt,label,description in (
+        ("bo1","BO1","Partidas avulsas"),
+        ("bo3","BO3","Séries de três mapas"),
+    ):
+        cards=grouped[fmt]
+        columns.append(
+            '<section class="edb-series-column" aria-label="'+label+'">'
+            '<div class="edb-series-group-title"><span>'+label+
+            '</span><span>'+description+' · '+str(len(cards))+'</span></div>'
+            '<div class="edb-series-grid">'+
+            ("".join(cards) if cards else
+             '<div class="edb-series-empty">Nenhuma '+label+' nesta temporada.</div>')+
+            '</div></section>'
+        )
+    return "".join(columns)+"</div>"
 
 def series_maps(series_id, map_links, all_matches):
     games={str(m["id"]):m for m in all_matches}
