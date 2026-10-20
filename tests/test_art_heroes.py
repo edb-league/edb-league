@@ -230,3 +230,21 @@ def test_hall_skips_squares_without_data_and_keeps_the_henio_square():
     render_hall(partial, _hall_entries()[:1], 1, players=[], records=[])
     duo = next(block for block in partial.blocks if 'class="edb-fame-duo"' in block)
     assert duo.count("<section") == 2 and "MAIOR ADR" not in duo
+
+
+def test_hall_keeps_css_for_every_section_below_the_squares():
+    import re
+    from legacy_views import render_hall, LEGACY_CSS
+    records = [
+        {"player_id": "1", "player_name": "Alfa", "kills": 20},
+        {"player_id": "2", "player_name": "Bravo", "kills": 10},
+    ]
+    fake = _FakeSt()
+    render_hall(fake, _hall_entries(), 5, players=[], records=records)
+    markup = " ".join(block for block in fake.blocks if "<" in block)
+    used = set(re.findall(r'class="([^"]+)"', markup))
+    classes = {name for group in used for name in group.split()}
+    assert {"edb-fame-top-player", "edb-fame-toplist", "edb-fame-grid", "edb-fame-card"} <= classes
+    missing = sorted(name for name in classes
+                     if name.startswith("edb-") and "." + name not in LEGACY_CSS)
+    assert not missing, f"classes sem CSS: {missing}"

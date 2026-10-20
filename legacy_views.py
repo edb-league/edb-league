@@ -55,6 +55,21 @@ box-shadow:inset 4px 0 #D6B98A}
 .edb-fame-spotlight--wins .edb-fame-spotlight-kicker{color:#8FE0B5}
 .edb-fame-spotlight--wins .edb-fame-spotlight-label{color:#84B79D}
 .edb-fame-spotlight--wins .edb-fame-spotlight-value{color:#A9F2CA}
+.edb-fame-toplist{display:grid;gap:8px;margin:13px 0 24px}
+.edb-fame-top-player{display:flex;align-items:center;justify-content:space-between;gap:14px;
+background:#14263B;border:1px solid #30465E;border-radius:12px;padding:12px 15px}
+.edb-fame-top-player a{color:#E0F1FF;text-decoration:none;font-weight:750}
+.edb-fame-top-player strong{font-size:1.05rem;color:#B3DDFB;font-variant-numeric:tabular-nums}
+.edb-fame-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.edb-fame-card{border:1px solid #354A60;border-radius:16px;
+background:linear-gradient(140deg,#1B2E43,#142235);padding:18px;min-width:0}
+.edb-fame-card:first-child{border-color:#806C50}
+.edb-fame-title{font-size:.76rem;color:#A9BECE;letter-spacing:.5px;font-weight:750}
+.edb-fame-score{font-size:1.5rem;color:#D6B98A;font-weight:850;margin:8px 0}
+.edb-fame-people{font-size:.93rem;font-weight:700;color:#EFF4FA;overflow-wrap:anywhere}
+.edb-fame-people a{color:#CCE4F8;text-decoration:none;border-bottom:1px solid #4C7291}
+.edb-fame-people a:hover{color:#FFFFFF;border-color:#D6B98A}
+.edb-fame-detail{font-size:.73rem;color:#9DB3C6;margin-top:9px}
 .edb-fame-duo{display:grid;grid-template-columns:repeat(4,minmax(0,300px));gap:18px;
 justify-content:start;margin:16px 0 26px}
 .edb-fame-duo>section{aspect-ratio:1/1;box-sizing:border-box;margin:0;padding:20px;
