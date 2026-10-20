@@ -47,7 +47,7 @@ def render_confront_admin(st, store, seasons, matches, stats, players,
             str(by_match[mid].get("played_at"))[:10]+" · "+
             str(by_match[mid].get("map_name") or "Mapa")+" · "+mid[:12]
         ),
-        max_selections=total,key="edb_confront_maps"
+        max_selections=total,key=f"edb_confront_maps_{chosen_format}_{season['number']}"
     )
     if not candidates:
         st.info("Nenhum mapa avulso disponível nesta temporada. Importe o primeiro mapa.")
@@ -71,7 +71,7 @@ def render_confront_admin(st, store, seasons, matches, stats, players,
         team_b=st.text_input("Time B (azul)",value="PL",key="edb_confront_b_name")
     selected_a=st.multiselect(
         "Escolha os 5 jogadores do Time A",
-        roster,max_selections=5,key="edb_confront_team_a_players",
+        roster,max_selections=5,key=f"edb_confront_team_a_players_{season['number']}",
         format_func=lambda pid:name_formatter(by_player[pid]["nickname"])
     )
     if len(selected_a)==5:
