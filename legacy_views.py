@@ -6,6 +6,7 @@ from urllib.parse import quote
 import pandas as pd
 from social_views import render_achievement_collection
 from chart_theme import style_edb_line
+from bagres import premio_henio
 
 LEGACY_CSS = """
 <style>
@@ -27,6 +28,23 @@ padding:14px;border-radius:9px;color:#F3F1EA;margin:14px 0}
 background:linear-gradient(145deg,#142B44,#0E2036);min-width:0}
 .edb-fame-overview-value{color:#8ECAFC;font-size:1.5rem;line-height:1.3;font-weight:900}
 .edb-fame-overview-label{color:#A9C3D7;font-size:.74rem;margin-top:2px}
+.edb-henio-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  border:1px solid #A86E54;border-radius:18px;padding:22px 25px;
+  background:radial-gradient(ellipse at 98% 8%,rgba(211,112,63,.20),transparent 55%),
+             linear-gradient(118deg,#322635,#1A2839 75%,#152437);
+  box-shadow:inset 5px 0 #E5A06E,0 7px 19px rgba(0,0,0,.14);
+  margin:16px 0 26px;
+}
+.edb-henio-kicker{font-size:.7rem;color:#F0AD80;letter-spacing:1.6px;font-weight:900}
+.edb-henio-title{font-size:clamp(1.25rem,3vw,1.75rem);font-weight:900;color:#FFE4C3;margin:7px 0 4px}
+.edb-henio-subtitle{font-size:.82rem;color:#C8B9BB;margin-bottom:8px}
+.edb-henio-recipient{font-size:1.06rem;color:#FFF2E2;font-weight:850}
+.edb-henio-recipient a{color:#FFF2E2;text-decoration:none;border-bottom:1px solid #C28A65}
+.edb-henio-notes{color:#B9A9B5;font-size:.72rem;margin-top:7px;line-height:1.5}
+.edb-henio-adr{flex:none;text-align:right;color:#F3B486;font-size:1.65rem;font-weight:900;font-variant-numeric:tabular-nums}
+.edb-henio-adr span{display:block;font-size:.68rem;letter-spacing:1px;color:#BDA6AA}
+@media(max-width:600px){.edb-henio-banner{display:block;padding:17px}.edb-henio-adr{text-align:left;margin-top:12px}}
 .edb-fame-spotlight{border:1px solid #806C50;border-radius:18px;padding:22px;
 background:linear-gradient(125deg,#29364A,#172638);margin-bottom:17px;
 box-shadow:inset 4px 0 #D6B98A}
@@ -190,6 +208,30 @@ def render_hall(st, hall, matches_count, players=None, records=None):
         '</div></div>' for label,count in overview
     ) + '</div>', unsafe_allow_html=True)
     st.caption(f"Recordes automáticos de {matches_count} partidas oficiais. Empates são compartilhados.")
+    henio=premio_henio(records,min_maps=2)
+    if henio is None:
+        holder_markup='<span class="edb-henio-recipient">A definir</span>'
+        adr_markup='—'
+        detail='Aguardando jogadores com ao menos 2 mapas e dano registrado.'
+    else:
+        holder_markup='<span class="edb-henio-recipient">' + ' · '.join(
+            '<a href="' + escape(profile_link(p["id"]),quote=True) + '" '
+            'target="_self">' + escape(p["name"]) + '</a>'
+            for p in henio["holders"]
+        ) + '</span>'
+        adr_markup=f'{henio["adr"]:.1f}'
+        detail='Menor ADR acumulado · dano total dividido pelos rounds de todos os mapas oficiais.'
+    st.markdown(
+        '<section class="edb-henio-banner">'
+        '<div><div class="edb-henio-kicker">🏅 HOMENAGEM DA EDB LEAGUE</div>'
+        '<div class="edb-henio-title">PRÊMIO HENIO</div>'
+        '<div class="edb-henio-subtitle">JOGADOR COM PIOR ADR</div>' +
+        holder_markup +
+        '<div class="edb-henio-notes">' + escape(detail) + '</div></div>'
+        '<div class="edb-henio-adr">' + escape(adr_markup) + '<span>ADR</span></div>'
+        '</section>',
+        unsafe_allow_html=True
+    )
     if not hall:
         st.info("Ainda não há estatísticas suficientes para estabelecer recordes.")
         return
