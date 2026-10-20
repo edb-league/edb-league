@@ -140,3 +140,7 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
 - **Limite de tentativas de login** vale por instância da API. Com uma instância, como no plano gratuito, é exato.
 - **Render gratuito hiberna.** A primeira visita depois de um tempo parado demora alguns segundos.
 - A imagem Docker da API não foi construída aqui (sem Docker no ambiente). O `apps/api/Dockerfile` está pronto para o primeiro build.
+
+### Importação automática
+
+Ver `docs/IMPORTADOR_DEMOS.md` (`scripts/edb_import.py`, módulo `edb.demo_pipeline`).
