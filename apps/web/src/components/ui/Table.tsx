@@ -19,7 +19,7 @@ export function TableWrap({
       role="region"
       aria-label={caption}
       tabIndex={0}
-      className={clsx("overflow-x-auto rounded-lg border border-line-soft bg-surface", className)}
+      className={clsx("relative overflow-x-auto rounded-lg border border-line-soft bg-surface", className)}
     >
       <table className="w-full text-base">
         <caption className="sr-only">{caption}</caption>

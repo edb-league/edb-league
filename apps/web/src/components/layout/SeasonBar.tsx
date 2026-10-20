@@ -31,7 +31,7 @@ export function SeasonBar({
       className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-card)] border border-line-soft bg-surface px-4 py-3"
     >
       <div className="min-w-0 flex-1 basis-64">
-        <p className="text-lg font-bold">{current.label}</p>
+        <p className="font-display text-2xl font-bold uppercase">{current.label}</p>
         <p className="text-base text-muted">{seasonSummary(current)}</p>
         {current.status === "active" && current.progress && (
           <div className="mt-2 max-w-xs">
@@ -55,7 +55,7 @@ export function SeasonBar({
                     className={clsx(
                       "inline-flex min-h-11 items-center rounded-lg border px-4 text-base font-bold no-underline",
                       active
-                        ? "border-accent bg-accent-bg text-on-accent"
+                        ? "border-gold-bg bg-gold-bg text-on-gold"
                         : "border-line bg-surface-2 text-fg hover:bg-surface-3",
                     )}
                   >

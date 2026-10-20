@@ -1,9 +1,16 @@
 @import "tailwindcss";
-@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow/700.css";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
 @import "./tokens.css";
 
 @theme inline {
-  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Barlow", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", ui-sans-serif, system-ui, sans-serif;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -17,6 +24,10 @@
   --color-accent-bg: var(--accent-bg);
   --color-on-accent: var(--on-accent);
   --color-gold: var(--gold);
+  --color-gold-bg: var(--gold-bg);
+  --color-on-gold: var(--on-gold);
+  --color-win-bg: var(--win-bg);
+  --color-loss-bg: var(--loss-bg);
   --color-win: var(--win);
   --color-loss: var(--loss);
   --color-pt: var(--pt);
@@ -31,14 +42,16 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
-    font-size: 100%;
-    line-height: 1.55;
+    font-size: 106.25%;
+    line-height: 1.5;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     scroll-padding-top: 1rem;
   }
   body { min-height: 100dvh; background: var(--bg); color: var(--text); }
-  h1, h2, h3, h4 { line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; }
+  h1, h2, h3, h4 { line-height: 1.15; text-wrap: balance; }
+  /* Títulos de página e de seção em condensada maiúscula; números grandes usam .num. */
+  h1, h2 { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
   p, li { text-wrap: pretty; }
   a { color: var(--accent); text-underline-offset: 0.18em; }
   a:hover { text-decoration-thickness: 2px; }
@@ -89,6 +102,7 @@
 
   table { border-collapse: collapse; }
   .tabular { font-variant-numeric: tabular-nums; }
+  .num { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
 
   /* Respeita quem reduz movimento. */
   @media (prefers-reduced-motion: reduce) {
@@ -110,11 +124,11 @@
 
 @layer components {
   .kicker {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--gold);
   }
   .card {
     background: var(--surface);

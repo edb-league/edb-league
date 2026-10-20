@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/layout/SiteHeader";
-import { Notice } from "@/components/ui/Notice";
+import Link from "next/link";
 import { api } from "@/lib/api";
+import { NAV_ITEMS } from "@/lib/nav";
 import type { Meta } from "@/lib/types";
 import "./globals.css";
 
@@ -47,19 +48,31 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Pular para o conteúdo
         </a>
         <SiteHeader />
-        <div className="lg:pl-64">
+        <div>
           {meta?.demo && (
             <div className="border-b border-line-soft bg-surface-2 px-4 py-2 text-center text-base">
               <strong>Dados de demonstração.</strong> Os jogadores e partidas abaixo são fictícios.
             </div>
           )}
-          <main id="conteudo" tabIndex={-1} className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 focus:outline-none md:px-8 md:py-8">
+          <main id="conteudo" tabIndex={-1} className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-6 focus:outline-none md:px-8 md:py-8">
             {children}
           </main>
-          <footer className="mx-auto max-w-6xl px-4 pb-10 text-sm text-muted md:px-8">
-            <Notice tone="info">
-              Os números vêm das partidas registradas e são atualizados a cada poucos minutos.
-            </Notice>
+          <footer className="border-t border-line-soft bg-surface">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-6 text-base text-muted md:px-8">
+              <p className="font-display text-xl font-bold tracking-wider text-fg uppercase">EDB League · CS2</p>
+              <p className="max-w-prose">Os números vêm das partidas registradas e são atualizados a cada poucos minutos.</p>
+              <nav aria-label="Rodapé">
+                <ul className="flex flex-wrap gap-x-5">
+                  {NAV_ITEMS.map((item) => (
+                    <li key={item.href}>
+                      <Link href={item.href} className="inline-flex min-h-11 items-center">
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </div>
           </footer>
         </div>
       </body>

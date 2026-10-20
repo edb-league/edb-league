@@ -14,10 +14,10 @@ export function Stat({
   className?: string;
 }) {
   return (
-    <div className={clsx("rounded-lg border border-line-soft bg-surface-2 px-4 py-3", className)}>
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="tabular text-2xl font-bold">{value}</dd>
-      {hint && <dd className="text-sm text-subtle">{hint}</dd>}
+    <div className={clsx("card px-4 py-4", className)}>
+      <dt className="mb-1 text-base font-semibold text-muted">{label}</dt>
+      <dd className="num text-4xl leading-none">{value}</dd>
+      {hint && <dd className="mt-1 text-base text-muted">{hint}</dd>}
     </div>
   );
 }

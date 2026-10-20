@@ -36,6 +36,12 @@ add("pl", surfaces, 4.5, "time PL");
 add("focus", surfaces, 3, "anel de foco (componente)");
 add("border", surfaces, 3, "borda de controles (componente)");
 pairs.push(["on-accent", "accent-bg", 7, "texto sobre botão primário"]);
+pairs.push(["on-gold", "gold-bg", 7, "texto sobre botão dourado"]);
+for (const n of [1, 2, 3, 4]) pairs.push([`lv${n}-fg`, `lv${n}-bg`, 4.5, `número no selo de nível (faixa ${n})`]);
+pairs.push(["win", "win-bg", 4.5, "texto de vitória sobre a etiqueta"]);
+pairs.push(["loss", "loss-bg", 4.5, "texto de derrota sobre a etiqueta"]);
+add("gold-bg", surfaces, 3, "selo dourado (componente)");
+for (const n of [1, 2, 3, 4]) add(`lv${n}-bg`, ["surface"], 3, `selo de nível ${n} sobre o cartão (componente)`);
 
 let failed = 0;
 for (const theme of ["dark", "light"]) {

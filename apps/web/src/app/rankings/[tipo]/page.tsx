@@ -58,7 +58,7 @@ export default async function RankingPage({
                   aria-current={active ? "page" : undefined}
                   className={clsx(
                     "inline-flex min-h-11 items-center rounded-lg border px-5 text-base font-bold no-underline",
-                    active ? "border-accent bg-accent-bg text-on-accent" : "border-line bg-surface text-fg hover:bg-surface-2",
+                    active ? "border-gold-bg bg-gold-bg text-on-gold" : "border-line bg-surface text-fg hover:bg-surface-2",
                   )}
                 >
                   {tab.label}

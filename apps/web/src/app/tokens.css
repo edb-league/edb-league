@@ -24,11 +24,25 @@
   --accent-bg: light-dark(#09539a, #7cc0f2);
   --on-accent: light-dark(#ffffff, #08182b);
   --gold: light-dark(#7a5200, #e3c794);
+  --gold-bg: light-dark(#6e4a00, #e3c794);
+  --on-gold: light-dark(#ffffff, #10233a);
   --win: light-dark(#006b52, #5fe0bc);
   --loss: light-dark(#a33f00, #ff9a6b);
   --pt: light-dark(#b3243f, #ff9fb0);
   --pl: light-dark(#0b5ca8, #9bcbff);
+  --win-bg: light-dark(#d4f3e9, #0f3d31);
+  --loss-bg: light-dark(#fde3d4, #4a2414);
   --focus: light-dark(#1a47d6, #ffd166);
+
+  /* Faixas de nível (1-3, 4-6, 7-8, 9-10). O número do nível sempre aparece em texto. */
+  --lv1-bg: light-dark(#46617c, #a3bad0);
+  --lv1-fg: light-dark(#ffffff, #08182b);
+  --lv2-bg: light-dark(#09539a, #7cc0f2);
+  --lv2-fg: light-dark(#ffffff, #08182b);
+  --lv3-bg: light-dark(#6e4a00, #e3c794);
+  --lv3-fg: light-dark(#ffffff, #10233a);
+  --lv4-bg: light-dark(#a33f00, #ff5a36);
+  --lv4-fg: light-dark(#ffffff, #1a0a00);
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }

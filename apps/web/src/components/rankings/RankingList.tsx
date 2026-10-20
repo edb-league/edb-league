@@ -2,6 +2,7 @@ import clsx from "clsx";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/Card";
+import { LevelBadge } from "@/components/ui/LevelBadge";
 import { num } from "@/lib/format";
 import type { Ranking, RankingRow } from "@/lib/types";
 
@@ -48,16 +49,17 @@ export function RankingList({ ranking }: { ranking: Ranking }) {
             key={row.player_id}
             className={clsx(
               "card group relative p-4 hover:bg-surface-2 md:p-5",
-              row.rank === 1 && "border-l-4 border-l-gold",
+              row.rank === 1 && "border-l-4 border-l-gold-bg",
             )}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex min-w-0 items-start gap-3">
-                <span className="tabular min-w-9 pt-0.5 text-base font-bold text-muted">
+                <span className="num min-w-10 text-3xl leading-none text-muted">
                   <span className="sr-only">Posição </span>#{String(row.rank).padStart(2, "0")}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-lg font-bold break-words">
+                  <h3 className="flex flex-wrap items-center gap-2 text-xl font-bold break-words">
+                    {ranking.type !== "bagres" && <LevelBadge level={row.level} />}
                     <Link
                       href={`/jogadores/${encodeURIComponent(row.player_id)}`}
                       className="text-fg no-underline group-hover:underline after:absolute after:inset-0 after:content-['']"
@@ -76,7 +78,7 @@ export function RankingList({ ranking }: { ranking: Ranking }) {
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm text-muted">{ranking.focus_label}</p>
-                <p className="tabular text-2xl font-extrabold text-gold">
+                <p className="num text-4xl leading-none text-gold">
                   {num(row.focus, decimals, ranking.focus_unit)}
                 </p>
               </div>

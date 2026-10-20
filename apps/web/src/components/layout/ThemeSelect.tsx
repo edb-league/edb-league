@@ -54,14 +54,14 @@ export function ThemeSelect() {
   const theme = useSyncExternalStore(subscribe, read, () => "auto" as Theme);
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm text-muted">
+    <div className="flex items-center">
+      <label htmlFor={id} className="sr-only">
         Tema
       </label>
-      <select id={id} className={controlClass} value={theme} onChange={(event) => choose(event.target.value as Theme)}>
-        <option value="auto">Automático (sistema)</option>
-        <option value="light">Claro</option>
-        <option value="dark">Escuro</option>
+      <select id={id} className={`${controlClass} !w-auto`} value={theme} onChange={(event) => choose(event.target.value as Theme)}>
+        <option value="auto">Tema: automático</option>
+        <option value="light">Tema: claro</option>
+        <option value="dark">Tema: escuro</option>
       </select>
     </div>
   );

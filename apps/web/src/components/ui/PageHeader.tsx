@@ -19,7 +19,7 @@ export function PageHeader({
   counts?: { players: number; matches: number; maps: number };
 }) {
   return (
-    <header className="relative isolate overflow-hidden rounded-[var(--radius-card)] border border-line-soft bg-surface-2">
+    <header className="relative isolate overflow-hidden rounded-[var(--radius-card)] border border-t-4 border-line-soft border-t-gold-bg bg-surface-2">
       {art && (
         <>
           <Image
@@ -39,8 +39,8 @@ export function PageHeader({
       )}
       <div className="max-w-2xl px-5 py-7 md:px-8 md:py-10">
         <p className="kicker mb-2">EDB LEAGUE · CS2</p>
-        <h1 className="text-3xl font-extrabold md:text-4xl">{title}</h1>
-        <p className="mt-3 max-w-prose text-lg text-muted">{subtitle}</p>
+        <h1 className="text-5xl leading-none md:text-6xl">{title}</h1>
+        <p className="mt-3 max-w-prose text-xl text-muted">{subtitle}</p>
         {counts && (
           <ul className="mt-5 flex flex-wrap gap-2" aria-label="Resumo da liga">
             {(
@@ -52,9 +52,9 @@ export function PageHeader({
             ).map(([label, value]) => (
               <li
                 key={label}
-                className="rounded-full border border-line bg-surface/90 px-3 py-1 text-sm text-muted"
+                className="rounded-full border border-line-soft bg-surface/90 px-3 py-1 text-base text-muted"
               >
-                <b className="tabular mr-1 text-gold">{num(value)}</b>
+                <b className="num mr-1 text-xl text-gold">{num(value)}</b>
                 {label}
               </li>
             ))}

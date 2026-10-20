@@ -7,6 +7,7 @@ const base =
 
 const variants = {
   primary: "bg-accent-bg text-on-accent hover:brightness-110",
+  gold: "bg-gold-bg text-on-gold hover:brightness-110",
   secondary: "border border-line bg-surface-2 text-fg hover:bg-surface-3",
   ghost: "text-accent hover:bg-surface-2",
   danger: "border border-loss bg-surface text-loss hover:bg-surface-2",

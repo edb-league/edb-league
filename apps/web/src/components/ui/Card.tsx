@@ -23,7 +23,7 @@ export function SectionTitle({
   return (
     <div className="mb-4">
       {kicker && <p className="kicker mb-1">{kicker}</p>}
-      <Heading id={id} className={clsx("font-bold", level === 2 ? "text-2xl" : "text-xl")}>
+      <Heading id={id} className={clsx(level === 3 && "font-display font-bold uppercase", level === 2 ? "text-4xl" : "text-2xl")}>
         {title}
       </Heading>
       {children && <p className="mt-1 text-base text-muted">{children}</p>}

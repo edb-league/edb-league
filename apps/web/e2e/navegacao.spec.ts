@@ -37,7 +37,7 @@ test("menu fecha ao navegar", async ({ page }) => {
   await page.goto("/");
   const button = page.getByRole("button", { name: /menu/i });
   await button.click();
-  await page.getByRole("link", { name: /medalhas/i }).click();
+  await page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: /medalhas/i }).click();
   await expect(page).toHaveURL(/\/medalhas$/);
   await expect(button).toHaveAttribute("aria-expanded", "false");
 });
