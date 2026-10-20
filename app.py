@@ -16,6 +16,7 @@ from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboar
 from bagres import bagres_board
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
+from confront_registry import prepare_confront_bundle
 from storage import Store
 # Os imports Python ja sao reutilizados entre reruns; nao forcar reload
 # a cada interacao. O deploy atualiza os modulos pelo reinicio do aplicativo.
@@ -414,8 +415,8 @@ def season_rules_banner(selected_season):
         '<div class="edb-season-rules-grid">'
         '<div class="edb-season-rules-item"><strong>14 dias</strong>'
         '<span>Temporadas quinzenais, de segunda a domingo</span></div>'
-        '<div class="edb-season-rules-item"><strong>BO3 livres</strong>'
-        '<span>Sem limite de confrontos por temporada</span></div>'
+        '<div class="edb-season-rules-item"><strong>BO1 e BO3 livres</strong>'
+        '<span>Sem limite de confrontos ou mapas por temporada</span></div>'
         '<div class="edb-season-rules-item"><strong>Top 6 mapas</strong>'
         '<span>Os 6 melhores mapas de cada jogador contam em cada ranking</span></div>'
         '</div><p class="edb-season-rules-foot">'+esc(foot)+'</p></section>'
@@ -567,7 +568,7 @@ season_homologated=bool(season_record.get('homologated_at'))
 if page in ('Visão geral','Rankings','Missões & XP'):
     frame=(cached_enriched_frame(all_players,all_matches,all_stats) if store.cloud
            else enrich(all_players,all_matches,all_stats))
-    # Mapas sem associacao a BO3 nao entram na classificacao oficial.
+    # Mapas de BO1 e BO3 vinculados à temporada têm peso idêntico.
     selected=frame[frame['match_id'].astype(str).isin(season_ids)].copy() if not frame.empty else frame.copy()
     season_stars={str(r['player_id']):int(r['stars']) for r in all_frozen_stars
                   if int(r['season_number'])==season_number}
@@ -788,7 +789,7 @@ elif page=='Hall da Fama':
     else: st.caption('A primeira premiação oficial será homologada após a Temporada 1.')
 
 elif page=='Partidas':
-    hero('Histórico de partidas','Confrontos, mapas e resultados da EDB LEAGUE.')
+    hero('Histórico de partidas','BO1 e BO3: cada mapa conta igualmente na temporada.')
     st.markdown(CARD_CSS, unsafe_allow_html=True)
     active_match_id=st.query_params.get('match')
     if isinstance(active_match_id,list):
@@ -807,18 +808,20 @@ elif page=='Partidas':
                 unsafe_allow_html=True)
     series_matches=series_maps(active_bo3_id,all_bo3_maps,all_matches) if active_bo3_id else []
     if active_bo3_id:
-        st.markdown('#### Mapas desta BO3')
+        active_series=next(s for s in season_series if str(s['id'])==active_bo3_id)
+        series_kind='BO1' if active_series.get('match_format')=='bo1' else 'BO3'
+        st.markdown(f'#### Mapas desta {series_kind}')
         if series_matches:
             st.markdown(match_cards(series_matches,active_match_id,
                                     season_number=season_number,bo3_id=active_bo3_id),
                         unsafe_allow_html=True)
         else:
-            st.info('Esta BO3 ainda não tem mapas vinculados. Os registros serão adicionados após a conferência dos prints.')
+            st.info('Este confronto ainda não tem mapas vinculados. Os registros serão adicionados após a conferência dos prints.')
     assigned_ids={str(m['match_id']) for m in all_bo3_maps}
     legacy_matches=[m for m in all_matches if str(m['id']) not in assigned_ids]
     if legacy_matches:
         st.markdown('#### Mapas antigos ainda não agrupados')
-        st.caption('Registros preservados. Serão associados às BO3 corretas após conferir datas, elencos e placares.')
+        st.caption('Registros preservados. Vincule os mapas a BO1 ou BO3 na Administração após conferir os placares.')
         st.markdown(match_cards(legacy_matches,active_match_id,season_number=season_number),
                     unsafe_allow_html=True)
     visible_matches=series_matches+legacy_matches
@@ -985,7 +988,7 @@ elif page=='Administração':
                 try:
                     target_series=[r for r in all_bo3 if int(r['season_number'])==target_number]
                     if any(r['status']!='completed' for r in target_series):
-                        raise ValueError('Há BO3 incompletas nesta temporada.')
+                        raise ValueError('Há confrontos incompletos nesta temporada.')
                     ids=season_match_ids(target_number,all_bo3,all_bo3_maps)
                     frame=enrich(all_players,all_matches,all_stats)
                     period=frame[frame['match_id'].astype(str).isin(ids)].copy()
@@ -1024,7 +1027,7 @@ elif page=='Administração':
                     st.error('Homologação não realizada: '+str(exc))
         else:
             st.caption('Não há temporadas encerradas pendentes de homologação.')
-    players_tab,imports_tab,backup_tab=st.tabs(['👥 Jogadores','📁 Importar demo / CSV','⬇️ Exportar dados'])
+    players_tab,confront_tab,imports_tab,backup_tab=st.tabs(['👥 Jogadores','⚔️ BO1 / BO3','📁 Importar demo / CSV','⬇️ Exportar dados'])
     with players_tab:
         st.markdown('#### Adicionar jogador')
         with st.form('new_player'):
@@ -1104,9 +1107,9 @@ elif page=='Administração':
                     except Exception as exc:
                         st.error('Não foi possível reativar: '+str(exc))
     with imports_tab:
-        st.info('A Temporada 1 inicia em 19/10/2026. Registre apenas mapas da temporada atual.')
-        with st.expander('Importação avulsa · somente mapa isolado',expanded=False):
-            st.caption('Para uma BO3 de três mapas, use a importação completa acima. Esta opção é destinada exclusivamente a mapas avulsos.')
+        st.info('Importe cada mapa e depois vincule-o a uma BO1 ou BO3 na aba Confrontos.')
+        with st.expander('Importar estatísticas de um mapa · demo ou CSV',expanded=True):
+            st.caption('Primeiro salve cada mapa. Depois, na aba BO1 / BO3, confira os times, placares e registre o confronto na temporada.')
             st.markdown('#### Importar uma partida')
             method=st.radio('Origem dos dados',['Demo da xplay (.dem ou .dem.gz)','CSV de placar','Exemplo do print do SCOPE.GG'],horizontal=True)
             st.info('A importação de demo gera uma prévia editável antes de salvar. Verifique participantes, rounds e eliminações; o parser depende da versão e estrutura da demo.')
