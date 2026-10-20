@@ -189,26 +189,44 @@ class _FakeSt:
         return lambda *args, **kwargs: None
 
 
-def test_hall_banners_are_side_by_side_squares():
+def _hall_entries():
+    return [
+        {"title": "Mais kills em uma partida", "value": "28 kills",
+         "holders": [{"id": "1", "name": "Kvra (Caveira)"}], "detail": "Mirage · 20/10/2026"},
+        {"title": "Maior ADR em uma partida", "value": "103.2 ADR",
+         "holders": [{"id": "2", "name": "Alfa"}], "detail": "Anubis · 19/10/2026"},
+        {"title": "Mais vitórias", "value": "3 vitórias",
+         "holders": [{"id": "3", "name": "Bravo"}, {"id": "4", "name": "Charlie"}],
+         "detail": "Acumulado em todas as partidas registradas"},
+    ]
+
+
+def test_hall_has_four_squares_in_requested_order():
     from legacy_views import render_hall, LEGACY_CSS
-    hall = [{"title": "Mais kills em uma partida", "value": "28 kills",
-             "holders": [{"id": "1", "name": "Kvra (Caveira)"}],
-             "detail": "Mirage · 20/10/2026"}]
     fake = _FakeSt()
-    render_hall(fake, hall, 5, players=[], records=[])
+    render_hall(fake, _hall_entries(), 5, players=[], records=[])
     duo = next(block for block in fake.blocks if 'class="edb-fame-duo"' in block)
-    assert duo.index("edb-henio-banner") < duo.index("edb-fame-spotlight")
-    assert duo.count("<section") == 2
-    assert "28 kills" in duo and "PRÊMIO HENIO" in duo
+    assert duo.count("<section") == 4
+    order = [duo.index(text) for text in (
+        "MELHOR MARCA INDIVIDUAL", "PRÊMIO HENIO",
+        "MAIOR ADR EM UMA PARTIDA", "MAIS VITÓRIAS")]
+    assert order == sorted(order)
+    assert "28 kills" in duo and "103.2 ADR" in duo and "3 vitórias" in duo
+    assert "Bravo</a> · <a" in duo and "Charlie" in duo
     assert "aspect-ratio:1/1" in LEGACY_CSS
-    assert "grid-template-columns:repeat(2,minmax(0,340px))" in LEGACY_CSS
+    assert "grid-template-columns:repeat(4,minmax(0,300px))" in LEGACY_CSS
+    assert "@media(max-width:1279px){.edb-fame-duo{grid-template-columns:repeat(2" in LEGACY_CSS
     assert ".edb-fame-duo{grid-template-columns:minmax(0,1fr)}" in LEGACY_CSS
 
 
-def test_hall_without_records_keeps_only_the_henio_square_and_notice():
+def test_hall_skips_squares_without_data_and_keeps_the_henio_square():
     from legacy_views import render_hall
     fake = _FakeSt()
     render_hall(fake, [], 0, players=[], records=[])
     duo = next(block for block in fake.blocks if 'class="edb-fame-duo"' in block)
     assert duo.count("<section") == 1 and "edb-fame-spotlight" not in duo
     assert any(block.startswith("INFO:") for block in fake.blocks)
+    partial = _FakeSt()
+    render_hall(partial, _hall_entries()[:1], 1, players=[], records=[])
+    duo = next(block for block in partial.blocks if 'class="edb-fame-duo"' in block)
+    assert duo.count("<section") == 2 and "MAIOR ADR" not in duo
