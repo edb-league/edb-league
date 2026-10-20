@@ -17,10 +17,10 @@ from season_rankings import season_boards
     (4,date(2027,1,19),date(2027,2,18)),
     (5,date(2027,2,19),date(2027,3,18)),
     (17,date(2028,2,19),date(2028,3,18)),  # Ano bissexto: 29 dias
-]):
-    def test_monthly_period(number,begin,finish):
-        assert season_dates(number)==(begin,finish)
-        assert finish+timedelta(days=1)==season_dates(number+1)[0]
+])
+def test_monthly_period(number,begin,finish):
+    assert season_dates(number)==(begin,finish)
+    assert finish+timedelta(days=1)==season_dates(number+1)[0]
 
 
 def test_no_legacy_season_zero_month_start():
