@@ -40,7 +40,8 @@ def test_admin_changes_invalidate_before_rerun():
     assert "load_scope_stats.clear()" in APP
     # Duas gravacoes, duas alteracoes no elenco, uma de mapa, uma homologacao.
     assert APP.count("invalidate_league_cache()") == 7
-    assert "store.save_player(nick,3,steam or None,skill_level=level)\n                    invalidate_league_cache()" in APP
-    assert "store.save_player(nn,int(existing['stars']),ss or None,existing['id'],skill_level=level)\n                        invalidate_league_cache()" in APP
+    import re
+    assert re.search(r"store\.save_player\(nick,3,steam or None,skill_level=level\)\n\s+invalidate_league_cache\(\)", APP)
+    assert re.search(r"store\.save_player\(nn,int\(existing\['stars'\]\),ss or None,existing\['id'\],skill_level=level\)\n\s+invalidate_league_cache\(\)", APP)
     assert "st.session_state.pop('pending_import',None)\n                                invalidate_league_cache()" in APP
     assert "invalidate_league_cache()\n                    st.success('Classificação, estrelas e títulos oficiais homologados.')" in APP
