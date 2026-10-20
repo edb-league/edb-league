@@ -16,7 +16,7 @@ from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboar
 from bagres import bagres_board
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
-from confront_registry import prepare_confront_bundle
+from confront_views import render_confront_admin
 from storage import Store
 # Os imports Python ja sao reutilizados entre reruns; nao forcar reload
 # a cada interacao. O deploy atualiza os modulos pelo reinicio do aplicativo.
@@ -1106,6 +1106,11 @@ elif page=='Administração':
                         st.rerun()
                     except Exception as exc:
                         st.error('Não foi possível reativar: '+str(exc))
+    with confront_tab:
+        render_confront_admin(
+            st,store,all_seasons,all_matches,all_stats,all_players,
+            all_bo3_maps,invalidate_league_cache,player_label
+        )
     with imports_tab:
         st.info('Importe cada mapa e depois vincule-o a uma BO1 ou BO3 na aba Confrontos.')
         with st.expander('Importar estatísticas de um mapa · demo ou CSV',expanded=True):
