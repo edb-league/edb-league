@@ -665,7 +665,7 @@ if page=='Visão geral':
     st.markdown(season_rules_banner(season_number),unsafe_allow_html=True)
 
 elif page=='Rankings':
-    hero('Rankings da EDB LEAGUE','Três disputas: melhor desempenho, superação do próprio nível e presença.')
+    hero('Rankings da EDB LEAGUE','Desempenho Elite, superação pessoal e o ranking BAGRES — pior ADR primeiro.')
     # Os links trocam ?ranking= sem depender do DOM interno de st.tabs.
     # Alteração de URL reinicia o script preservando as mesmas estatísticas.
     selected_rank = st.query_params.get('ranking', 'elite')
