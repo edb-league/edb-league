@@ -19,7 +19,7 @@ def test_top_navigation_reads_query_params_and_keeps_player_links():
     assert "st.session_state['edb_page'] = ROUTES[requested_page]" in APP
     assert "linked_player = st.query_params.get('player')" in APP
     assert "st.session_state['edb_page'] = 'Jogadores'" in APP
-    assert "render_player_profile(" in APP
+    assert "player_banner(player_label(who['nickname']),steam," in APP
     assert "st.sidebar" not in APP
     assert "st.sidebar.radio(" not in APP
 
@@ -52,7 +52,7 @@ def test_match_metadata_follows_scoreboards_and_stats():
 def test_player_profiles_and_hall_of_fame_reachable():
     assert "elif page=='Hall da Fama':" in APP
     assert "linked_player = st.query_params.get('player')" in APP
-    assert "render_player_profile(" in APP
+    assert "player_banner(player_label(who['nickname']),steam," in APP
     assert "render_hall_of_fame(" in APP
     assert "def get_career_records():" in APP
     assert "return match_records(all_players,all_matches,all_stats,scope_stats)" in APP

@@ -49,7 +49,6 @@ match_records = _league_legacy.match_records
 player_summary = _league_legacy.player_summary
 hall_of_fame = _league_legacy.hall_of_fame
 import legacy_views as _legacy_views
-render_player_profile = _legacy_views.render_profile
 render_hall_of_fame = _legacy_views.render_hall
 import league_social as _league_social
 compare_players = _league_social.compare_players
@@ -61,6 +60,11 @@ import brand_shell as _brand_shell
 BRAND_CSS = _brand_shell.BRAND_CSS
 hero_banner = _brand_shell.hero_banner
 import admin_panel as _admin_panel
+import steam_profile as _steam_profile
+import player_page as _player_page
+steam_view = _steam_profile.steam_view
+fetch_steam_profile = _steam_profile.fetch_steam_profile
+player_banner = _player_page.player_banner
 ADMIN_CSS = _admin_panel.ADMIN_CSS
 admin_banner_head = _admin_panel.admin_banner_head
 import top_navigation as _top_navigation
@@ -248,6 +252,11 @@ def secret(k):
         return str(value) if value is not None else ''
     except (FileNotFoundError,KeyError):
         return os.getenv(k,'')
+
+@st.cache_data(ttl=21600, max_entries=64, show_spinner=False)
+def cached_steam_profile(steamid64: str, _api_key: str):
+    """Foto e horas de CS por 6 h; falhas levantam exceção e não ficam em cache."""
+    return fetch_steam_profile(steamid64,_api_key)
 
 @st.cache_data(ttl=3600, max_entries=4, show_spinner=False)
 def ensure_current_calendar(supabase_url: str, _service_role_key: str, brasil_date: str) -> None:
@@ -735,7 +744,7 @@ elif page=='Medalhas':
     render_medal_catalogue(st,active_players,player_medals)
 
 elif page=='Jogadores':
-    hero('Perfil dos jogadores','Identidade, carreira, evolução e conquistas individuais.')
+    hero('Perfil dos jogadores','Foto da Steam, horas de CS e estatísticas de cada jogador.')
     # Um link direto antigo ainda pode abrir um perfil arquivado para consulta.
     player_options=list(active_players)
     if linked_player:
@@ -753,24 +762,18 @@ elif page=='Jogadores':
             st.session_state['edb_profile_choice']=ids[0]
         profile_id=st.selectbox(
             'Selecionar jogador', ids,
-            format_func=lambda pid: player_label(by_id[pid]['nickname']) +
-                          '  ·  nível ' + str(int(by_id[pid].get('skill_level',5))),
+            format_func=lambda pid: player_label(by_id[pid]['nickname']),
             key='edb_profile_choice',
             on_change=clear_profile_link
         )
         who=by_id[profile_id]
         career_records=get_career_records()
-        all_time_records=hall_of_fame(career_records)
-        render_player_profile(
-            st,px,who,player_summary(profile_id,career_records),all_time_records,
-            achievements(str(profile_id),career_records)
+        steam=steam_view(who.get('steamid'),secret('STEAM_API_KEY'),cached_steam_profile)
+        st.markdown(
+            player_banner(player_label(who['nickname']),steam,
+                          player_summary(profile_id,career_records)),
+            unsafe_allow_html=True
         )
-        won_titles=[x for x in all_season_titles if str(x['player_id'])==str(profile_id)]
-        if won_titles:
-            st.markdown('### Títulos oficiais da EDB LEAGUE')
-            names={'elite':'MVP da Temporada','superacao':'Revelação da Temporada','xp':'Xinxa da Temporada'}
-            for award in sorted(won_titles,key=lambda x:int(x['season_number']),reverse=True):
-                st.write(f"🏆 Temporada {award['season_number']} — {names.get(award['rank_type'],award['rank_type'])}")
 
 elif page=='Hall da Fama':
     hero('Hall da Fama','Grandes jogadores constroem momentos. Lendas deixam um legado.')

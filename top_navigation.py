@@ -9,12 +9,13 @@ NAV_ITEMS = (
     ("home", "Visão geral", ""),
     ("rankings", "Rankings", "Rankings"),
     ("matches", "Partidas", "Partidas"),
+    ("players", "Jogadores", "Jogadores"),
     ("versus", "Comparar jogadores", "Comparar jogadores"),
     ("fame", "Hall da Fama", "Hall da Fama"),
     ("medals", "Medalhas", "Medalhas"),
     ("xp", "Missões & XP", "Missões & XP"),
 )
-EXTRA_ROUTES = {"players": "Jogadores", "admin": "Administração"}
+EXTRA_ROUTES = {"admin": "Administração"}
 ROUTES = {slug: page for slug, page, _ in NAV_ITEMS} | EXTRA_ROUTES
 
 HOME_SVG = (

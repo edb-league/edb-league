@@ -37,7 +37,7 @@ def test_brand_is_left_of_categories_and_header_moves_up():
     assert "overflow-x:auto" in TOP_NAV_CSS
     assert "@media(max-width:650px)" in TOP_NAV_CSS
     assert [label for _, label, _ in NAV_ITEMS] == [
-        "Visão geral", "Rankings", "Partidas", "Comparar jogadores",
+        "Visão geral", "Rankings", "Partidas", "Jogadores", "Comparar jogadores",
         "Hall da Fama", "Medalhas", "Missões & XP",
     ]
 
