@@ -308,6 +308,9 @@ def bo3_cards(season_number, series, map_links, all_matches, selected_series=Non
             for m in maps if str(m.get("match_id")) in games
         ]
         summary=" · ".join(str(x) for x in valid_names) if valid_names else "Mapas ainda não cadastrados"
+        if not complete:
+            total=1 if fmt=="bo1" else 3
+            summary=f"{len(maps)}/{total} " + ("Mapa" if fmt=="bo1" else "Mapas") + " · " + summary
         date_label=_confront_first_date(s,maps,games)
         result=_confront_result(s,maps,games,fmt,complete)
         name_left,name_right,values,left_side,right_side=_confront_sides(s,result)
