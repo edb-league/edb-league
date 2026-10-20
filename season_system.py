@@ -1,4 +1,4 @@
-"""EDB LEAGUE: temporadas quinzenais e agrupamento historico de BO3."""
+"""EDB LEAGUE: temporadas quinzenais e confrontos históricos BO1 / BO3."""
 from __future__ import annotations
 
 from datetime import date
@@ -88,8 +88,13 @@ def season_match_ids(season_number, series, map_links):
     return {str(m["match_id"]) for m in map_links if str(m.get("series_id")) in ids}
 
 
+def series_format(row):
+    """Registros antigos permanecem BO3 quando o campo não está presente."""
+    return "bo1" if str(row.get("match_format") or "bo3").lower()=="bo1" else "bo3"
+
+
 def confirmed_bo3_count(season_number, series, map_links):
-    """Só séries efetivamente concluídas contam para alcançar as cinco BO3."""
+    """Conta confrontos completos, BO1 com 1 mapa e BO3 com pelo menos 2."""
     counts={str(s["id"]):0 for s in series if int(s["season_number"])==int(season_number)}
     for row in map_links:
         sid=str(row["series_id"])
@@ -97,7 +102,7 @@ def confirmed_bo3_count(season_number, series, map_links):
     return sum(1 for s in series
         if int(s["season_number"])==int(season_number)
         and s.get("status")=="completed" and s.get("winner_side") in ("a","b")
-        and counts.get(str(s["id"]),0)>=2)
+        and counts.get(str(s["id"]),0)>=(1 if series_format(s)=="bo1" else 2))
 
 
 def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_date=None):
@@ -110,19 +115,19 @@ def season_bar(seasons, season_number, page_slug, completed, *, rank=None, on_da
     end=_parse_date(chosen.get("ends_on"))
     archived=bool(chosen.get("homologated_at"))
     if start is None or end is None:
-        summary=f"{completed} BO3 concluidas · calendario a confirmar"
+        summary=f"{completed} confrontos concluídos · calendario a confirmar"
         progress=""
     elif on_date < start:
         summary=f"A INICIAR · {start.strftime('%d/%m')} a {end.strftime('%d/%m/%Y')}"
         progress=""
     elif on_date > end:
-        summary=(f"HOMOLOGADA · {completed} BO3 concluidas" if archived else
-                 f"ENCERRADA · AGUARDANDO HOMOLOGACAO · {completed} BO3 concluidas")
+        summary=(f"HOMOLOGADA · {completed} confrontos concluídos" if archived else
+                 f"ENCERRADA · AGUARDANDO HOMOLOGACAO · {completed} confrontos concluídos")
         progress=""
     else:
         day=(on_date-start).days+1
         remaining=(end-on_date).days
-        summary=f"Dia {day}/14 · {remaining} dias restantes · {completed} BO3 concluidas"
+        summary=f"Dia {day}/14 · {remaining} dias restantes · {completed} confrontos concluídos"
         progress=(f'<div class="edb-season-progress" aria-label="Dia {day} de 14">'
                   f'<span style="width:{min(100,100*day/14):.2f}%"></span></div>')
     link_extra=""
@@ -161,7 +166,9 @@ def bo3_cards(season_number, series, map_links, all_matches, selected_series=Non
         css=" edb-series-selected" if active else ""
         href=("?page=matches&amp;season="+str(season_number) if active else
               "?page=matches&amp;season="+str(season_number)+"&amp;bo3="+quote(sid,safe=""))
-        complete=s.get("status")=="completed" and s.get("winner_side") in ("a","b") and len(maps)>=2
+        fmt=series_format(s)
+        minimum=1 if fmt=="bo1" else 2
+        complete=s.get("status")=="completed" and s.get("winner_side") in ("a","b") and len(maps)>=minimum
         status="FINALIZADA" if complete else ("EM ANDAMENTO" if maps else "AGUARDANDO REGISTRO")
         valid_names=[games[str(m["match_id"])].get("map_name") or "Mapa"
                      for m in maps if str(m.get("match_id")) in games]
@@ -174,14 +181,14 @@ def bo3_cards(season_number, series, map_links, all_matches, selected_series=Non
         elif complete:
             series_result="Resultado a conferir"
         else:
-            series_result=f"{len(maps)}/3 Mapas"
+            series_result=f"{len(maps)}/{1 if fmt=='bo1' else 3} " + ("Mapa" if fmt=="bo1" else "Mapas")
         team_names=(str(s.get("team_a_name") or "Time A")+" × "+
                     str(s.get("team_b_name") or "Time B"))
         pieces.append(
             '<a class="edb-series-card'+css+'" href="'+href+'" target="_self"'
-            ' aria-label="BO3 '+str(int(s["sequence_number"]))+
+            ' aria-label="'+fmt.upper()+' '+str(int(s["sequence_number"]))+
             (" - fechar" if active else " - ver mapas")+'">'
-            '<div class="edb-series-heading"><strong>BO3 #'+str(int(s["sequence_number"]))+
+            '<div class="edb-series-heading"><strong>'+fmt.upper()+' #'+str(int(s["sequence_number"]))+
             '</strong><span class="edb-series-status">'+status+'</span></div>'
             '<div class="edb-series-score">'+escape(series_result)+'</div>'
             '<div class="edb-series-caption">'+escape(team_names)+'</div>'
