@@ -174,7 +174,14 @@ def bo3_cards(season_number, series, map_links, all_matches, selected_series=Non
                      for m in maps if str(m.get("match_id")) in games]
         summary=" · ".join(str(x) for x in valid_names) if valid_names else "Mapas ainda não cadastrados"
         # O placar exibido acompanha os vencedores reais dos mapas.
-        if complete and all(m.get("winner_side") in ("a", "b") for m in maps):
+        if complete and fmt=="bo1" and maps and str(maps[0]["match_id"]) in games:
+            game=games[str(maps[0]["match_id"])]
+            a_score=game.get("team_a_score")
+            b_score=game.get("team_b_score")
+            series_result=(f"{a_score} : {b_score}"
+                           if a_score is not None and b_score is not None else
+                           ("1 : 0" if s["winner_side"]=="a" else "0 : 1"))
+        elif complete and all(m.get("winner_side") in ("a", "b") for m in maps):
             wins_a=sum(m["winner_side"] == "a" for m in maps)
             wins_b=sum(m["winner_side"] == "b" for m in maps)
             series_result=f"{wins_a} : {wins_b}"
