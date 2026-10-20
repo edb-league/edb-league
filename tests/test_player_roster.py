@@ -81,7 +81,7 @@ def test_admin_removes_without_delete_and_restores_from_separate_list():
     assert "def get_career_records():" in APP
     assert "return cached_career_records(all_players,all_matches,all_stats,scope_stats)" in APP
     assert "with st.form('edb_archive_player'):" in APP
-    assert "st.form_submit_button('Remover jogador',type='primary')" in APP
+    assert "st.form_submit_button('Remover do elenco',use_container_width=True)" in APP
     assert "if not remove_confirm:" in APP
     assert "store.set_player_active(remove_target['id'],False)" in APP
     assert "with st.form('edb_reactivate_player'):" in APP

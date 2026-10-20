@@ -60,6 +60,9 @@ render_medal_catalogue = _social_views.render_medal_catalogue
 import brand_shell as _brand_shell
 BRAND_CSS = _brand_shell.BRAND_CSS
 hero_banner = _brand_shell.hero_banner
+import admin_panel as _admin_panel
+ADMIN_CSS = _admin_panel.ADMIN_CSS
+admin_banner_head = _admin_panel.admin_banner_head
 import top_navigation as _top_navigation
 TOP_NAV_CSS = _top_navigation.TOP_NAV_CSS
 top_navigation = _top_navigation.top_navigation
@@ -972,6 +975,94 @@ elif page=='Administração':
         st.stop()
     if st.button('Sair do modo administrador'):
         st.session_state.is_admin=False;st.rerun()
+    register_col,config_col=st.columns(2,gap='large')
+    with register_col:
+        with st.container(key='edb_admin_register'):
+            st.markdown(
+                admin_banner_head('👤 NOVO JOGADOR','Cadastrar jogador',
+                                  'Adicione um atleta ao elenco da liga.',with_css=True),
+                unsafe_allow_html=True
+            )
+            with st.form('new_player',clear_on_submit=True):
+                nick=st.text_input('Nickname')
+                steam=st.text_input('SteamID (opcional)')
+                level=st.selectbox('Nível (1–10)',range(1,11),index=4)
+                if st.form_submit_button('Adicionar jogador',type='primary',use_container_width=True):
+                    try:
+                        store.save_player(nick,3,steam or None,skill_level=level)
+                        invalidate_league_cache()
+                        st.success('Jogador cadastrado.')
+                        st.rerun()
+                    except Exception as exc:st.error(str(exc))
+    with config_col:
+        with st.container(key='edb_admin_config'):
+            st.markdown(
+                admin_banner_head('⚙️ GESTÃO DO ELENCO','Configurar jogador',
+                                  'Selecione um jogador cadastrado para mudar o nível ou removê-lo do elenco.'),
+                unsafe_allow_html=True
+            )
+            if active_players:
+                existing=st.selectbox(
+                    'Jogador cadastrado',
+                    sorted(active_players,key=lambda p:player_name(p).casefold()),
+                    format_func=lambda p:player_name(p),
+                    key='edb_admin_player',
+                )
+                pid=str(existing['id'])
+                with st.form('edit_player_'+pid):
+                    level=st.slider('Nível (1–10)',1,10,int(existing.get('skill_level',5)),
+                                    key='edb_admin_level_'+pid)
+                    with st.expander('Editar nickname e SteamID'):
+                        nn=st.text_input('Nickname',value=existing['nickname'],key='edb_admin_nick_'+pid)
+                        ss=st.text_input('SteamID',value=existing.get('steamid') or '',key='edb_admin_steam_'+pid)
+                    if st.form_submit_button('Salvar alterações',use_container_width=True):
+                        try:
+                            store.save_player(nn,int(existing['stars']),ss or None,existing['id'],skill_level=level)
+                            invalidate_league_cache()
+                            st.success('Alteração salva.')
+                            st.rerun()
+                        except Exception as exc:st.error(str(exc))
+                remove_target=existing
+                with st.form('edb_archive_player'):
+                    st.caption(
+                        'Remove o jogador das listas de participantes e do sorteador. '
+                        'O cadastro e o histórico de partidas, estatísticas e títulos '
+                        'são preservados. É possível reativá-lo depois.'
+                    )
+                    remove_confirm=st.checkbox(
+                        'Confirmo que desejo remover este jogador do elenco ativo.',
+                        key='edb_archive_confirm_'+pid
+                    )
+                    if st.form_submit_button('Remover do elenco',use_container_width=True):
+                        if not remove_confirm:
+                            st.warning('Marque a confirmação antes de remover.')
+                        else:
+                            try:
+                                store.set_player_active(remove_target['id'],False)
+                                invalidate_league_cache()
+                                st.success('Jogador removido do elenco. Histórico preservado.')
+                                st.rerun()
+                            except Exception as exc:
+                                st.error('Não foi possível remover: '+str(exc))
+            else:
+                st.caption('Nenhum jogador ativo para configurar.')
+            if inactive_players:
+                with st.expander('Jogadores removidos do elenco'):
+                    with st.form('edb_reactivate_player'):
+                        reactivate_target=st.selectbox(
+                            'Jogador removido',
+                            sorted(inactive_players,key=lambda p:player_name(p).casefold()),
+                            format_func=lambda p:player_name(p),
+                            key='edb_reactivate_target',
+                        )
+                        if st.form_submit_button('Reativar jogador',use_container_width=True):
+                            try:
+                                store.set_player_active(reactivate_target['id'],True)
+                                invalidate_league_cache()
+                                st.success('Jogador reativado no elenco.')
+                                st.rerun()
+                            except Exception as exc:
+                                st.error('Não foi possível reativar: '+str(exc))
     if store.cloud:
         st.markdown('#### Homologação de temporadas encerradas')
         pending_seasons=[
@@ -1027,85 +1118,7 @@ elif page=='Administração':
                     st.error('Homologação não realizada: '+str(exc))
         else:
             st.caption('Não há temporadas encerradas pendentes de homologação.')
-    players_tab,confront_tab,imports_tab,backup_tab=st.tabs(['👥 Jogadores','⚔️ BO1 / BO3','📁 Importar demo / CSV','⬇️ Exportar dados'])
-    with players_tab:
-        st.markdown('#### Adicionar jogador')
-        with st.form('new_player'):
-            col1,col2,col3=st.columns([3,2,2])
-            with col1:nick=st.text_input('Nickname')
-            with col2:steam=st.text_input('SteamID (opcional)')
-            with col3:level=st.selectbox('Nível (1–10)',range(1,11),index=4)
-            if st.form_submit_button('Cadastrar jogador',type='primary'):
-                try:
-                    store.save_player(nick,3,steam or None,skill_level=level)
-                    invalidate_league_cache()
-                    st.success('Jogador cadastrado.')
-                    st.rerun()
-                except Exception as exc:st.error(str(exc))
-        if active_players:
-            st.markdown('#### Ajustar nível / nickname')
-            existing=st.selectbox('Jogador cadastrado',active_players,format_func=lambda r:r['nickname'])
-            with st.form('edit_player'):
-                nn=st.text_input('Nickname',value=existing['nickname'])
-                ss=st.text_input('SteamID',value=existing.get('steamid') or '')
-                level=st.slider('Nível (1–10)',1,10,int(existing.get('skill_level',5)))
-                if st.form_submit_button('Salvar alterações'):
-                    try:
-                        store.save_player(nn,int(existing['stars']),ss or None,existing['id'],skill_level=level)
-                        invalidate_league_cache()
-                        st.success('Alteração salva.')
-                        st.rerun()
-                    except Exception as exc:st.error(str(exc))
-
-        st.markdown('#### Remover jogador do elenco')
-        st.caption(
-            'Remove o jogador das listas de participantes e do sorteador. '
-            'O cadastro e o histórico de partidas, estatísticas e títulos '
-            'são preservados. É possível reativá-lo depois.'
-        )
-        if active_players:
-            with st.form('edb_archive_player'):
-                remove_target=st.selectbox(
-                    'Selecionar jogador para remover',
-                    sorted(active_players,key=lambda p:player_name(p).casefold()),
-                    format_func=lambda p:player_name(p),
-                    key='edb_archive_target',
-                )
-                remove_confirm=st.checkbox(
-                    'Confirmo que desejo remover este jogador do elenco ativo.',
-                    key='edb_archive_confirm'
-                )
-                if st.form_submit_button('Remover jogador',type='primary'):
-                    if not remove_confirm:
-                        st.warning('Marque a confirmação antes de remover.')
-                    else:
-                        try:
-                            store.set_player_active(remove_target['id'],False)
-                            invalidate_league_cache()
-                            st.success('Jogador removido do elenco. Histórico preservado.')
-                            st.rerun()
-                        except Exception as exc:
-                            st.error('Não foi possível remover: '+str(exc))
-        else:
-            st.caption('Nenhum jogador ativo para remover.')
-
-        if inactive_players:
-            st.markdown('#### Reativar jogador removido')
-            with st.form('edb_reactivate_player'):
-                reactivate_target=st.selectbox(
-                    'Jogador removido',
-                    sorted(inactive_players,key=lambda p:player_name(p).casefold()),
-                    format_func=lambda p:player_name(p),
-                    key='edb_reactivate_target',
-                )
-                if st.form_submit_button('Reativar jogador'):
-                    try:
-                        store.set_player_active(reactivate_target['id'],True)
-                        invalidate_league_cache()
-                        st.success('Jogador reativado no elenco.')
-                        st.rerun()
-                    except Exception as exc:
-                        st.error('Não foi possível reativar: '+str(exc))
+    confront_tab,imports_tab,backup_tab=st.tabs(['⚔️ BO1 / BO3','📁 Importar demo / CSV','⬇️ Exportar dados'])
     with confront_tab:
         render_confront_admin(
             st,store,all_seasons,all_matches,all_stats,all_players,
