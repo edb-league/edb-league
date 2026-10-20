@@ -23,11 +23,6 @@ border-radius:13px;padding:14px}
 .edb-profile-metric-value{color:#EFF6FD;font-size:1.3rem;font-weight:850;margin-top:3px}
 .edb-profile-best{border-left:3px solid #D6B98A;background:#1F3042;
 padding:14px;border-radius:9px;color:#F3F1EA;margin:14px 0}
-.edb-fame-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:13px 0 24px}
-.edb-fame-overview-card{border:1px solid #355477;border-radius:13px;padding:14px;
-background:linear-gradient(145deg,#142B44,#0E2036);min-width:0}
-.edb-fame-overview-value{color:#8ECAFC;font-size:1.5rem;line-height:1.3;font-weight:900}
-.edb-fame-overview-label{color:#A9C3D7;font-size:.74rem;margin-top:2px}
 .edb-henio-banner{
   display:flex;align-items:center;justify-content:space-between;gap:20px;
   border:1px solid #A86E54;border-radius:18px;padding:22px 25px;
@@ -56,9 +51,6 @@ box-shadow:inset 4px 0 #D6B98A}
 background:#14263B;border:1px solid #30465E;border-radius:12px;padding:12px 15px}
 .edb-fame-top-player a{color:#E0F1FF;text-decoration:none;font-weight:750}
 .edb-fame-top-player strong{font-size:1.05rem;color:#B3DDFB;font-variant-numeric:tabular-nums}
-@media(max-width:700px){
- .edb-fame-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
 .edb-fame-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
 .edb-fame-card{border:1px solid #354A60;border-radius:16px;
 background:linear-gradient(140deg,#1B2E43,#142235);padding:18px;min-width:0}
@@ -192,22 +184,7 @@ def render_profile(st, px, player, data, hall, medals=None):
 def render_hall(st, hall, matches_count, players=None, records=None):
     """Destaques calculados dos dados oficiais, sem temporadas inventadas."""
     st.markdown(LEGACY_CSS, unsafe_allow_html=True)
-    players = players or []
     records = records or []
-    total_kills = sum(int(row["kills"]) for row in records)
-    overview = [
-        ("Jogadores", len(players)),
-        ("Partidas", matches_count),
-        ("Kills registradas", total_kills),
-        ("Recordes ativos", len(hall)),
-    ]
-    st.markdown('<div class="edb-fame-overview">' + "".join(
-        '<div class="edb-fame-overview-card"><div class="edb-fame-overview-value">' +
-        f'{count:,}'.replace(",", ".") +
-        '</div><div class="edb-fame-overview-label">' + escape(label) +
-        '</div></div>' for label,count in overview
-    ) + '</div>', unsafe_allow_html=True)
-    st.caption(f"Recordes automáticos de {matches_count} partidas oficiais. Empates são compartilhados.")
     henio=premio_henio(records,min_maps=2)
     if henio is None:
         holder_markup='<span class="edb-henio-recipient">A definir</span>'
