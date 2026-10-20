@@ -63,8 +63,10 @@ def adr(p: dict) -> float:
 
 
 def print_series(series: dp.Series, directory: dp.Directory | None, team_a: set[str], names: tuple[str, str],
-                 scores: list[tuple[int, int]]) -> None:
+                 scores: list[tuple[int, int]], basis: str = "") -> None:
     print(f"\n=== {series.label} ===")
+    if basis:
+        print(f"  {names[0]} = {basis}")
     for run, (a, b) in zip(series.demos, scores):
         print(f"\n  {run.file.path.name}  |  {run.analysis['map']}  |  {names[0]} {a} x {b} {names[1]}"
               f"  |  {run.analysis['rounds']} rounds")
@@ -185,18 +187,20 @@ def run_once(args, store) -> int:
     written = 0
     for series in dp.group_series(runs):
         problems = list(series.problems) + [e for d in series.demos for e in d.errors]
+        anchors = {"PT": dp.anchor_steamids(args.ancora_pt, series, directory),
+                   "PL": dp.anchor_steamids(args.ancora_pl, series, directory)}
         try:
-            team_a, scores = dp.assign_teams(series, args.trocar_times)
+            team_a, scores, basis = dp.assign_teams(series, args.trocar_times, anchors)
         except ValueError as exc:
             problems.append(str(exc))
-            team_a, scores = set(), []
+            team_a, scores, basis = set(), [], ""
         if problems:
             print(f"\n=== {series.label} ===")
             for p in problems:
                 print(f"  NÃO IMPORTÁVEL: {p}")
             continue
         names = (args.time_a, args.time_b)
-        print_series(series, directory, team_a, names, scores)
+        print_series(series, directory, team_a, names, scores, basis)
         if not args.gravar:
             continue
         if store is None:
@@ -212,13 +216,17 @@ def run_once(args, store) -> int:
             print("  Série não gravada (identidades pendentes).")
             continue
         ids, bind, new_players = resolved
+        already = dp.find_existing_series(series, ids, store.matches(), store.stats())
+        if already:
+            print(f"  JÁ EXISTE no banco (provavelmente cadastrada pelo SCOPE): {', '.join(already)}. Não gravada.")
+            continue
         if not args.sim:
             if not ask(f"\n  Gravar {series.label} na temporada {season['number']}? [s/N] ").lower().startswith("s"):
                 print("  Pulada.")
                 continue
         key = (int(season["number"]), series.fmt)
         match_ids = dp.next_match_ids(series, season, existing, taken, reserved.get(key, 0))
-        plan = dp.build_plan(series, season, match_ids, ids, args.time_a, args.time_b, args.trocar_times)
+        plan = dp.build_plan(series, season, match_ids, ids, args.time_a, args.time_b, args.trocar_times, anchors)
         created: list[str] = []
         try:
             for pid, nickname in new_players.items():
@@ -252,7 +260,11 @@ def main() -> int:
     parser.add_argument("--sim", action="store_true", help="não pergunta; grava só séries sem pendência")
     parser.add_argument("--vigiar", action="store_true", help="repete a leitura da pasta a cada --intervalo segundos")
     parser.add_argument("--intervalo", type=int, default=60)
-    parser.add_argument("--trocar-times", action="store_true", help="inverte quem é time A e time B")
+    parser.add_argument("--trocar-times", action="store_true", help="inverte PT e PL depois de aplicar as âncoras")
+    parser.add_argument("--ancora-pt", nargs="+", default=dp.DEFAULT_ANCHORS["PT"],
+                        help="jogador(es) que definem PT (nick na demo, nick/alias do banco ou SteamID)")
+    parser.add_argument("--ancora-pl", nargs="+", default=dp.DEFAULT_ANCHORS["PL"],
+                        help="jogador(es) que definem PL")
     parser.add_argument("--time-a", default="PT")
     parser.add_argument("--time-b", default="PL")
     parser.add_argument("--so", nargs="*", help="processa apenas estes arquivos")

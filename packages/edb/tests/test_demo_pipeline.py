@@ -106,11 +106,59 @@ def test_md3_incompleta_e_md1_separadas():
 
 def test_times_seguem_o_primeiro_mapa():
     s = dp.group_series(bo3_runs())[0]
-    team_a, scores = dp.assign_teams(s)
+    team_a, scores, _ = dp.assign_teams(s)
     assert team_a == set(B)  # B começou de T no primeiro mapa
     assert scores == [(7, 13), (13, 7), (8, 13)]
-    team_a, scores = dp.assign_teams(s, swap=True)
+    team_a, scores, _ = dp.assign_teams(s, swap=True)
     assert team_a == set(A) and scores == [(13, 7), (7, 13), (13, 8)]
+
+
+def test_ancoras_definem_pt_e_pl():
+    s = dp.group_series(bo3_runs())[0]
+    # "n1" é o nick de A na demo; "n6" é o de B
+    anchors = {"PT": dp.anchor_steamids(["n1"], s), "PL": dp.anchor_steamids(["n6"], s)}
+    assert anchors == {"PT": {"1"}, "PL": {"6"}}
+    team_a, scores, basis = dp.assign_teams(s, anchors=anchors)
+    assert team_a == set(A) and scores == [(13, 7), (7, 13), (13, 8)] and "âncora de PT" in basis
+    # só a âncora de PL na série: PT é o oposto
+    team_a, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": {"6"}})
+    assert team_a == set(A) and "oposto" in basis
+    # --trocar-times inverte depois das âncoras
+    team_a, _, _ = dp.assign_teams(s, swap=True, anchors=anchors)
+    assert team_a == set(B)
+    # nenhuma âncora presente: volta à regra antiga
+    team_a, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": set()})
+    assert team_a == set(B) and "nenhuma âncora" in basis
+
+
+def test_ancoras_no_mesmo_time_dao_erro():
+    s = dp.group_series(bo3_runs())[0]
+    with pytest.raises(ValueError, match="mesmo time"):
+        dp.assign_teams(s, anchors={"PT": {"1"}, "PL": {"2"}})
+
+
+def test_ancora_por_nick_do_banco_e_por_steamid():
+    s = dp.group_series(bo3_runs())[0]
+    d = dp.Directory(players_db(), [{"alias": "Neteb", "player_id": "p1"}])
+    assert dp.anchor_steamids(["Neteb"], s, d) == {"1"}        # alias do banco -> steamid
+    assert dp.anchor_steamids(["Nick7"], s, d) == {"7"}        # nick do banco
+    assert dp.anchor_steamids(["9"], s) == {"9"}               # SteamID direto
+    assert dp.anchor_steamids(["ninguem"], s, d) == set()
+
+
+def test_partida_ja_cadastrada_nao_duplica():
+    s = dp.group_series(bo3_runs())[0]
+    ids = {str(i): f"p{i}" for i in range(1, 11)}
+    roster = [f"p{i}" for i in range(1, 11)]
+    matches = [{"id": "edb-t1-bo3-01-anubis", "played_at": "2026-10-19", "map_name": "Anubis"},
+               {"id": "outro", "played_at": "2026-10-20", "map_name": "Nuke"}]
+    stats = [{"match_id": "edb-t1-bo3-01-anubis", "player_id": p} for p in roster]
+    assert dp.find_existing_series(s, ids, matches, stats) == ["edb-t1-bo3-01-anubis"]
+    matches[0]["played_at"] = "2026-10-10"                      # outra data: é outra partida
+    assert dp.find_existing_series(s, ids, matches, stats) == []
+    matches[0]["played_at"] = "2026-10-19"
+    stats[0]["player_id"] = "p99"                               # outro elenco: é outra partida
+    assert dp.find_existing_series(s, ids, matches, stats) == []
 
 
 def test_elenco_trocado_no_meio_da_serie_e_recusado():
@@ -244,6 +292,9 @@ class FlowStore(FakeStore):
     def matches(self):
         return []
 
+    def stats(self):
+        return []
+
     def _list(self, table):
         return {
             "player_aliases": [],
@@ -262,7 +313,8 @@ def flow(monkeypatch, players, gravar=True, sim=True):
     monkeypatch.setattr(script, "collect", lambda folder, store, only: (bo3_runs(), []))
     store = FlowStore(players)
     args = Namespace(pasta=str(Path(__file__).parent), gravar=gravar, sim=sim, trocar_times=False,
-                     time_a="PT", time_b="PL", so=None)
+                     time_a="PT", time_b="PL", so=None,
+                     ancora_pt=dp.DEFAULT_ANCHORS["PT"], ancora_pl=dp.DEFAULT_ANCHORS["PL"])
     script.run_once(args, store)
     return store
 
@@ -291,3 +343,17 @@ def test_fluxo_identidade_desconhecida_nao_grava(monkeypatch, capsys):
     store = flow(monkeypatch, players_db())     # VnD não bate com o nick da demo
     assert writes(store) == []
     assert "PENDENTE" in capsys.readouterr().out
+
+
+def test_fluxo_nao_grava_partida_que_ja_existe(monkeypatch, capsys):
+    players = [{"id": f"p{i}", "nickname": f"Nick{i}", "steamid": str(i)} for i in range(1, 11)]
+    script = load_script()
+    monkeypatch.setattr(script, "collect", lambda folder, store, only: (bo3_runs(), []))
+    store = FlowStore(players)
+    store.matches = lambda: [{"id": "edb-t1-bo3-01-anubis", "played_at": "2026-10-20", "map_name": "Anubis"}]
+    store.stats = lambda: [{"match_id": "edb-t1-bo3-01-anubis", "player_id": f"p{i}"} for i in range(1, 11)]
+    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None,
+                     ancora_pt=["n1"], ancora_pl=["n6"])
+    script.run_once(args, store)
+    assert writes(store) == []
+    assert "JÁ EXISTE" in capsys.readouterr().out

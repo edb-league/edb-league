@@ -202,10 +202,53 @@ def group_series(runs: list[DemoRun]) -> list[Series]:
     return series
 
 
-def assign_teams(series: Series, swap: bool = False) -> tuple[set[str], list[tuple[int, int]]]:
-    """Time A = quem começou de T no primeiro mapa (ou o outro, com swap). Devolve (A, placares A x B)."""
+# Regra da liga: PT é o time em que está o jogador-âncora de PT; PL, o da âncora de PL.
+# Cada âncora aceita nick da demo, nick/alias do banco ou SteamID.
+DEFAULT_ANCHORS = {"PT": ["Neteb", "Петэв"], "PL": ["The Most", "Scby"]}
+
+
+def anchor_steamids(terms: list[str], series: Series, directory: "Directory | None" = None) -> set[str]:
+    """SteamIDs da série que correspondem aos termos (nick na demo, nick/alias no banco ou SteamID)."""
+    wanted = {str(t).strip().casefold() for t in terms if str(t).strip()}
+    found: set[str] = set()
+    roster: set[str] = set()
+    for run in series.demos:
+        for p in run.analysis["players"]:
+            steam = str(p["steamid"])
+            roster.add(steam)
+            if steam.casefold() in wanted or str(p.get("nick") or "").casefold() in wanted:
+                found.add(steam)
+    if directory:
+        for term in wanted:
+            for pid in directory.by_name.get(term, ()):
+                steam = str(directory.players[pid].get("steamid") or "")
+                if steam in roster:
+                    found.add(steam)
+    return found
+
+
+def assign_teams(series: Series, swap: bool = False, anchors: dict[str, set[str]] | None = None):
+    """Define o time A (PT) e os placares A x B por mapa. Devolve (A, placares, base da escolha).
+
+    Com âncoras: A é o time que tem a âncora de PT (ou o oposto da âncora de PL).
+    Sem âncora na série, volta à regra antiga: A = quem começou de T no primeiro mapa.
+    """
     first_t, first_ct = series.demos[0].sides
-    team_a = set(first_ct if swap else first_t)
+    pt = (anchors or {}).get("PT", set())
+    pl = (anchors or {}).get("PL", set())
+    team_a, basis = set(first_t), "quem começou de T no primeiro mapa (nenhuma âncora na série)"
+    if pt or pl:
+        pt_side = "t" if pt & first_t else "ct" if pt & first_ct else None
+        pl_side = "t" if pl & first_t else "ct" if pl & first_ct else None
+        if pt_side and pl_side and pt_side == pl_side:
+            raise ValueError("As âncoras de PT e PL estão no mesmo time; ajuste com --ancora-pt/--ancora-pl.")
+        if pt_side:
+            team_a, basis = set(first_t if pt_side == "t" else first_ct), "time da âncora de PT"
+        elif pl_side:
+            team_a, basis = set(first_ct if pl_side == "t" else first_t), "oposto da âncora de PL"
+    if swap:
+        team_a = set(first_ct) if team_a == set(first_t) else set(first_t)
+        basis += " (invertido por --trocar-times)"
     scores: list[tuple[int, int]] = []
     for run in series.demos:
         t_set, ct_set = run.sides
@@ -216,7 +259,7 @@ def assign_teams(series: Series, swap: bool = False) -> tuple[set[str], list[tup
             scores.append((ct_score, t_score))
         else:
             raise ValueError(f"{run.file.path.name}: os times mudaram de elenco em relação ao primeiro mapa.")
-    return team_a, scores
+    return team_a, scores, basis
 
 
 # --------------------------------------------------------------------------- identidades
@@ -307,9 +350,10 @@ def match_row(match_id: str, run: DemoRun, played_on: date) -> dict:
 
 
 def build_plan(series: Series, season: dict, match_ids: list[str], ids: dict[str, str],
-               team_a_name: str, team_b_name: str, swap: bool = False) -> dict:
+               team_a_name: str, team_b_name: str, swap: bool = False,
+               anchors: dict[str, set[str]] | None = None) -> dict:
     """Tudo o que será gravado, pronto para a prévia e para o Store."""
-    team_a, scores = assign_teams(series, swap)
+    team_a, scores, _ = assign_teams(series, swap, anchors)
     plan = {"matches": [], "player_stats": [], "details": [], "scope": [], "bundle": None}
     for run, mid in zip(series.demos, match_ids):
         plan["matches"].append(match_row(mid, run, series.played_on))
@@ -340,6 +384,28 @@ def next_match_ids(series: Series, season: dict, existing_series: list[dict], ta
         if not any(i in taken for i in ids):
             return ids
         n += 1
+
+
+def find_existing_series(series: Series, ids: dict[str, str], matches: list[dict],
+                         stats: list[dict]) -> list[str]:
+    """Partidas já no banco com o mesmo mapa, os mesmos 10 jogadores e data a até 1 dia de distância.
+
+    Evita duplicar uma partida cadastrada antes pelos prints do SCOPE (sem hash de demo).
+    """
+    roster = {ids[s] for s in ids}
+    by_match: dict[str, set[str]] = {}
+    for row in stats:
+        by_match.setdefault(str(row["match_id"]), set()).add(str(row["player_id"]))
+    found = []
+    for run in series.demos:
+        for m in matches:
+            if str(m.get("map_name") or "").casefold() != run.file.map:
+                continue
+            if abs((date.fromisoformat(str(m["played_at"])[:10]) - series.played_on).days) > 1:
+                continue
+            if by_match.get(str(m["id"])) == roster:
+                found.append(str(m["id"]))
+    return found
 
 
 # --------------------------------------------------------------------------- gravação
