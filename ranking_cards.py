@@ -94,6 +94,9 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
                       quote(str(player_id),safe="") + '" target="_self">'
                       if player_id else "")
         link_end = '</a>' if player_id else ""
+        tier = (f'Nível {int(row["Nível"])}'
+                if focus == "ADR" and row.get("Nível") is not None
+                else "★" * stars)
         pieces.append(
             link_start +
             '<article class="edb-rank-card">'
@@ -102,9 +105,7 @@ def ranking_cards(rows, focus="Elite", name_formatter=None):
             f'<span class="edb-rank-place">#{index:02d}</span>'
             '<div class="edb-rank-identity">'
             f'<div class="edb-rank-name">{name}</div>'
-            (f'<div class="edb-rank-stars">Nível {int(row["Nível"])}</div>'
-             if focus == "ADR" and row.get("Nível") is not None
-             else f'<div class="edb-rank-stars">{"★" * stars}</div>')
+            f'<div class="edb-rank-stars">{escape(tier)}</div>'
             '</div></div>'
             '<div class="edb-rank-focus">'
             f'<div class="edb-rank-focus-label">{labels[focus]}</div>'
