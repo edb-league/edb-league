@@ -13,6 +13,7 @@ import streamlit as st
 from chart_theme import style_edb_bar
 from team_draw import draw_balanced_teams, draw_message, player_name, player_level, team_cards_html
 from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
+from bagres import bagres_board
 from demo_importer import parse_demo, prepare_upload
 from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
 from storage import Store
@@ -687,8 +688,16 @@ elif page=='Rankings':
         if changes.empty:st.info('Precisamos de pelo menos quatro partidas por jogador para medir evolução histórica.')
         else:st.dataframe(changes,use_container_width=True,hide_index=True)
     elif selected_rank == 'resenha':
-        st.write('XP por participação, vitória e missão semanal. Contam os 6 melhores mapas por jogador, priorizando vitórias.')
-        scoreboard_table(board_xp,focus='XP')
+        st.write('**BAGRES** — o menor ADR acumulado da temporada assume a liderança. '
+                 'Quanto menor o dano médio por round, mais alta a posição neste ranking.')
+        st.caption('Considera todos os mapas registrados na temporada (não os 6 melhores). '
+                   'ADR = dano total ÷ rounds individuais. Menos de 2 mapas: provisório. '
+                   'Rounds inferidos podem afetar o cálculo. O ranking de XP e os títulos '
+                   'oficiais da liga permanecem inalterados.')
+        board_bagres=bagres_board(
+            selected,{str(p['id']):int(p.get('skill_level') or 5) for p in all_players}
+        )
+        scoreboard_table(board_bagres,focus='ADR')
 
 elif page=='Comparar jogadores':
     hero('Comparar jogadores','Análise lado a lado: desempenho, vitórias e confrontos da liga.')
