@@ -9,7 +9,7 @@ from html import escape
 RANK_OPTIONS = (
     ("elite", "Elite"),
     ("superacao", "Superação"),
-    ("resenha", "Resenha"),
+    ("resenha", "BAGRES"),
 )
 
 RANK_SWITCH_CSS = """
