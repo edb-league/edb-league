@@ -1,4 +1,4 @@
-"""Navegação horizontal responsiva e acesso administrativo fixo da EDB LEAGUE."""
+"""Navegação responsiva (menu lateral em telas largas, barra horizontal em telas estreitas) e acesso administrativo fixo da EDB LEAGUE."""
 from __future__ import annotations
 
 from html import escape
@@ -100,6 +100,8 @@ TOP_NAV_CSS = """
 }
 .edb-topnav .edb-nav-home {min-width:46px;padding:10px 13px;}
 .edb-nav-home svg {display:block;}
+/* O rótulo do início só aparece no menu lateral; na barra horizontal fica só o ícone. */
+.edb-nav-home-label {display:none;}
 /* Informações reais continuam acessíveis depois do cabeçalho. */
 .edb-topmeta {display:flex;align-items:center;gap:13px;flex-wrap:wrap;
   min-height:35px;color:#A3BFD9;font-size:.78rem;padding:2px 2px 6px;}
@@ -138,6 +140,43 @@ TOP_NAV_CSS = """
   .edb-admin-float {left:11px;bottom:12px;min-height:40px;padding:9px 11px;font-size:.73rem;}
   .edb-topmeta {font-size:.7rem;gap:9px;}
 }
+/* Telas largas: o mesmo menu vira uma coluna fixa à esquerda, com a mesma estética.
+   Em tablets e celulares (até 860px) continua a barra horizontal rolável acima. */
+@media(min-width:861px) {
+  [data-testid="stAppViewContainer"] {
+    box-sizing:border-box !important;padding-left:236px !important;
+  }
+  [data-testid="stMainBlockContainer"], .block-container {padding-top:1.1rem !important;}
+  .edb-topbar {
+    position:fixed;top:0;left:0;bottom:0;z-index:998;
+    width:236px;box-sizing:border-box;
+    flex-direction:column;align-items:stretch;gap:16px;
+    min-height:0;margin:0;padding:16px 12px 76px;
+    border:none;border-right:1px solid #243B55;border-radius:0;
+    box-shadow:8px 0 26px rgba(0,0,0,.20);
+    overflow-y:auto;scrollbar-width:thin;
+  }
+  .edb-topbrand {gap:10px;padding:4px 6px 14px;border-bottom:1px solid #1B3149;}
+  .edb-topbrand img {width:44px;height:44px;}
+  .edb-topbrand-name {font-size:.95rem;letter-spacing:.9px;}
+  .edb-topnav {
+    flex-direction:column;align-items:stretch;justify-content:flex-start;
+    gap:3px;flex:0 0 auto;height:auto;padding:0;overflow:visible;
+  }
+  .edb-topnav a {
+    justify-content:flex-start;gap:10px;min-height:44px;
+    padding:11px 14px;border-radius:10px;font-size:.84rem;
+  }
+  .edb-topnav a.edb-nav-selected:after {
+    left:0;right:auto;top:20%;bottom:20%;width:3px;height:auto;
+  }
+  .edb-topnav .edb-nav-home {min-width:0;padding:11px 14px;}
+  .edb-nav-home-label {display:inline;}
+  .edb-admin-float {
+    left:12px;bottom:14px;width:212px;box-sizing:border-box;
+    justify-content:flex-start;
+  }
+}
 </style>
 """
 
@@ -159,7 +198,8 @@ def top_navigation(page):
         active = destination == page
         selected = ' edb-nav-selected' if active else ''
         icon_class = ' edb-nav-home' if slug == "home" else ''
-        visible = HOME_SVG if slug == "home" else escape(label)
+        visible = (HOME_SVG + '<span class="edb-nav-home-label">' + escape(destination) + '</span>'
+                   if slug == "home" else escape(label))
         links.append(
             '<a href="?page=' + slug + '" target="_self"'
             ' class="edb-nav-item' + selected + icon_class + '"'

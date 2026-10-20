@@ -47,3 +47,24 @@ def test_active_category_updates_and_counters_are_not_faked():
     assert "11</b> jogadores" in counters
     assert "3</b> partidas" in counters
     assert "496</b> kills registradas" in counters
+
+
+def test_desktop_menu_is_a_fixed_left_column_and_mobile_keeps_top_bar():
+    css = TOP_NAV_CSS
+    assert "@media(min-width:861px)" in css
+    desktop = css.split("@media(min-width:861px)", 1)[1]
+    assert "position:fixed;top:0;left:0;bottom:0;" in desktop
+    assert "flex-direction:column;" in desktop
+    assert 'padding-left:236px !important' in desktop
+    assert "a.edb-nav-selected:after" in desktop
+    # Barra horizontal rolável preservada para telas estreitas.
+    assert "overflow-x:auto" in css.split("@media(min-width:861px)", 1)[0]
+    assert ".edb-nav-home-label {display:none;}" in css
+
+
+def test_home_label_exists_for_the_side_menu_without_changing_the_link():
+    markup = top_navigation("Visão geral")
+    assert '<span class="edb-nav-home-label">Visão geral</span>' in markup
+    assert 'href="?page=home"' in markup
+    assert 'aria-label="Visão geral" aria-current="page"' in markup
+    assert markup.count('edb-nav-home-label') == 1
