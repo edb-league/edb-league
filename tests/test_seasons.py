@@ -1,9 +1,10 @@
-"""Temporadas EDB: ciclos quinzenais e vínculo explícito de mapas."""
+"""Temporadas EDB: ciclos mensais e vínculo explícito de mapas."""
 from datetime import date
 from pathlib import Path
 
 from season_system import (
     DEFAULT_SEASONS, bo3_cards, chosen_season_number, confirmed_bo3_count,
+    season_dates,
     current_season_number, season_bar, season_match_ids, series_maps,
 )
 
@@ -20,7 +21,7 @@ def _series():
 
 def test_site_starts_at_season_one_and_rejects_old_season_links():
     assert [s["number"] for s in DEFAULT_SEASONS] == [1]
-    assert DEFAULT_SEASONS[0]["ends_on"] == "2026-11-01"
+    assert DEFAULT_SEASONS[0]["ends_on"] == "2026-11-18"
     assert current_season_number(DEFAULT_SEASONS,date(2026,10,18)) == 1
     assert current_season_number(DEFAULT_SEASONS,date(2026,10,19)) == 1
     assert current_season_number(DEFAULT_SEASONS,date(2026,11,1)) == 1
@@ -69,8 +70,8 @@ def test_three_legacy_draft_slots_no_fake_matches_and_links_are_scoped():
 
 def test_season_selector_persists_rank_mode_and_has_no_extra_period_filter():
     result=season_bar(DEFAULT_SEASONS,1,"rankings",0,rank="resenha",on_date=date(2026,10,19))
-    assert "Temporada 1" in result and "Dia 1/14" in result
-    assert "13 dias restantes" in result
+    assert "Temporada 1" in result and "Dia 1/31" in result
+    assert "30 dias restantes" in result
     assert 'href="?page=rankings&amp;season=0&amp;ranking=resenha"' not in result
     assert 'href="?page=rankings&amp;season=1&amp;ranking=resenha"' in result
     assert 'edb-season-active' in result
