@@ -34,6 +34,9 @@ for (const scheme of ["light", "dark"] as const) {
       for (const route of [
         `/jogadores/${playerA}`,
         `/jogadores/${playerA}?aba=estatisticas`,
+        `/jogadores/${playerA}?aba=estatisticas&lado=t`,
+        `/jogadores/${playerA}?aba=estatisticas&vista=weapons`,
+        `/jogadores/${playerA}?aba=estatisticas&vista=opponents`,
         `/jogadores/${playerA}?aba=partidas`,
         `/jogadores/${playerA}?aba=medalhas`,
         `/medalhas?faixa=gold`,

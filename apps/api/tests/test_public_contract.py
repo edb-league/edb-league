@@ -190,3 +190,48 @@ def test_perfil_avancado_aparece_so_com_demo(client, demo):
     assert sample["coverage"]["maps_with_demo"] <= sample["coverage"]["maps_total"]
     assert {s["key"] for s in sample["scores"]} == {"firepower", "entrying", "trading", "opening", "closing", "sniping", "utility"}
     assert all(0 <= s["value"] <= 100 for s in sample["scores"] if s["value"] is not None)
+
+
+def _first_with_demo(client):
+    players = get(client, "/api/players")
+    items = players if isinstance(players, list) else players["players"]
+    for p in items:
+        detail = get(client, f"/api/players/{p['id']}")
+        if detail["advanced"] is not None:
+            return p["id"], detail
+    raise AssertionError("a demonstração deveria ter jogador com demo")
+
+
+def test_perfil_avancado_filtros(client, demo):
+    pid, base = _first_with_demo(client)
+    check(base, "PlayerDetail")
+    assert base["headline"]["rating2"] is not None
+    options = base["advanced"]["filters"]["options"]
+    assert options["maps"] and options["formats"] and options["seasons"]
+    assert base["advanced"]["filters"]["applied"] == {"side": None, "map": None, "format": None, "season": None}
+
+    lado = get(client, f"/api/players/{pid}?lado=t")
+    check(lado, "PlayerDetail")
+    assert lado["advanced"]["side"] == "t"
+    assert lado["advanced"]["rounds"] < base["advanced"]["rounds"]
+    # o cabeçalho não muda com o filtro
+    assert lado["headline"] == base["headline"]
+
+    mapa = options["maps"][0]
+    por_mapa = get(client, f"/api/players/{pid}?mapa={mapa}")
+    assert [m["map"] for m in por_mapa["advanced"]["maps"]] == [mapa]
+    assert 0 < por_mapa["advanced"]["coverage"]["maps_with_demo"] <= base["advanced"]["coverage"]["maps_with_demo"]
+
+    vazio = get(client, f"/api/players/{pid}?mapa=Mapa-inexistente")
+    check(vazio, "PlayerDetail")
+    assert vazio["advanced"]["rounds"] == 0 and vazio["advanced"]["coverage"]["maps_with_demo"] == 0
+    assert vazio["advanced"]["filters"]["options"] == options
+
+    ignorado = get(client, f"/api/players/{pid}?lado=xyz&formato=bo9&periodo=abc")
+    assert ignorado["advanced"]["filters"]["applied"] == base["advanced"]["filters"]["applied"]
+
+
+def test_perfil_avancado_nomes_com_significado(client, demo):
+    _, detail = _first_with_demo(client)
+    metrics = [m for ms in detail["advanced"]["sections"].values() for m in ms]
+    assert metrics and all(m["label"].isascii() and m["meaning"] for m in metrics)

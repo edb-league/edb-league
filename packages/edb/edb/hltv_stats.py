@@ -16,8 +16,51 @@ from collections import defaultdict
 
 SECTION_ORDER = ["firepower", "entrying", "trading", "opening", "closing", "sniping", "utility"]
 SECTION_LABELS = {
-    "firepower": "Poder de fogo", "entrying": "Entrada", "trading": "Trocas", "opening": "Abertura",
-    "closing": "Fechamento", "sniping": "Sniper", "utility": "Utilitários",
+    "firepower": ("Firepower", "poder de fogo"), "entrying": ("Entrying", "entrada"), "trading": ("Trading", "trocas"),
+    "opening": ("Opening", "abertura"), "closing": ("Closing", "fechamento"), "sniping": ("Sniping", "sniper"),
+    "utility": ("Utility", "utilitários"),
+}
+METRIC_NAMES = {
+    "kpr": ("Kills per round", "kills por round"),
+    "adr": ("Damage per round", "dano por round (ADR)"),
+    "kprw": ("Kills per round win", "kills por round vencido"),
+    "adr_won": ("Damage per round win", "dano por round vencido"),
+    "rounds_with_kill": ("Rounds with a kill", "rounds com pelo menos 1 kill"),
+    "rounds_multikill": ("Rounds with a multi-kill", "rounds com 2 ou mais kills"),
+    "net_kills": ("Kill difference per 24 rounds", "saldo de kills a cada 24 rounds"),
+    "net_damage": ("Damage difference per round", "saldo de dano por round"),
+    "headshots": ("Headshot %", "porcentagem de kills com headshot"),
+    "dpr": ("Deaths per round", "mortes por round"),
+    "deaths_traded": ("Traded deaths", "mortes vingadas por um companheiro"),
+    "apr": ("Assists per round", "assistências por round"),
+    "opening_deaths_pr": ("Opening deaths per round", "mortes de abertura por round"),
+    "trade_kills_pr": ("Trade kills per round", "kills de troca por round"),
+    "trade_kills_pct": ("Trade kills", "kills de troca, em % das kills"),
+    "assisted_kills": ("Assisted kills", "kills com assistência, em % das kills"),
+    "opening_attempts": ("Opening attempts", "participação em aberturas"),
+    "opening_kills": ("Opening kills", "kills de abertura"),
+    "opening_deaths": ("Opening deaths", "mortes de abertura"),
+    "opening_ratio": ("Opening kill ratio", "kills de abertura por morte de abertura"),
+    "opening_success": ("Opening success", "aberturas vencidas, em %"),
+    "win_after_opening": ("Win% after opening kill", "vitória do round após kill de abertura"),
+    "first_kill_won": ("Opening kills in won rounds", "abertura em rounds vencidos"),
+    "time_alive": ("Time alive per round", "tempo vivo por round"),
+    "post_plant": ("Alive after plant", "vivo depois da bomba plantada"),
+    "last_alive": ("Last alive", "rounds em que foi o último vivo"),
+    "clutches_24": ("Clutches won per 24 rounds", "clutches vencidos a cada 24 rounds"),
+    "clutch_win": ("Clutch win %", "aproveitamento em clutches"),
+    "rounds_sniper": ("Rounds with sniper kills", "rounds com kill de sniper"),
+    "sniper_kills": ("Sniper kills", "kills de sniper, em % das kills"),
+    "rounds_awp": ("Rounds with AWP kills", "rounds com kill de AWP"),
+    "awp_kills": ("AWP kills", "kills de AWP, em % das kills"),
+    "util_damage": ("Utility damage per round", "dano de utilitário por round"),
+    "he_damage": ("Grenade damage per round", "dano de granada HE por round"),
+    "fire_damage": ("Molotov damage per round", "dano de molotov por round"),
+    "flashes": ("Flashes thrown per round", "flashes lançadas por round"),
+    "flash_assists": ("Flash assists per round", "assistências de flash por round"),
+    "flashed": ("Enemies flashed per round", "inimigos cegados por round"),
+    "flash_time": ("Blind time per round", "tempo de inimigo cego por round"),
+    "smokes": ("Smokes thrown per round", "smokes lançadas por round"),
 }
 SUM_FIELDS = [
     "rounds_t", "rounds_ct", "rounds_won", "rounds_won_t", "rounds_won_ct", "kills_t", "kills_ct", "deaths_t",
@@ -109,8 +152,9 @@ def rating2(t: dict, side: str | None = None) -> float | None:
     return 0.0073 * kast + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * adr + 0.1587
 
 
-def _m(key, label, value, t=None, ct=None, unit="n", decimals=2, hint="", adapted=False):
-    return {"key": key, "label": label, "value": value, "t": t, "ct": ct, "unit": unit,
+def _m(key, value, t=None, ct=None, unit="n", decimals=2, hint="", adapted=False):
+    label, meaning = METRIC_NAMES[key]
+    return {"key": key, "label": label, "meaning": meaning, "value": value, "t": t, "ct": ct, "unit": unit,
             "decimals": decimals, "hint": hint, "adapted": adapted}
 
 
@@ -157,72 +201,72 @@ def sections(t: dict) -> dict[str, list[dict]]:
     adr3 = _by_side(lambda s: rate("damage", s))
     out: dict[str, list[dict]] = {}
     out["firepower"] = [
-        _m("kpr", "Kills por round", *kpr3, decimals=2),
-        _m("adr", "Dano por round (ADR)", *adr3, decimals=1),
-        _m("kprw", "Kills por round vencido", _div(t["kills_in_won_rounds"], t["rounds_won"]), decimals=2,
+        _m("kpr", *kpr3, decimals=2),
+        _m("adr", *adr3, decimals=1),
+        _m("kprw", _div(t["kills_in_won_rounds"], t["rounds_won"]), decimals=2,
            hint="Kills feitas em rounds que o time venceu, divididas pelos rounds vencidos."),
-        _m("adr_won", "Dano por round vencido", _div(t["damage_in_won_rounds"], t["rounds_won"]), decimals=1,
+        _m("adr_won", _div(t["damage_in_won_rounds"], t["rounds_won"]), decimals=1,
            adapted=True, hint="Substitui o Round Win Shares da HLTV, cuja fórmula não é pública."),
-        _m("rounds_with_kill", "Rounds com kill", *[_pct(_div(any_kill_rounds(s), _side(t, "rounds", s))) for s in (None, "t", "ct")],
+        _m("rounds_with_kill", *[_pct(_div(any_kill_rounds(s), _side(t, "rounds", s))) for s in (None, "t", "ct")],
            unit="pct", decimals=1),
-        _m("rounds_multikill", "Rounds com multi-kill", *[_pct(_div(multi_rounds(s), _side(t, "rounds", s))) for s in (None, "t", "ct")],
+        _m("rounds_multikill", *[_pct(_div(multi_rounds(s), _side(t, "rounds", s))) for s in (None, "t", "ct")],
            unit="pct", decimals=1),
-        _m("net_kills", "Saldo de kills a cada 24 rounds", *[_div((_side(t, "kills", s) - _side(t, "deaths", s)) * 24, _side(t, "rounds", s)) for s in (None, "t", "ct")],
+        _m("net_kills", *[_div((_side(t, "kills", s) - _side(t, "deaths", s)) * 24, _side(t, "rounds", s)) for s in (None, "t", "ct")],
            decimals=2, hint="(kills - mortes) / rounds x 24."),
-        _m("net_damage", "Saldo de dano por round", _div(t["damage_t"] + t["damage_ct"] - t["damage_taken"], rounds), decimals=1,
+        _m("net_damage", _div(t["damage_t"] + t["damage_ct"] - t["damage_taken"], rounds), decimals=1,
            adapted=True, hint="Dano causado menos dano recebido de inimigos, por round."),
-        _m("headshots", "Headshots", _pct(_div(t["headshots"], kills)), unit="pct", decimals=1),
+        _m("headshots", _pct(_div(t["headshots"], kills)), unit="pct", decimals=1),
     ]
     out["entrying"] = [
-        _m("dpr", "Mortes por round", *dpr3, decimals=2),
-        _m("deaths_traded", "Mortes trocadas", _pct(_div(t["deaths_traded"], deaths)), unit="pct", decimals=1,
+        _m("dpr", *dpr3, decimals=2),
+        _m("deaths_traded", _pct(_div(t["deaths_traded"], deaths)), unit="pct", decimals=1,
            hint="Mortes vingadas por um companheiro em até 5 segundos."),
-        _m("apr", "Assistências por round", *[_div(_side(t, "assists", s), _side(t, "rounds", s)) for s in (None, "t", "ct")], decimals=2,
+        _m("apr", *[_div(_side(t, "assists", s), _side(t, "rounds", s)) for s in (None, "t", "ct")], decimals=2,
            hint="Assistências de dano, sem contar flash assist."),
-        _m("opening_deaths_pr", "Mortes de abertura por round", *[_div(_side(t, "opening_deaths", s), _side(t, "rounds", s)) for s in (None, "t", "ct")], decimals=2),
+        _m("opening_deaths_pr", *[_div(_side(t, "opening_deaths", s), _side(t, "rounds", s)) for s in (None, "t", "ct")], decimals=2),
     ]
     out["trading"] = [
-        _m("trade_kills_pr", "Kills de troca por round", _div(t["trade_kills"], rounds), decimals=2),
-        _m("trade_kills_pct", "Kills de troca", _pct(_div(t["trade_kills"], kills)), unit="pct", decimals=1,
+        _m("trade_kills_pr", _div(t["trade_kills"], rounds), decimals=2),
+        _m("trade_kills_pct", _pct(_div(t["trade_kills"], kills)), unit="pct", decimals=1,
            hint="Parte das kills que vingou uma morte de companheiro em até 5 segundos."),
-        _m("assisted_kills", "Kills com assistência", _pct(_div(t["assisted_kills"], kills)), unit="pct", decimals=1),
+        _m("assisted_kills", _pct(_div(t["assisted_kills"], kills)), unit="pct", decimals=1),
     ]
     out["opening"] = [
-        _m("opening_attempts", "Participação em aberturas", *[_pct(opening_attempts(s)) for s in (None, "t", "ct")], unit="pct", decimals=1,
+        _m("opening_attempts", *[_pct(opening_attempts(s)) for s in (None, "t", "ct")], unit="pct", decimals=1,
            hint="Rounds em que o jogador matou ou morreu primeiro."),
-        _m("opening_kills", "Kills de abertura", *[_side(t, "opening_kills", s) for s in (None, "t", "ct")], decimals=0),
-        _m("opening_deaths", "Mortes de abertura", *[_side(t, "opening_deaths", s) for s in (None, "t", "ct")], decimals=0),
-        _m("opening_ratio", "Razão de kills de abertura", *[opening_ratio(s) for s in (None, "t", "ct")], decimals=2),
-        _m("opening_success", "Sucesso nas aberturas", *[_pct(opening_success(s)) for s in (None, "t", "ct")], unit="pct", decimals=1),
-        _m("win_after_opening", "Vitória após kill de abertura", _pct(_div(t["opening_kill_rounds_won"], t["opening_kills_t"] + t["opening_kills_ct"])), unit="pct", decimals=1),
-        _m("first_kill_won", "Abertura em rounds vencidos", _pct(_div(t["opening_kills_in_won_rounds"], t["rounds_won"])), unit="pct", decimals=1,
+        _m("opening_kills", *[_side(t, "opening_kills", s) for s in (None, "t", "ct")], decimals=0),
+        _m("opening_deaths", *[_side(t, "opening_deaths", s) for s in (None, "t", "ct")], decimals=0),
+        _m("opening_ratio", *[opening_ratio(s) for s in (None, "t", "ct")], decimals=2),
+        _m("opening_success", *[_pct(opening_success(s)) for s in (None, "t", "ct")], unit="pct", decimals=1),
+        _m("win_after_opening", _pct(_div(t["opening_kill_rounds_won"], t["opening_kills_t"] + t["opening_kills_ct"])), unit="pct", decimals=1),
+        _m("first_kill_won", _pct(_div(t["opening_kills_in_won_rounds"], t["rounds_won"])), unit="pct", decimals=1,
            hint="Kills de abertura em rounds vencidos, divididas pelos rounds vencidos."),
     ]
     out["closing"] = [
-        _m("time_alive", "Tempo vivo por round", _div(t["time_alive_seconds"], rounds), unit="s", decimals=0,
+        _m("time_alive", _div(t["time_alive_seconds"], rounds), unit="s", decimals=0,
            hint="Do fim do tempo de compra até a morte ou o fim do round."),
-        _m("post_plant", "Vivo após o plant", *[_pct(post_plant(s)) for s in (None, "t", "ct")], unit="pct", decimals=1,
+        _m("post_plant", *[_pct(post_plant(s)) for s in (None, "t", "ct")], unit="pct", decimals=1,
            adapted=True, hint="Dos rounds com bomba plantada, quantos o jogador ainda estava vivo."),
-        _m("last_alive", "Último vivo", _pct(_div(t["last_alive_rounds"], rounds)), unit="pct", decimals=1,
+        _m("last_alive", _pct(_div(t["last_alive_rounds"], rounds)), unit="pct", decimals=1,
            hint="Rounds em que ficou sozinho contra pelo menos um inimigo."),
-        _m("clutches_24", "Clutches vencidos a cada 24 rounds", _div(t["clutches_won"] * 24, rounds), decimals=2),
-        _m("clutch_win", "Aproveitamento em clutches", _pct(_div(t["clutches_won"], tries)), unit="pct", decimals=1),
+        _m("clutches_24", _div(t["clutches_won"] * 24, rounds), decimals=2),
+        _m("clutch_win", _pct(_div(t["clutches_won"], tries)), unit="pct", decimals=1),
     ]
     out["sniping"] = [
-        _m("rounds_sniper", "Rounds com sniper", _pct(_div(t["rounds_with_sniper"], rounds)), unit="pct", decimals=1),
-        _m("sniper_kills", "Kills de sniper", _pct(_div(t["sniper_kills"], kills)), unit="pct", decimals=1),
-        _m("rounds_awp", "Rounds com AWP", _pct(_div(t["rounds_with_awp"], rounds)), unit="pct", decimals=1),
-        _m("awp_kills", "Kills de AWP", _pct(_div(t["awp_kills"], kills)), unit="pct", decimals=1),
+        _m("rounds_sniper", _pct(_div(t["rounds_with_sniper"], rounds)), unit="pct", decimals=1),
+        _m("sniper_kills", _pct(_div(t["sniper_kills"], kills)), unit="pct", decimals=1),
+        _m("rounds_awp", _pct(_div(t["rounds_with_awp"], rounds)), unit="pct", decimals=1),
+        _m("awp_kills", _pct(_div(t["awp_kills"], kills)), unit="pct", decimals=1),
     ]
     out["utility"] = [
-        _m("util_damage", "Dano de utilitário por round", _div(t["he_damage"] + t["fire_damage"], rounds), decimals=1),
-        _m("he_damage", "Dano de granada HE por round", _div(t["he_damage"], rounds), decimals=1),
-        _m("fire_damage", "Dano de molotov por round", _div(t["fire_damage"], rounds), decimals=1),
-        _m("flashes", "Flashes lançadas por round", _div(t["flashes_thrown"], rounds), decimals=2),
-        _m("flash_assists", "Flash assists por round", _div(t["flash_assists"], rounds), decimals=2),
-        _m("flashed", "Inimigos cegados por round", _div(t["enemies_flashed"], rounds), decimals=2),
-        _m("flash_time", "Tempo de inimigo cego por round", _div(t["flash_seconds"], rounds), unit="s", decimals=1),
-        _m("smokes", "Smokes por round", _div(t["smokes_detonated"], rounds), decimals=2),
+        _m("util_damage", _div(t["he_damage"] + t["fire_damage"], rounds), decimals=1),
+        _m("he_damage", _div(t["he_damage"], rounds), decimals=1),
+        _m("fire_damage", _div(t["fire_damage"], rounds), decimals=1),
+        _m("flashes", _div(t["flashes_thrown"], rounds), decimals=2),
+        _m("flash_assists", _div(t["flash_assists"], rounds), decimals=2),
+        _m("flashed", _div(t["enemies_flashed"], rounds), decimals=2),
+        _m("flash_time", _div(t["flash_seconds"], rounds), unit="s", decimals=1),
+        _m("smokes", _div(t["smokes_detonated"], rounds), decimals=2),
     ]
     return out
 
@@ -263,46 +307,76 @@ def percentile_scores(profiles: dict[str, dict]) -> dict[str, dict[str, int | No
     return scores
 
 
-def build_profile(rows: list[dict]) -> dict | None:
-    """Perfil de um jogador a partir das linhas dele em player_match_detail."""
+SIDES = (None, "t", "ct")
+
+
+def _card(key, label, meaning, value, unit="n", decimals=2):
+    return {"key": key, "label": label, "meaning": meaning, "value": value, "unit": unit, "decimals": decimals}
+
+
+def empty_profile(side: str | None = None) -> dict:
+    """Perfil sem nenhuma linha: mesma forma do perfil real, com contagens zeradas e valores nulos."""
+    none = {k: None for k in ("rating1", "rating1_t", "rating1_ct", "rating2", "rating2_t", "rating2_ct")}
+    return {
+        "rounds": 0, "side": side or "all", "rating": none, "cards": [], "sections": {k: [] for k in SECTION_ORDER},
+        "multikills": [], "clutches": [], "weapon_classes": [], "weapons": [], "special_kills": [],
+        "totals": {"kills": 0, "deaths": 0, "assists": 0, "rounds_with_kill": 0, "plants": 0, "defuses": 0,
+                   "kills_t": 0, "kills_ct": 0},
+        "scores": [], "similar": [],
+    }
+
+
+def build_profile(rows: list[dict], side: str | None = None) -> dict | None:
+    """Perfil de um jogador a partir das linhas dele em player_match_detail.
+
+    ``side`` ("t" ou "ct") restringe ao lado escolhido tudo o que a demo separa por lado. O que a demo
+    não separa (armas, clutches, métricas sem T e CT) fica sem valor no lado, em vez de mostrar o total.
+    """
     if not rows:
         return None
     t = aggregate(rows)
-    rounds = _side(t, "rounds", None)
+    rounds = _side(t, "rounds", side)
     if not rounds:
         return None
-    kills = _side(t, "kills", None)
+    kills = _side(t, "kills", side)
+    sects = sections(t)
+    if side:
+        sects = {k: [{**m, "value": m[side]} for m in v] for k, v in sects.items()}
     return {
         "rounds": int(rounds),
+        "side": side or "all",
         "rating": {
-            "rating1": _round(rating1(t)), "rating1_t": _round(rating1(t, "t")), "rating1_ct": _round(rating1(t, "ct")),
-            "rating2": _round(rating2(t)), "rating2_t": _round(rating2(t, "t")), "rating2_ct": _round(rating2(t, "ct")),
+            "rating1": _round(rating1(t, side)), "rating1_t": _round(rating1(t, "t")), "rating1_ct": _round(rating1(t, "ct")),
+            "rating2": _round(rating2(t, side)), "rating2_t": _round(rating2(t, "t")), "rating2_ct": _round(rating2(t, "ct")),
         },
         "cards": [
-            {"key": "rating1", "label": "Rating 1.0", "value": _round(rating1(t)), "unit": "n", "decimals": 2},
-            {"key": "rating1_t", "label": "Rating T", "value": _round(rating1(t, "t")), "unit": "n", "decimals": 2},
-            {"key": "rating1_ct", "label": "Rating CT", "value": _round(rating1(t, "ct")), "unit": "n", "decimals": 2},
-            {"key": "dpr", "label": "DPR", "value": _round(_div(_side(t, "deaths", None), rounds)), "unit": "n", "decimals": 2},
-            {"key": "kast", "label": "KAST", "value": _round(_pct(_div(_side(t, "kast_rounds", None), rounds)), 1), "unit": "pct", "decimals": 1},
-            {"key": "multikill", "label": "Multi-kill", "value": _round(_pct(_div(sum(_side(t, f"rk{n}", None) for n in range(2, 6)), rounds)), 1), "unit": "pct", "decimals": 1},
-            {"key": "adr", "label": "ADR", "value": _round(_div(_side(t, "damage", None), rounds), 1), "unit": "n", "decimals": 1},
-            {"key": "kpr", "label": "KPR", "value": _round(_div(kills, rounds)), "unit": "n", "decimals": 2},
+            _card("rating1_t", "T Rating", "Rating 1.0 jogando de T", _round(rating1(t, "t"))),
+            _card("rating1", "Rating 1.0", "rating geral" if not side else "rating no lado", _round(rating1(t, side))),
+            _card("rating1_ct", "CT Rating", "Rating 1.0 jogando de CT", _round(rating1(t, "ct"))),
+            _card("dpr", "DPR", "mortes por round", _round(_div(_side(t, "deaths", side), rounds))),
+            _card("kast", "KAST", "rounds com kill, assistência, sobrevivência ou troca",
+                  _round(_pct(_div(_side(t, "kast_rounds", side), rounds)), 1), "pct", 1),
+            _card("multikill", "Multi-kill", "rounds com 2 ou mais kills",
+                  _round(_pct(_div(sum(_side(t, f"rk{n}", side) for n in range(2, 6)), rounds)), 1), "pct", 1),
+            _card("adr", "ADR", "dano médio por round", _round(_div(_side(t, "damage", side), rounds), 1), "n", 1),
+            _card("kpr", "KPR", "kills por round", _round(_div(kills, rounds))),
         ],
-        "sections": {k: [_clean(m) for m in v] for k, v in sections(t).items()},
+        "sections": {k: [_clean(m) for m in v] for k, v in sects.items()},
         "multikills": [
-            {"kills": n, "rounds": int(_side(t, f"rk{n}", None)), "t": int(t[f"rk{n}_t"]), "ct": int(t[f"rk{n}_ct"]),
-             "pct": _round(_pct(_div(_side(t, f"rk{n}", None), rounds)), 1)} for n in range(1, 6)
+            {"kills": n, "rounds": int(_side(t, f"rk{n}", side)), "t": int(t[f"rk{n}_t"]), "ct": int(t[f"rk{n}_ct"]),
+             "pct": _round(_pct(_div(_side(t, f"rk{n}", side), rounds)), 1)} for n in range(1, 6)
         ],
         "clutches": [
             {"label": f"1v{n}", "tries": t["clutch_table"][f"1v{n}"][0], "won": t["clutch_table"][f"1v{n}"][1]}
             for n in range(1, 6)
         ],
         "weapon_classes": [
-            {"label": label, "kills": int(t[field]), "pct": _round(_pct(_div(t[field], kills)), 1)} for field, label in CLASS_LABELS
+            {"label": label, "kills": int(t[field]), "pct": _round(_pct(_div(t[field], _side(t, "kills", None))), 1)}
+            for field, label in CLASS_LABELS
         ],
         "weapons": [
             {"weapon": WEAPON_NAMES.get(w, w.replace("_", " ")), "kills": c,
-             "pct": _round(_pct(_div(c, kills)), 1)}
+             "pct": _round(_pct(_div(c, _side(t, "kills", None))), 1)}
             for w, c in sorted(t["weapons"].items(), key=lambda kv: -kv[1])[:10]
         ],
         "special_kills": [
@@ -310,8 +384,8 @@ def build_profile(rows: list[dict]) -> dict | None:
             {"label": "Sem mira (noscope)", "kills": int(t["noscope_kills"])}, {"label": "Cego", "kills": int(t["blind_kills"])},
         ],
         "totals": {
-            "kills": int(kills), "deaths": int(_side(t, "deaths", None)), "assists": int(_side(t, "assists", None)),
-            "rounds_with_kill": int(sum(_side(t, f"rk{n}", None) for n in range(1, 6))),
+            "kills": int(kills), "deaths": int(_side(t, "deaths", side)), "assists": int(_side(t, "assists", side)),
+            "rounds_with_kill": int(sum(_side(t, f"rk{n}", side) for n in range(1, 6))),
             "plants": int(t["plants"]), "defuses": int(t["defuses"]),
             "kills_t": int(t["kills_t"]), "kills_ct": int(t["kills_ct"]),
         },
@@ -327,13 +401,14 @@ def _clean(metric: dict) -> dict:
     return {**metric, "value": _round(metric["value"], d + 1), "t": _round(metric["t"], d + 1), "ct": _round(metric["ct"], d + 1)}
 
 
-def build_league(rows_by_player: dict[str, list[dict]]) -> dict[str, dict]:
+def build_league(rows_by_player: dict[str, list[dict]], side: str | None = None) -> dict[str, dict]:
     """Perfis de todos os jogadores com demo, já com as notas 0 a 100 e jogadores parecidos."""
-    profiles = {pid: p for pid, rows in rows_by_player.items() if (p := build_profile(rows))}
+    profiles = {pid: p for pid, rows in rows_by_player.items() if (p := build_profile(rows, side))}
     scores = percentile_scores(profiles)
     for pid, profile in profiles.items():
         profile["scores"] = [
-            {"key": s, "label": SECTION_LABELS[s], "value": scores[pid].get(s)} for s in SECTION_ORDER
+            {"key": s, "label": SECTION_LABELS[s][0], "meaning": SECTION_LABELS[s][1], "value": scores[pid].get(s)}
+            for s in SECTION_ORDER
         ]
     for pid, profile in profiles.items():
         mine = [s["value"] for s in profile["scores"]]

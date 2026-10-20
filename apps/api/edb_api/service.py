@@ -12,7 +12,7 @@ from edb.hltv_stats import build_league
 from edb.league_legacy import match_records
 from edb.season_rankings import season_boards
 from edb.season_system import (
-    DEFAULT_SEASONS, chosen_season_number, confirmed_bo3_count, season_match_ids,
+    DEFAULT_SEASONS, chosen_season_number, confirmed_bo3_count, season_match_ids, series_format,
 )
 from edb.steam_profile import fetch_steam_profile
 from edb.storage import Store
@@ -94,12 +94,47 @@ class Snap:
     @property
     def hltv(self) -> dict:
         """Perfis no estilo HLTV por jogador, só para quem tem partidas com demo."""
+        return self.hltv_for()
+
+    @property
+    def match_meta(self) -> dict:
+        """Mapa, formato (bo1/bo3) e temporada de cada partida registrada em série."""
         def compute():
+            series = {str(s["id"]): s for s in self.bo3}
+            links = {str(m["match_id"]): str(m.get("series_id")) for m in self.bo3_maps}
+            names = {str(m["id"]): m.get("map_name") for m in self.matches}
+            meta: dict = {}
+            for match_id, name in names.items():
+                serie = series.get(links.get(match_id, ""))
+                meta[match_id] = {
+                    "map": name,
+                    "format": series_format(serie) if serie else None,
+                    "season": int(serie["season_number"]) if serie else None,
+                }
+            return meta
+        return self.cached("match_meta", compute)
+
+    def match_ids_where(self, map_name=None, fmt=None, season=None) -> set | None:
+        """Partidas que passam nos filtros; None quando não há filtro algum."""
+        if map_name is None and fmt is None and season is None:
+            return None
+        return {
+            mid for mid, m in self.match_meta.items()
+            if (map_name is None or m["map"] == map_name) and (fmt is None or m["format"] == fmt)
+            and (season is None or m["season"] == season)
+        }
+
+    def hltv_for(self, map_name=None, fmt=None, season=None, side=None) -> dict:
+        """Perfis HLTV da liga com os mesmos filtros para todos (as notas 0 a 100 comparam o que é comparável)."""
+        def compute():
+            allowed = self.match_ids_where(map_name, fmt, season)
             by_player: dict = {}
             for row in self.details:
+                if allowed is not None and str(row["match_id"]) not in allowed:
+                    continue
                 by_player.setdefault(str(row["player_id"]), []).append(row)
-            return build_league(by_player)
-        return self.cached("hltv", compute)
+            return build_league(by_player, side)
+        return self.cached(("hltv", map_name, fmt, season, side), compute)
 
     @property
     def records(self) -> list:

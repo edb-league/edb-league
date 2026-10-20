@@ -6,6 +6,7 @@ import pandas as pd
 from edb.bagres import bagres_board, premio_henio
 from edb.core import TARGET_KPR, enrich, historical_progress
 from edb.fixture_cards import basic_team_tables, fixture_overview, match_stat_coverage
+from edb.hltv_stats import empty_profile
 from edb.league_legacy import hall_of_fame, player_summary
 from edb.league_social import MEDALS, achievements, compare_players
 from edb.match_cards import ordered_matches
@@ -318,9 +319,10 @@ def _per_map(records: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda r: (-r["games"], r["map"]))
 
 
-def _company(snap: Snap, player_id: str, same_team: bool) -> list[dict]:
+def _company(snap: Snap, player_id: str, same_team: bool, allowed: set | None = None) -> list[dict]:
     """Rating do jogador nas partidas em que outro jogador esteve no mesmo time (ou no adversário)."""
-    mine = {r["match_id"]: r for r in snap.records if r["player_id"] == player_id}
+    mine = {r["match_id"]: r for r in snap.records
+            if r["player_id"] == player_id and (allowed is None or str(r["match_id"]) in allowed)}
     others: dict[str, list[dict]] = {}
     for r in snap.records:
         base = mine.get(r["match_id"])
@@ -335,23 +337,58 @@ def _company(snap: Snap, player_id: str, same_team: bool) -> list[dict]:
     return sorted(rows, key=lambda r: (-r["games"], -(r["rating"] or 0)))[:6]
 
 
-def _advanced(snap: Snap, player_id: str) -> dict | None:
-    profile = snap.hltv.get(player_id)
-    if profile is None:
+def _stat_filters(side=None, map_name=None, fmt=None, season=None) -> dict:
+    """Normaliza os filtros da aba Estatísticas; valores desconhecidos viram 'sem filtro'."""
+    try:
+        season = int(season) if season not in (None, "", "todas") else None
+    except (TypeError, ValueError):
+        season = None
+    return {
+        "side": str(side).lower() if str(side).lower() in ("t", "ct") else None,
+        "map": map_name or None,
+        "format": str(fmt).lower() if str(fmt).lower() in ("bo1", "bo3") else None,
+        "season": season,
+    }
+
+
+def _advanced(snap: Snap, player_id: str, filters: dict | None = None) -> dict | None:
+    f = filters or _stat_filters()
+    detailed_all = {str(d["match_id"]) for d in snap.details if str(d["player_id"]) == player_id}
+    if not detailed_all:
         return None
-    records = [r for r in snap.records if r["player_id"] == player_id]
-    detailed = {str(d["match_id"]) for d in snap.details if str(d["player_id"]) == player_id}
+    meta = snap.match_meta
+    options = {
+        "maps": sorted({meta[m]["map"] for m in detailed_all if m in meta and meta[m]["map"]}),
+        "formats": sorted({meta[m]["format"] for m in detailed_all if m in meta and meta[m]["format"]}),
+        "seasons": sorted({meta[m]["season"] for m in detailed_all if m in meta and meta[m]["season"] is not None}),
+    }
+    allowed = snap.match_ids_where(f["map"], f["format"], f["season"])
+    profile = snap.hltv_for(f["map"], f["format"], f["season"], f["side"]).get(player_id) or empty_profile(f["side"])
+    records = [r for r in snap.records if r["player_id"] == player_id and (allowed is None or str(r["match_id"]) in allowed)]
+    detailed = detailed_all if allowed is None else detailed_all & allowed
     out = dict(profile)
     out["similar"] = [{"player": ref(snap, s["player_id"]), "similarity": s["similarity"]}
                       for s in profile["similar"] if s["player_id"] in snap.players_by_id]
     out["coverage"] = {"maps_with_demo": len(detailed), "maps_total": len(records)}
     out["maps"] = _per_map(records)
-    out["teammates"] = _company(snap, player_id, True)
-    out["opponents"] = _company(snap, player_id, False)
+    out["teammates"] = _company(snap, player_id, True, allowed)
+    out["opponents"] = _company(snap, player_id, False, allowed)
+    out["filters"] = {"applied": f, "options": options}
     return out
 
 
-def build_player_detail(service: LeagueService, snap: Snap, player_id: str) -> dict:
+def _headline(snap: Snap, player_id: str) -> dict | None:
+    """Ratings da demo sem filtro, para o cabeçalho do perfil."""
+    profile = snap.hltv.get(player_id)
+    if profile is None:
+        return None
+    return {"rating1": profile["rating"]["rating1"], "rating2": profile["rating"]["rating2"],
+            "rating2_t": profile["rating"]["rating2_t"], "rating2_ct": profile["rating"]["rating2_ct"],
+            "rating1_t": profile["rating"]["rating1_t"], "rating1_ct": profile["rating"]["rating1_ct"],
+            "maps_with_demo": sum(1 for d in snap.details if str(d["player_id"]) == player_id)}
+
+
+def build_player_detail(service: LeagueService, snap: Snap, player_id: str, filters: dict | None = None) -> dict:
     player = snap.players_by_id.get(str(player_id))
     if player is None:
         raise NotFound("Jogador não encontrado.")
@@ -371,7 +408,8 @@ def build_player_detail(service: LeagueService, snap: Snap, player_id: str) -> d
         },
         "matches": [_match_row(r) for r in reversed(summary["matches"])],
         "medals": [_medal(m) for m in achievements(str(player["id"]), records)],
-        "advanced": _advanced(snap, str(player["id"])),
+        "headline": _headline(snap, str(player["id"])),
+        "advanced": _advanced(snap, str(player["id"]), filters),
     }
 
 

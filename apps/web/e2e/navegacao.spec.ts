@@ -175,12 +175,47 @@ test("perfil do jogador tem abas e cada uma mostra só o seu conteúdo", async (
   await expect(page.getByRole("heading", { name: /Evolução por partida/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toHaveCount(0);
   await nav.getByRole("link", { name: "Estatísticas" }).click();
-  await expect(page.getByRole("heading", { name: "Estatísticas detalhadas" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Poder de fogo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Detailed stats/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Firepower/ })).toBeVisible();
   await nav.getByRole("link", { name: "Partidas" }).click();
   await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toBeVisible();
   await nav.getByRole("link", { name: "Medalhas e títulos" }).click();
   await expect(page.getByRole("heading", { name: "Títulos de temporada" })).toBeVisible();
+});
+
+test("estatísticas: nomes em inglês com significado, sub-abas e filtros na URL", async ({ page, request }) => {
+  const { playerA } = await ids(request);
+  await page.goto(`/jogadores/${playerA}?aba=estatisticas`);
+  // Nome da HLTV em inglês e significado em português na mesma célula.
+  const kpr = page.getByRole("rowheader", { name: /Kills per round\s+kills por round/ }).first();
+  await expect(kpr).toBeVisible();
+  // Rating 2.0 em destaque no cabeçalho, sem idade nem país.
+  await expect(page.locator("header.card").getByText("Rating 2.0")).toBeVisible();
+  await expect(page.getByText(/^Idade$|^País$/)).toHaveCount(0);
+
+  const tipos = page.getByRole("navigation", { name: "Tipos de estatística" });
+  await expect(tipos.getByRole("link", { name: /Overview/ })).toHaveAttribute("aria-current", "page");
+  await tipos.getByRole("link", { name: /Weapons/ }).click();
+  await expect(page).toHaveURL(/vista=weapons/);
+  await expect(page.getByRole("heading", { name: /Weapons/ })).toBeVisible();
+
+  const filtros = page.getByRole("region", { name: "Filtros" });
+  await filtros.getByRole("link", { name: /^CT/ }).click();
+  await expect(page).toHaveURL(/lado=ct/);
+  await expect(page).toHaveURL(/vista=weapons/);
+  await expect(filtros.getByRole("link", { name: /^CT/ })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByText(/não separa armas por lado/)).toBeVisible();
+
+  await filtros.getByRole("link", { name: "Limpar filtros" }).click();
+  await expect(page).not.toHaveURL(/lado=/);
+});
+
+test("estatísticas: filtro sem partidas mostra aviso e permite limpar", async ({ page, request }) => {
+  const { playerA } = await ids(request);
+  await page.goto(`/jogadores/${playerA}?aba=estatisticas&mapa=Mapa-que-nao-existe`);
+  await expect(page.getByText(/combina com estes filtros/)).toBeVisible();
+  await page.getByRole("link", { name: "Limpar filtros" }).click();
+  await expect(page.getByRole("heading", { name: /Firepower/ })).toBeVisible();
 });
 
 test("medalhas filtra por faixa", async ({ page }) => {

@@ -76,3 +76,34 @@ def test_demo_real_fecha_as_contas_internas():
     assert all(p["rounds_t"] + p["rounds_ct"] == rounds for p in players)
     assert all(sum(p["weapon_kills"].values()) == p["kills"] for p in players)
     assert sum(p["damage"] for p in players) == sum(p["damage_taken"] for p in players)
+
+
+def test_nomes_em_ingles_com_significado_em_portugues():
+    profile = build_profile([row()])
+    kpr = next(m for m in profile["sections"]["firepower"] if m["key"] == "kpr")
+    assert kpr["label"] == "Kills per round" and kpr["meaning"] == "kills por round"
+    for metrics in profile["sections"].values():
+        assert all(m["label"] and m["meaning"] and m["label"] != m["meaning"] for m in metrics)
+    assert all(c["meaning"] for c in profile["cards"])
+    league = build_league({k: [row()] for k in "abc"})
+    assert league["a"]["scores"][0]["label"] == "Firepower" and league["a"]["scores"][0]["meaning"] == "poder de fogo"
+
+
+def test_lado_usa_so_os_rounds_do_lado():
+    t_side = build_profile([row()], "t")
+    assert t_side["side"] == "t" and t_side["rounds"] == 10
+    kpr = next(m for m in t_side["sections"]["firepower"] if m["key"] == "kpr")
+    assert kpr["value"] == pytest.approx(0.8)
+    assert t_side["totals"]["kills"] == 8
+    # métrica que a demo não separa por lado fica sem valor em vez de repetir o total
+    kprw = next(m for m in t_side["sections"]["firepower"] if m["key"] == "kprw")
+    assert kprw["value"] is None
+    assert t_side["rating"]["rating1"] == pytest.approx(rating1(aggregate([row()]), "t"), abs=0.01)
+
+
+def test_perfil_vazio_tem_a_mesma_forma_do_real():
+    from edb.hltv_stats import empty_profile
+    empty, real = empty_profile("ct"), build_profile([row()])
+    assert set(empty) <= set(real) | {"scores", "similar"}
+    assert empty["rounds"] == 0 and empty["side"] == "ct"
+    assert set(empty["sections"]) == set(real["sections"])

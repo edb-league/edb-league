@@ -173,7 +173,10 @@ export type StatUnit = "n" | "pct" | "s";
 /** Métrica de uma seção do perfil. `t` e `ct` só existem quando a demo permite separar por lado. */
 export type AdvMetric = {
   key: string;
+  /** Nome da HLTV, em inglês. */
   label: string;
+  /** Significado em português, mostrado em letra menor ao lado do nome. */
+  meaning: string;
   value: number | null;
   t: number | null;
   ct: number | null;
@@ -184,9 +187,9 @@ export type AdvMetric = {
   adapted: boolean;
 };
 
-export type AdvCard = { key: string; label: string; value: number | null; unit: StatUnit; decimals: number };
+export type AdvCard = { key: string; label: string; meaning: string; value: number | null; unit: StatUnit; decimals: number };
 
-export type AdvScore = { key: string; label: string; value: number | null };
+export type AdvScore = { key: string; label: string; meaning: string; value: number | null };
 
 export type AdvSections = {
   firepower: AdvMetric[];
@@ -238,8 +241,19 @@ export type AdvCompany = { player: PlayerRef; games: number; rating: number | nu
 export type AdvSimilar = { player: PlayerRef; similarity: number };
 
 /** Estatísticas calculadas a partir das demos. `null` quando nenhuma partida do jogador tem demo. */
+export type AdvSide = "all" | "t" | "ct";
+
+export type AdvFilters = {
+  /** Filtros aplicados, já normalizados pela API. */
+  applied: { side: "t" | "ct" | null; map: string | null; format: "bo1" | "bo3" | null; season: number | null };
+  /** Valores que existem nas partidas com demo deste jogador. */
+  options: { maps: string[]; formats: ("bo1" | "bo3")[]; seasons: number[] };
+};
+
 export type AdvancedStats = {
   rounds: number;
+  side: AdvSide;
+  filters: AdvFilters;
   rating: AdvRating;
   cards: AdvCard[];
   sections: AdvSections;
@@ -257,6 +271,17 @@ export type AdvancedStats = {
   opponents: AdvCompany[];
 };
 
+/** Ratings da demo sem filtro, para o cabeçalho. `null` quando nenhuma partida do jogador tem demo. */
+export type AdvHeadline = {
+  rating1: number | null;
+  rating1_t: number | null;
+  rating1_ct: number | null;
+  rating2: number | null;
+  rating2_t: number | null;
+  rating2_ct: number | null;
+  maps_with_demo: number;
+};
+
 export type PlayerDetail = {
   player: PlayerListItem;
   steam: SteamView;
@@ -264,6 +289,7 @@ export type PlayerDetail = {
   /** Mais recente primeiro. */
   matches: PlayerMatchRow[];
   medals: Medal[];
+  headline: AdvHeadline | null;
   advanced: AdvancedStats | null;
 };
 

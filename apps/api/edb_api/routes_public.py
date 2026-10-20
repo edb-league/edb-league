@@ -45,9 +45,12 @@ def players(include_inactive: bool = False):
 
 
 @router.get("/players/{player_id}")
-def player_detail(player_id: str):
+def player_detail(player_id: str, lado: str | None = None, mapa: str | None = None,
+                  formato: str | None = None, periodo: str | None = None):
+    """Perfil do jogador. Os filtros (lado, mapa, formato, periodo) valem só para o bloco `advanced`."""
     service = get_service()
-    return views.build_player_detail(service, service.snap(), player_id)
+    filters = views._stat_filters(lado, mapa, formato, periodo)
+    return views.build_player_detail(service, service.snap(), player_id, filters)
 
 
 @router.get("/compare")

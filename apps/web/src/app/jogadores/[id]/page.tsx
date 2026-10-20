@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AdvancedStatsView } from "@/components/players/AdvancedStats";
+import { AdvancedStatsView, STAT_VIEWS, type StatView } from "@/components/players/AdvancedStats";
 import { Evolution } from "@/components/players/Evolution";
 import { MedalCard } from "@/components/players/MedalCard";
 import { Badge, OutcomeBadge } from "@/components/ui/Badge";
@@ -129,12 +129,25 @@ export default async function PlayerPage({
   const { season } = await seasonContext(sp.temporada);
   const tabRaw = Array.isArray(sp.aba) ? sp.aba[0] : sp.aba;
   const tab = TABS.find(([key]) => key === tabRaw)?.[0] ?? "resumo";
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || undefined;
+  const view: StatView = STAT_VIEWS.find(([key]) => key === one(sp.vista))?.[0] ?? "overview";
+  // Filtros da aba Estatísticas: só entram na consulta quando essa aba está aberta.
+  const statFilters = {
+    lado: one(sp.lado),
+    mapa: one(sp.mapa),
+    formato: one(sp.formato),
+    periodo: one(sp.periodo),
+  };
   const [d, elite, hall] = await Promise.all([
-    apiOrNotFound<PlayerDetail>(`/players/${encodeURIComponent(id)}`),
+    apiOrNotFound<PlayerDetail>(`/players/${encodeURIComponent(id)}${qs(tab === "estatisticas" ? statFilters : {})}`),
     api<Ranking>(`/rankings/elite${qs({ season })}`),
     api<Hall>("/hall-of-fame"),
   ]);
   const { player, steam, summary } = d;
+  const statsHref = (patch: Record<string, string | undefined>) => {
+    const next: Record<string, string | undefined> = { aba: "estatisticas", vista: one(sp.vista), ...statFilters, ...patch };
+    return `/jogadores/${encodeURIComponent(player.id)}${seasonQuery(season, next)}`;
+  };
   const games = summary.games;
   const earned = d.medals.filter((m) => m.earned);
   const locked = d.medals.filter((m) => !m.earned);
@@ -248,13 +261,36 @@ export default async function PlayerPage({
             </div>
           </div>
           <dl className="flex flex-wrap gap-3">
-            <div className="card min-w-36 bg-surface-2 px-4 py-3">
-              <dt className="text-base font-semibold text-muted">Rating médio</dt>
-              <dd className="num text-5xl leading-none text-gold">{num(meanRating, 2)}</dd>
-              <dd className="text-sm text-muted">
-                {games} {games === 1 ? "partida" : "partidas"}
-              </dd>
-            </div>
+            {d.headline ? (
+              <>
+                <div className="card min-w-44 border-[3px] border-gold-bg bg-surface-2 px-5 py-3">
+                  <dt className="text-base font-bold">
+                    Rating 2.0 <span className="text-sm font-normal text-muted">estimado</span>
+                  </dt>
+                  <dd className="num text-7xl leading-none text-gold">{num(d.headline.rating2, 2)}</dd>
+                  <dd className="text-sm text-muted">
+                    T {num(d.headline.rating2_t, 2)} · CT {num(d.headline.rating2_ct, 2)}
+                  </dd>
+                </div>
+                <div className="card min-w-36 bg-surface-2 px-4 py-3">
+                  <dt className="text-base font-semibold text-muted">
+                    Rating 1.0 <span className="text-sm font-normal">fórmula exata</span>
+                  </dt>
+                  <dd className="num text-5xl leading-none">{num(d.headline.rating1, 2)}</dd>
+                  <dd className="text-sm text-muted">
+                    {d.headline.maps_with_demo} {d.headline.maps_with_demo === 1 ? "mapa" : "mapas"} com demo
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <div className="card min-w-36 bg-surface-2 px-4 py-3">
+                <dt className="text-base font-semibold text-muted">Rating médio</dt>
+                <dd className="num text-5xl leading-none text-gold">{num(meanRating, 2)}</dd>
+                <dd className="text-sm text-muted">
+                  {games} {games === 1 ? "partida" : "partidas"}
+                </dd>
+              </div>
+            )}
             <div className="card min-w-36 bg-surface-2 px-4 py-3">
               <dt className="text-base font-semibold text-muted">Índice Elite</dt>
               <dd className="num text-5xl leading-none">{num(row?.elite, 1)}</dd>
@@ -400,11 +436,13 @@ export default async function PlayerPage({
       {tab === "estatisticas" && (
         <section id="estatisticas" aria-labelledby="estatisticas-titulo">
           {d.advanced ? (
-            <AdvancedStatsView data={d.advanced} playerName={player.name} />
+            <AdvancedStatsView data={d.advanced} playerName={player.name} buildHref={statsHref} view={view} />
           ) : (
             <>
-              <SectionTitle id="estatisticas-titulo" title="Estatísticas detalhadas" />
-              <AdvancedStatsView data={null} playerName={player.name} />
+              <SectionTitle id="estatisticas-titulo" title="Detailed stats">
+                estatísticas detalhadas
+              </SectionTitle>
+              <AdvancedStatsView data={null} playerName={player.name} buildHref={statsHref} view={view} />
             </>
           )}
         </section>

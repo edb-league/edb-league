@@ -1,6 +1,12 @@
 import { num } from "@/lib/format";
 
-export type StyleItem = { label: string; basis: string; score: number | null };
+export type StyleItem = {
+  label: string;
+  basis: string;
+  score: number | null;
+  /** Quando verdadeiro, `basis` é o significado do nome (sem parênteses), não a base do cálculo. */
+  meaning?: boolean;
+};
 
 /**
  * Estilo de jogo: posição do jogador entre os da liga (100 = melhor, 0 = pior).
@@ -13,7 +19,8 @@ export function StyleBars({ items }: { items: StyleItem[] }) {
         <li key={item.label}>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <span className="text-lg font-semibold">
-              {item.label} <span className="text-base font-normal text-muted">({item.basis})</span>
+              {item.label}{" "}
+              <span className="text-base font-normal text-muted">{item.meaning ? item.basis : `(${item.basis})`}</span>
             </span>
             <b className="num text-3xl leading-none text-gold">
               {item.score === null ? "–" : num(item.score)}
