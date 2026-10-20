@@ -59,7 +59,7 @@ def test_three_legacy_draft_slots_no_fake_matches_and_links_are_scoped():
     matches=[{"id":"old","map_name":"Anubis","played_at":"2026-09-29"}]
     layout=bo3_cards(0,_series()[:3],[],matches)
     assert layout.count('class="edb-series-card"')==3
-    assert layout.count("BO3 - Data a definir")==3
+    assert layout.count("<strong>BO3 - Data a definir</strong>")==3
     assert "0/3 Mapas" in layout
     assert "AGUARDANDO REGISTRO" in layout
     assert "2 : 0" not in layout
