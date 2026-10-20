@@ -101,6 +101,63 @@ def _stats_for(rng, match_id, roster, team_a, a_score, b_score, source_scope=Fal
     return lines, extras
 
 
+def _split(rng, total: int, share: float) -> tuple[int, int]:
+    first = min(total, max(0, round(total * share + rng.gauss(0, 0.7))))
+    return first, total - first
+
+
+def _detail_for(rng, stat: dict) -> dict:
+    """Linha sintética de player_match_detail, coerente com os totais de player_stats."""
+    rounds, kills, deaths = stat["rounds"], stat["kills"], stat["deaths"]
+    rounds_t = rounds // 2
+    rounds_ct = rounds - rounds_t
+    kills_t, kills_ct = _split(rng, kills, 0.45)
+    deaths_t, deaths_ct = _split(rng, deaths, 0.5)
+    assists_t, assists_ct = _split(rng, stat["assists"], 0.5)
+    damage_t, damage_ct = _split(rng, stat["damage"], 0.47)
+    won_rounds = round(rounds * (0.62 if stat["won"] else 0.38))
+    won_t, won_ct = _split(rng, won_rounds, 0.5)
+    kast_rounds = int(rounds * stat["kast"] / 100)
+    kast_t, kast_ct = _split(rng, kast_rounds, 0.5)
+    rk4, rk3 = int(kills * 0.01 * rng.randint(0, 3)), int(kills * 0.05)
+    rk2 = int(kills * 0.18)
+    rk1 = max(0, min(kills - 2 * rk2 - 3 * rk3 - 4 * rk4, rounds - rk2 - rk3 - rk4))
+    row = {
+        "match_id": stat["match_id"], "player_id": stat["player_id"], "parser_version": 1,
+        "rounds_t": rounds_t, "rounds_ct": rounds_ct, "rounds_won": won_rounds,
+        "rounds_won_t": won_t, "rounds_won_ct": won_ct,
+        "kills_t": kills_t, "kills_ct": kills_ct, "deaths_t": deaths_t, "deaths_ct": deaths_ct,
+        "assists_t": assists_t, "assists_ct": assists_ct, "damage_t": damage_t, "damage_ct": damage_ct,
+        "damage_taken": int(rounds * rng.uniform(55, 95)), "kast_rounds_t": kast_t, "kast_rounds_ct": kast_ct,
+        "kills_in_won_rounds": int(kills * 0.62), "damage_in_won_rounds": int(stat["damage"] * 0.64),
+        "headshots": stat["headshots"], "trade_kills": stat["trade_kills"],
+        "deaths_traded": min(deaths, rng.randint(0, 4)), "assisted_kills": int(kills * rng.uniform(0.15, 0.4)),
+        "flash_assists": rng.randint(0, 3), "awp_kills": 0, "sniper_kills": 0,
+        "rifle_kills": int(kills * 0.6), "smg_kills": int(kills * 0.1), "pistol_kills": int(kills * 0.2),
+        "grenade_kills": 0, "other_kills": 0, "smoke_kills": rng.randint(0, 1), "wallbang_kills": rng.randint(0, 1),
+        "rounds_with_sniper": 0, "rounds_with_awp": 0, "time_alive_seconds": round(rounds * rng.uniform(40, 70), 1),
+        "rounds_with_plant_t": max(1, rounds_t // 2), "rounds_with_plant_ct": max(1, rounds_ct // 3),
+        "last_alive_rounds": rng.randint(0, 4), "clutches_won": rng.randint(0, 2),
+        "flashes_thrown": rng.randint(2, 14), "he_thrown": rng.randint(1, 8), "molotovs_thrown": rng.randint(1, 8),
+        "smokes_thrown": rng.randint(2, 8), "smokes_detonated": rng.randint(2, 8),
+        "he_damage": rng.choice([0, 12, 34, 58, 87]), "fire_damage": rng.choice([0, 9, 22, 45]),
+        "enemies_flashed": rng.randint(0, 12), "flash_seconds": round(rng.uniform(0, 30), 2),
+        "plants": stat["plants"], "defuses": stat["defuses"],
+        "weapon_kills": {"ak47": int(kills * 0.4), "m4a1_silencer": int(kills * 0.2), "deagle": int(kills * 0.2)},
+        "clutches": {"1v1": [rng.randint(0, 2), 0], "1v2": [rng.randint(0, 1), 0], "1v3": [0, 0], "1v4": [0, 0], "1v5": [0, 0]},
+    }
+    row["alive_post_plant_t"] = rng.randint(0, row["rounds_with_plant_t"])
+    row["alive_post_plant_ct"] = rng.randint(0, row["rounds_with_plant_ct"])
+    row["opening_kills_t"], row["opening_kills_ct"] = _split(rng, stat["open_kills"], 0.5)
+    row["opening_deaths_t"], row["opening_deaths_ct"] = rng.randint(0, 2), rng.randint(0, 2)
+    row["opening_kill_rounds_won"] = row["opening_kills_in_won_rounds"] = min(stat["open_kills"], rng.randint(0, 4))
+    for n, count in ((1, rk1), (2, rk2), (3, rk3), (4, rk4)):
+        row[f"rk{n}_t"], row[f"rk{n}_ct"] = _split(rng, count, 0.5)
+    for pair in row["clutches"].values():
+        pair[1] = min(pair[0], rng.randint(0, pair[0]))
+    return row
+
+
 def build_demo_data() -> dict:
     rng = random.Random(20261019)
     players = _make_players()
@@ -215,9 +272,11 @@ def build_demo_data() -> dict:
         titles.append({"season_number": 0, "rank_type": rank_type,
                        "player_id": str(champion["player_id"]), "score": float(champion[field])})
 
+    scoped = {m["id"] for m in matches if m["source"] == SOURCE_SCOPE}
+    details = [_detail_for(rng, line) for line in stats if line["match_id"] in scoped]
     return {
         "players": players, "matches": matches, "player_stats": stats,
-        "player_scope_stats": scope, "league_seasons": seasons, "bo3_series": series,
+        "player_scope_stats": scope, "player_match_detail": details, "league_seasons": seasons, "bo3_series": series,
         "bo3_maps": series_maps, "bo3_players": series_players,
         "season_player_stars": frozen, "season_final_rankings": final_rankings,
         "season_titles": titles, "player_aliases": [],
@@ -251,6 +310,9 @@ class DemoStore(Store):
 
     def scope_stats(self):
         return self._list("player_scope_stats")
+
+    def match_details(self):
+        return self._list("player_match_detail")
 
     # API estilo PostgREST --------------------------------------------------------
     @staticmethod

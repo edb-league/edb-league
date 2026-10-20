@@ -108,6 +108,10 @@ class Store:
         """Dados extras do SCOPE.GG: mira, granadas e ADR oficial (somente online)."""
         return self._list('player_scope_stats') if self.cloud else []
 
+    def match_details(self):
+        """Métricas detalhadas vindas da demo (somente online; tabela player_match_detail)."""
+        return self._list('player_match_detail') if self.cloud else []
+
     def _upsert(self,table,row,conflict=None):
         if self.cloud:
             params={'on_conflict':conflict} if conflict else None

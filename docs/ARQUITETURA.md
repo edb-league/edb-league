@@ -52,10 +52,32 @@ Navegador ──► Next.js (apps/web)  ── /api/* (rewrite, mesma origem) �
 | Rankings | `/rankings/elite`, `/superacao`, `/xp`, `/bagres` (abas Elite, Superação, XP e BAGRES) |
 | Missões e XP | `/missoes-xp` (grupo Conquistas) |
 | Partidas BO1/BO3 e mapa | `/partidas`, `/partidas/mapa/[id]` |
-| Jogadores e perfil | `/jogadores`, `/jogadores/[id]` (abas por `?aba=`: resumo, partidas, medalhas) |
+| Jogadores e perfil | `/jogadores`, `/jogadores/[id]` (abas por `?aba=`: resumo, estatisticas, partidas, medalhas) |
 | Comparar | `/comparar` (formulário GET, funciona sem JavaScript) |
 | Hall da Fama, Medalhas | `/hall-da-fama`, `/medalhas` (grupo Conquistas, com barra de abas; Medalhas filtra por `?faixa=`) |
 | Administração | `/admin` (elenco, importar, confrontos, temporadas, exportar CSV) |
+
+## Estatísticas das demos (estilo HLTV)
+
+A aba **Estatísticas** do jogador segue as seções da página de jogador da HLTV: Rating, notas de 0 a 100, Poder de fogo,
+Entrada, Trocas, Abertura, Fechamento, Sniper e Utilitários, mais multi-kills, clutches, armas, mapas, companheiros,
+adversários e jogadores parecidos.
+
+- **Origem:** o arquivo `.dem`. `packages/edb/edb/demo_stats.py` lê a demo e devolve contagens por jogador e partida
+  (`analyze`). A partida começa no último `begin_new_match`, então o round faca e o warmup não contam.
+- **Armazenamento:** tabela `player_match_detail` (migração `db/migrations/20261020_player_match_detail.sql`), só contagens.
+  É aditiva: não altera `player_stats` nem `player_scope_stats`. Partida sem linha nessa tabela simplesmente não entra.
+- **Cálculo:** `packages/edb/edb/hltv_stats.py` transforma as contagens em taxas (KPR, rating, percentuais). Não acessa banco.
+- **Tela:** `GET /api/players/{id}` devolve o bloco `advanced` (`null` sem demo). Componente `AdvancedStats.tsx`.
+
+O que é igual à HLTV: Rating 1.0 (fórmula pública, conferida com os totais do FalleN: 1,03), KPR, DPR, ADR, KAST, multi-kill,
+aberturas, clutches, proporção de sniper e AWP. O que é adaptado aparece com a marca "adaptado" na tela: Rating 2.0
+(estimativa, fica perto do rating do SCOPE), dano por round vencido (no lugar do Round Win Shares) e vivo após o plant.
+Rating 3.0 e Round Swing não são públicos e não são calculados. As notas de 0 a 100 comparam o jogador com os outros da
+liga, não com a cena profissional, e só aparecem com 3 jogadores ou mais com demo.
+
+Diferenças conhecidas contra o SCOPE (3 partidas): kills, mortes, assistências, aberturas, flashes, granadas e smokes batem
+exatamente; o dano da demo fica cerca de 1% abaixo, o KAST pode diferir em 1 ponto e há casos com 1 trade a menos.
 
 ## Banners e espaço na tela
 

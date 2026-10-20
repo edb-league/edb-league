@@ -168,6 +168,95 @@ export type Medal = {
   progress: number | null;
 };
 
+export type StatUnit = "n" | "pct" | "s";
+
+/** Métrica de uma seção do perfil. `t` e `ct` só existem quando a demo permite separar por lado. */
+export type AdvMetric = {
+  key: string;
+  label: string;
+  value: number | null;
+  t: number | null;
+  ct: number | null;
+  unit: StatUnit;
+  decimals: number;
+  hint: string;
+  /** Definição própria da liga, não idêntica à da HLTV. */
+  adapted: boolean;
+};
+
+export type AdvCard = { key: string; label: string; value: number | null; unit: StatUnit; decimals: number };
+
+export type AdvScore = { key: string; label: string; value: number | null };
+
+export type AdvSections = {
+  firepower: AdvMetric[];
+  entrying: AdvMetric[];
+  trading: AdvMetric[];
+  opening: AdvMetric[];
+  closing: AdvMetric[];
+  sniping: AdvMetric[];
+  utility: AdvMetric[];
+};
+
+export type AdvRating = {
+  rating1: number | null;
+  rating1_t: number | null;
+  rating1_ct: number | null;
+  rating2: number | null;
+  rating2_t: number | null;
+  rating2_ct: number | null;
+};
+
+export type AdvMultikill = { kills: number; rounds: number; t: number; ct: number; pct: number | null };
+export type AdvClutch = { label: string; tries: number; won: number };
+export type AdvWeaponClass = { label: string; kills: number; pct: number | null };
+export type AdvWeapon = { weapon: string; kills: number; pct: number | null };
+export type AdvSpecialKill = { label: string; kills: number };
+
+export type AdvTotals = {
+  kills: number;
+  deaths: number;
+  assists: number;
+  rounds_with_kill: number;
+  plants: number;
+  defuses: number;
+  kills_t: number;
+  kills_ct: number;
+};
+
+export type AdvMap = {
+  map: string;
+  games: number;
+  wins: number;
+  win_rate: number | null;
+  kpr: number | null;
+  adr: number | null;
+  rating: number | null;
+};
+
+export type AdvCompany = { player: PlayerRef; games: number; rating: number | null; win_rate: number | null };
+export type AdvSimilar = { player: PlayerRef; similarity: number };
+
+/** Estatísticas calculadas a partir das demos. `null` quando nenhuma partida do jogador tem demo. */
+export type AdvancedStats = {
+  rounds: number;
+  rating: AdvRating;
+  cards: AdvCard[];
+  sections: AdvSections;
+  multikills: AdvMultikill[];
+  clutches: AdvClutch[];
+  weapon_classes: AdvWeaponClass[];
+  weapons: AdvWeapon[];
+  special_kills: AdvSpecialKill[];
+  totals: AdvTotals;
+  scores: AdvScore[];
+  similar: AdvSimilar[];
+  coverage: { maps_with_demo: number; maps_total: number };
+  maps: AdvMap[];
+  teammates: AdvCompany[];
+  opponents: AdvCompany[];
+};
+
 export type PlayerDetail = {
   player: PlayerListItem;
   steam: SteamView;
@@ -175,6 +264,7 @@ export type PlayerDetail = {
   /** Mais recente primeiro. */
   matches: PlayerMatchRow[];
   medals: Medal[];
+  advanced: AdvancedStats | null;
 };
 
 /* ---------- Comparar ---------- */

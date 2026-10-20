@@ -294,6 +294,63 @@ def _medal(m: dict) -> dict:
                               "current", "earned", "progress")}
 
 
+def _avg(values):
+    values = [v for v in values if v is not None]
+    return sum(values) / len(values) if values else None
+
+
+def _per_map(records: list[dict]) -> list[dict]:
+    groups: dict[str, list[dict]] = {}
+    for r in records:
+        groups.setdefault(r["map"], []).append(r)
+    rows = []
+    for name, items in groups.items():
+        rounds = sum(r["rounds"] for r in items)
+        wins = sum(r["won"] is True for r in items)
+        decided = sum(r["won"] is not None for r in items)
+        rows.append({
+            "map": name, "games": len(items), "wins": wins,
+            "win_rate": _num(100 * wins / decided) if decided else None,
+            "kpr": _num(sum(r["kills"] for r in items) / rounds) if rounds else None,
+            "adr": _num(_avg([r["adr"] for r in items])),
+            "rating": _num(_avg([r["rating"] for r in items])),
+        })
+    return sorted(rows, key=lambda r: (-r["games"], r["map"]))
+
+
+def _company(snap: Snap, player_id: str, same_team: bool) -> list[dict]:
+    """Rating do jogador nas partidas em que outro jogador esteve no mesmo time (ou no adversário)."""
+    mine = {r["match_id"]: r for r in snap.records if r["player_id"] == player_id}
+    others: dict[str, list[dict]] = {}
+    for r in snap.records:
+        base = mine.get(r["match_id"])
+        if r["player_id"] == player_id or base is None or base["won"] is None or r["won"] is None:
+            continue
+        if (r["won"] == base["won"]) == same_team:
+            others.setdefault(r["player_id"], []).append(base)
+    rows = [{
+        "player": ref(snap, pid), "games": len(items), "rating": _num(_avg([b["rating"] for b in items])),
+        "win_rate": _num(100 * sum(b["won"] is True for b in items) / len(items)),
+    } for pid, items in others.items()]
+    return sorted(rows, key=lambda r: (-r["games"], -(r["rating"] or 0)))[:6]
+
+
+def _advanced(snap: Snap, player_id: str) -> dict | None:
+    profile = snap.hltv.get(player_id)
+    if profile is None:
+        return None
+    records = [r for r in snap.records if r["player_id"] == player_id]
+    detailed = {str(d["match_id"]) for d in snap.details if str(d["player_id"]) == player_id}
+    out = dict(profile)
+    out["similar"] = [{"player": ref(snap, s["player_id"]), "similarity": s["similarity"]}
+                      for s in profile["similar"] if s["player_id"] in snap.players_by_id]
+    out["coverage"] = {"maps_with_demo": len(detailed), "maps_total": len(records)}
+    out["maps"] = _per_map(records)
+    out["teammates"] = _company(snap, player_id, True)
+    out["opponents"] = _company(snap, player_id, False)
+    return out
+
+
 def build_player_detail(service: LeagueService, snap: Snap, player_id: str) -> dict:
     player = snap.players_by_id.get(str(player_id))
     if player is None:
@@ -314,6 +371,7 @@ def build_player_detail(service: LeagueService, snap: Snap, player_id: str) -> d
         },
         "matches": [_match_row(r) for r in reversed(summary["matches"])],
         "medals": [_medal(m) for m in achievements(str(player["id"]), records)],
+        "advanced": _advanced(snap, str(player["id"])),
     }
 
 

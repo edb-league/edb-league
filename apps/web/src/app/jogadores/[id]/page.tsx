@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AdvancedStatsView } from "@/components/players/AdvancedStats";
 import { Evolution } from "@/components/players/Evolution";
 import { MedalCard } from "@/components/players/MedalCard";
 import { Badge, OutcomeBadge } from "@/components/ui/Badge";
@@ -111,6 +112,7 @@ function RatingChip({ rating }: { rating: number | null }) {
 
 const TABS = [
   ["resumo", "Resumo"],
+  ["estatisticas", "Estatísticas"],
   ["partidas", "Partidas"],
   ["medalhas", "Medalhas e títulos"],
 ] as const;
@@ -392,6 +394,19 @@ export default async function PlayerPage({
               ))}
             </dl>
           </section>
+        </section>
+      )}
+
+      {tab === "estatisticas" && (
+        <section id="estatisticas" aria-labelledby="estatisticas-titulo">
+          {d.advanced ? (
+            <AdvancedStatsView data={d.advanced} playerName={player.name} />
+          ) : (
+            <>
+              <SectionTitle id="estatisticas-titulo" title="Estatísticas detalhadas" />
+              <AdvancedStatsView data={null} playerName={player.name} />
+            </>
+          )}
         </section>
       )}
 

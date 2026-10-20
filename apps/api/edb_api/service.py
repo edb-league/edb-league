@@ -8,6 +8,7 @@ from threading import RLock
 import pandas as pd
 
 from edb.core import enrich
+from edb.hltv_stats import build_league
 from edb.league_legacy import match_records
 from edb.season_rankings import season_boards
 from edb.season_system import (
@@ -57,6 +58,7 @@ class Snap:
         self.frozen_stars = data["frozen_stars"]
         self.final_rankings = data["final_rankings"]
         self.season_titles = data["season_titles"]
+        self.details = data.get("details", [])
         self.active_players = [p for p in self.players if bool(p.get("is_active", True))]
         self.inactive_players = [p for p in self.players if not bool(p.get("is_active", True))]
         self.players_by_id = {str(p["id"]): p for p in self.players}
@@ -88,6 +90,16 @@ class Snap:
     @property
     def frame(self) -> pd.DataFrame:
         return self.cached("frame", lambda: enrich(self.players, self.matches, self.stats))
+
+    @property
+    def hltv(self) -> dict:
+        """Perfis no estilo HLTV por jogador, só para quem tem partidas com demo."""
+        def compute():
+            by_player: dict = {}
+            for row in self.details:
+                by_player.setdefault(str(row["player_id"]), []).append(row)
+            return build_league(by_player)
+        return self.cached("hltv", compute)
 
     @property
     def records(self) -> list:
@@ -171,11 +183,16 @@ class LeagueService:
             data = {"players": store.players(), "matches": store.matches(), "stats": store.stats()}
             for key, table in SNAPSHOT_TABLES.items():
                 data[key] = store._list(table)
+            try:
+                data["details"] = store.match_details()
+            except Exception:  # a tabela é opcional: o site funciona sem as métricas da demo
+                log.exception("Falha ao ler player_match_detail")
+                data["details"] = []
             return data
         return {
             "players": store.players(), "matches": store.matches(), "stats": store.stats(),
             "seasons": DEFAULT_SEASONS, "bo3": [], "bo3_maps": [], "bo3_players": [],
-            "frozen_stars": [], "final_rankings": [], "season_titles": [],
+            "frozen_stars": [], "final_rankings": [], "season_titles": [], "details": [],
         }
 
     def _scope(self) -> list:

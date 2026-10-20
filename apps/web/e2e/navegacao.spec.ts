@@ -174,6 +174,9 @@ test("perfil do jogador tem abas e cada uma mostra só o seu conteúdo", async (
   await expect(nav.getByRole("link", { name: "Resumo" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { name: /Evolução por partida/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toHaveCount(0);
+  await nav.getByRole("link", { name: "Estatísticas" }).click();
+  await expect(page.getByRole("heading", { name: "Estatísticas detalhadas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Poder de fogo" })).toBeVisible();
   await nav.getByRole("link", { name: "Partidas" }).click();
   await expect(page.getByRole("heading", { name: "Histórico de partidas" })).toBeVisible();
   await nav.getByRole("link", { name: "Medalhas e títulos" }).click();

@@ -33,6 +33,7 @@ for (const scheme of ["light", "dark"] as const) {
       const { playerA, playerB, mapId, seriesId } = await ids(request);
       for (const route of [
         `/jogadores/${playerA}`,
+        `/jogadores/${playerA}?aba=estatisticas`,
         `/jogadores/${playerA}?aba=partidas`,
         `/jogadores/${playerA}?aba=medalhas`,
         `/medalhas?faixa=gold`,

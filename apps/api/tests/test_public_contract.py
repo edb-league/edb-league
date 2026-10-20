@@ -177,3 +177,16 @@ def test_cache_headers(client):
     assert client.get("/api/admin/session").headers["cache-control"] == "no-store"
     ids = [p["id"] for p in client.get("/api/players").json()][:10]
     assert client.post("/api/draw", json={"player_ids": ids}).headers["cache-control"] == "no-store"
+
+
+def test_perfil_avancado_aparece_so_com_demo(client, demo):
+    """Jogadores com partidas analisadas por demo recebem o bloco `advanced`; os demais, null."""
+    players = get(client, "/api/players")
+    items = players if isinstance(players, list) else players["players"]
+    details = [get(client, f"/api/players/{p['id']}") for p in items]
+    with_demo = [d for d in details if d["advanced"] is not None]
+    assert with_demo, "a demonstração deveria ter jogadores com demo"
+    sample = with_demo[0]["advanced"]
+    assert sample["coverage"]["maps_with_demo"] <= sample["coverage"]["maps_total"]
+    assert {s["key"] for s in sample["scores"]} == {"firepower", "entrying", "trading", "opening", "closing", "sniping", "utility"}
+    assert all(0 <= s["value"] <= 100 for s in sample["scores"] if s["value"] is not None)
