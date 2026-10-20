@@ -62,7 +62,7 @@ def test_premio_henio_exact_ties_are_shared():
     data=rows()
     for row in data:
         if row["player_id"]=="b":
-            row["damage"]=int(row["rounds"]*2000/30)
+            row["damage"]=800 if row["match_id"]=="m1" else 1200
     award=premio_henio(data)
     assert {h["id"] for h in award["holders"]}=={"a","b"}
 
