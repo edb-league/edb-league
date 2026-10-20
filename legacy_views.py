@@ -47,34 +47,30 @@ box-shadow:inset 4px 0 #D6B98A}
 .edb-fame-spotlight-value{font-size:1.8rem;font-weight:900;color:#E9D09E;margin:9px 0 3px}
 .edb-fame-spotlight-person{color:#F3F8FF;font-size:1.12rem;font-weight:750}
 .edb-fame-spotlight-label{font-size:.68rem;letter-spacing:1.2px;color:#B9A585;font-weight:800;margin-top:7px}
-.edb-fame-duo{display:grid;grid-template-columns:repeat(2,minmax(0,340px));gap:18px;
+.edb-fame-spotlight--adr{border-color:#4F7FA3;box-shadow:inset 4px 0 #7CC7F2}
+.edb-fame-spotlight--adr .edb-fame-spotlight-kicker{color:#9BD3F5}
+.edb-fame-spotlight--adr .edb-fame-spotlight-label{color:#86A9C3}
+.edb-fame-spotlight--adr .edb-fame-spotlight-value{color:#A6DCFF}
+.edb-fame-spotlight--wins{border-color:#4E8A6C;box-shadow:inset 4px 0 #6FD3A0}
+.edb-fame-spotlight--wins .edb-fame-spotlight-kicker{color:#8FE0B5}
+.edb-fame-spotlight--wins .edb-fame-spotlight-label{color:#84B79D}
+.edb-fame-spotlight--wins .edb-fame-spotlight-value{color:#A9F2CA}
+.edb-fame-duo{display:grid;grid-template-columns:repeat(4,minmax(0,300px));gap:18px;
 justify-content:start;margin:16px 0 26px}
-.edb-fame-duo>section{aspect-ratio:1/1;box-sizing:border-box;margin:0;padding:24px;
-display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-width:0}
+.edb-fame-duo>section{aspect-ratio:1/1;box-sizing:border-box;margin:0;padding:20px;
+display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
 .edb-fame-duo .edb-henio-banner{align-items:stretch}
+.edb-fame-duo .edb-henio-title{font-size:1.45rem}
+.edb-fame-duo .edb-henio-notes{font-size:.68rem}
 .edb-fame-duo .edb-henio-adr{text-align:left;margin-top:auto}
 .edb-fame-duo .edb-fame-spotlight-kicker{text-transform:uppercase}
-.edb-fame-duo .edb-fame-spotlight-value{font-size:2.5rem;margin:6px 0 4px}
+.edb-fame-duo .edb-fame-spotlight-value{font-size:2.1rem;margin:6px 0 4px}
 .edb-fame-duo .edb-fame-detail{margin-top:0}
+@media(max-width:1279px){.edb-fame-duo{grid-template-columns:repeat(2,minmax(0,340px))}}
 @media(max-width:700px){
  .edb-fame-duo{grid-template-columns:minmax(0,1fr)}
  .edb-fame-duo>section{padding:19px}
 }
-.edb-fame-toplist{display:grid;gap:8px;margin:13px 0 24px}
-.edb-fame-top-player{display:flex;align-items:center;justify-content:space-between;gap:14px;
-background:#14263B;border:1px solid #30465E;border-radius:12px;padding:12px 15px}
-.edb-fame-top-player a{color:#E0F1FF;text-decoration:none;font-weight:750}
-.edb-fame-top-player strong{font-size:1.05rem;color:#B3DDFB;font-variant-numeric:tabular-nums}
-.edb-fame-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
-.edb-fame-card{border:1px solid #354A60;border-radius:16px;
-background:linear-gradient(140deg,#1B2E43,#142235);padding:18px;min-width:0}
-.edb-fame-card:first-child{border-color:#806C50}
-.edb-fame-title{font-size:.76rem;color:#A9BECE;letter-spacing:.5px;font-weight:750}
-.edb-fame-score{font-size:1.5rem;color:#D6B98A;font-weight:850;margin:8px 0}
-.edb-fame-people{font-size:.93rem;font-weight:700;color:#EFF4FA;overflow-wrap:anywhere}
-.edb-fame-people a{color:#CCE4F8;text-decoration:none;border-bottom:1px solid #4C7291}
-.edb-fame-people a:hover{color:#FFFFFF;border-color:#D6B98A}
-.edb-fame-detail{font-size:.73rem;color:#9DB3C6;margin-top:9px}
 .edb-profile-badges{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px}
 .edb-profile-badge{background:#273448;color:#E4D0AB;border:1px solid #6A604E;
 border-radius:30px;padding:7px 12px;font-size:.75rem;font-weight:700}
@@ -195,6 +191,27 @@ def render_profile(st, px, player, data, hall, medals=None):
     st.caption("Os totais usam todas as partidas. O ADR acumulado é calculado por dano/rounds; partidas com rounds estimados podem afetá-lo.")
 
 
+def _record_square(entry, kicker, label, tone=""):
+    """Quadrado de recorde; vazio quando ainda não há dados para esse recorde."""
+    if not entry:
+        return ""
+    holders = " · ".join(
+        '<a href="' + escape(profile_link(h["id"]),quote=True) +
+        '" target="_self" style="color:#EFF6FD">' + escape(h["name"]) + '</a>'
+        for h in entry["holders"]
+    )
+    modifier = " edb-fame-spotlight--" + tone if tone else ""
+    return (
+        '<section class="edb-fame-spotlight' + modifier + '">'
+        '<div class="edb-fame-spotlight-kicker">' + escape(kicker) + '</div>'
+        '<div><div class="edb-fame-spotlight-label">' + escape(label) + '</div>'
+        '<div class="edb-fame-spotlight-value">' + escape(entry["value"]) + '</div>'
+        '<div class="edb-fame-spotlight-person">' + holders + '</div></div>'
+        '<div class="edb-fame-detail">' + escape(entry["detail"]) + '</div>'
+        '</section>'
+    )
+
+
 def render_hall(st, hall, matches_count, players=None, records=None):
     """Destaques calculados dos dados oficiais, sem temporadas inventadas."""
     st.markdown(LEGACY_CSS, unsafe_allow_html=True)
@@ -222,27 +239,17 @@ def render_hall(st, hall, matches_count, players=None, records=None):
         '<div class="edb-henio-adr">' + escape(adr_markup) + '<span>ADR</span></div>'
         '</section>'
     )
-    leading = next((entry for entry in hall if entry["title"] == "Mais kills em uma partida"), None)
-    spotlight_markup = ""
-    if leading:
-        holders = " · ".join(
-            '<a href="' + escape(profile_link(h["id"]),quote=True) +
-            '" target="_self" style="color:#EFF6FD">' + escape(h["name"]) + '</a>'
-            for h in leading["holders"]
-        )
-        spotlight_markup=(
-            '<section class="edb-fame-spotlight">'
-            '<div class="edb-fame-spotlight-kicker">🏆 Destaque da liga</div>'
-            '<div><div class="edb-fame-spotlight-label">MELHOR MARCA INDIVIDUAL</div>'
-            '<div class="edb-fame-spotlight-value">' + escape(leading["value"]) + '</div>'
-            '<div class="edb-fame-spotlight-person">' + holders + '</div></div>'
-            '<div class="edb-fame-detail">' + escape(leading["detail"]) + '</div>'
-            '</section>'
-        )
-    st.markdown(
-        '<div class="edb-fame-duo">' + henio_markup + spotlight_markup + '</div>',
-        unsafe_allow_html=True
-    )
+    by_title = {entry["title"]: entry for entry in hall}
+    squares = "".join((
+        _record_square(by_title.get("Mais kills em uma partida"),
+                       "🏆 Destaque da liga", "MELHOR MARCA INDIVIDUAL"),
+        henio_markup,
+        _record_square(by_title.get("Maior ADR em uma partida"),
+                       "🎯 Recorde da liga", "MAIOR ADR EM UMA PARTIDA", "adr"),
+        _record_square(by_title.get("Mais vitórias"),
+                       "🥇 Recorde da liga", "MAIS VITÓRIAS", "wins"),
+    ))
+    st.markdown('<div class="edb-fame-duo">' + squares + '</div>', unsafe_allow_html=True)
     if not hall:
         st.info("Ainda não há estatísticas suficientes para estabelecer recordes.")
         return
