@@ -173,3 +173,42 @@ def test_home_season_rules_banner_below_elite_and_draw():
     assert overview.index("render_home_team_draw()") < overview.index(
         "st.markdown(season_rules_banner(season_number)"
     )
+
+
+class _FakeSt:
+    def __init__(self):
+        self.blocks = []
+
+    def markdown(self, body, **kwargs):
+        self.blocks.append(body)
+
+    def info(self, body, **kwargs):
+        self.blocks.append("INFO:" + body)
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: None
+
+
+def test_hall_banners_are_side_by_side_squares():
+    from legacy_views import render_hall, LEGACY_CSS
+    hall = [{"title": "Mais kills em uma partida", "value": "28 kills",
+             "holders": [{"id": "1", "name": "Kvra (Caveira)"}],
+             "detail": "Mirage · 20/10/2026"}]
+    fake = _FakeSt()
+    render_hall(fake, hall, 5, players=[], records=[])
+    duo = next(block for block in fake.blocks if 'class="edb-fame-duo"' in block)
+    assert duo.index("edb-henio-banner") < duo.index("edb-fame-spotlight")
+    assert duo.count("<section") == 2
+    assert "28 kills" in duo and "PRÊMIO HENIO" in duo
+    assert "aspect-ratio:1/1" in LEGACY_CSS
+    assert "grid-template-columns:repeat(2,minmax(0,340px))" in LEGACY_CSS
+    assert ".edb-fame-duo{grid-template-columns:minmax(0,1fr)}" in LEGACY_CSS
+
+
+def test_hall_without_records_keeps_only_the_henio_square_and_notice():
+    from legacy_views import render_hall
+    fake = _FakeSt()
+    render_hall(fake, [], 0, players=[], records=[])
+    duo = next(block for block in fake.blocks if 'class="edb-fame-duo"' in block)
+    assert duo.count("<section") == 1 and "edb-fame-spotlight" not in duo
+    assert any(block.startswith("INFO:") for block in fake.blocks)

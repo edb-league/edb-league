@@ -46,6 +46,20 @@ box-shadow:inset 4px 0 #D6B98A}
 .edb-fame-spotlight-kicker{font-size:.7rem;letter-spacing:1.4px;color:#E8C893;font-weight:850}
 .edb-fame-spotlight-value{font-size:1.8rem;font-weight:900;color:#E9D09E;margin:9px 0 3px}
 .edb-fame-spotlight-person{color:#F3F8FF;font-size:1.12rem;font-weight:750}
+.edb-fame-spotlight-label{font-size:.68rem;letter-spacing:1.2px;color:#B9A585;font-weight:800;margin-top:7px}
+.edb-fame-duo{display:grid;grid-template-columns:repeat(2,minmax(0,340px));gap:18px;
+justify-content:start;margin:16px 0 26px}
+.edb-fame-duo>section{aspect-ratio:1/1;box-sizing:border-box;margin:0;padding:24px;
+display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-width:0}
+.edb-fame-duo .edb-henio-banner{align-items:stretch}
+.edb-fame-duo .edb-henio-adr{text-align:left;margin-top:auto}
+.edb-fame-duo .edb-fame-spotlight-kicker{text-transform:uppercase}
+.edb-fame-duo .edb-fame-spotlight-value{font-size:2.5rem;margin:6px 0 4px}
+.edb-fame-duo .edb-fame-detail{margin-top:0}
+@media(max-width:700px){
+ .edb-fame-duo{grid-template-columns:minmax(0,1fr)}
+ .edb-fame-duo>section{padding:19px}
+}
 .edb-fame-toplist{display:grid;gap:8px;margin:13px 0 24px}
 .edb-fame-top-player{display:flex;align-items:center;justify-content:space-between;gap:14px;
 background:#14263B;border:1px solid #30465E;border-radius:12px;padding:12px 15px}
@@ -198,7 +212,7 @@ def render_hall(st, hall, matches_count, players=None, records=None):
         ) + '</span>'
         adr_markup=f'{henio["adr"]:.1f}'
         detail='Menor ADR acumulado · dano total dividido pelos rounds de todos os mapas oficiais.'
-    st.markdown(
+    henio_markup=(
         '<section class="edb-henio-banner">'
         '<div><div class="edb-henio-kicker">🏅 HOMENAGEM DA EDB LEAGUE</div>'
         '<div class="edb-henio-title">PRÊMIO HENIO</div>'
@@ -206,29 +220,32 @@ def render_hall(st, hall, matches_count, players=None, records=None):
         holder_markup +
         '<div class="edb-henio-notes">' + escape(detail) + '</div></div>'
         '<div class="edb-henio-adr">' + escape(adr_markup) + '<span>ADR</span></div>'
-        '</section>',
-        unsafe_allow_html=True
+        '</section>'
     )
-    if not hall:
-        st.info("Ainda não há estatísticas suficientes para estabelecer recordes.")
-        return
-
     leading = next((entry for entry in hall if entry["title"] == "Mais kills em uma partida"), None)
+    spotlight_markup = ""
     if leading:
-        st.markdown("#### Destaque da liga")
         holders = " · ".join(
             '<a href="' + escape(profile_link(h["id"]),quote=True) +
             '" target="_self" style="color:#EFF6FD">' + escape(h["name"]) + '</a>'
             for h in leading["holders"]
         )
-        st.markdown(
+        spotlight_markup=(
             '<section class="edb-fame-spotlight">'
-            '<div class="edb-fame-spotlight-kicker">MELHOR MARCA INDIVIDUAL</div>'
+            '<div class="edb-fame-spotlight-kicker">🏆 Destaque da liga</div>'
+            '<div><div class="edb-fame-spotlight-label">MELHOR MARCA INDIVIDUAL</div>'
             '<div class="edb-fame-spotlight-value">' + escape(leading["value"]) + '</div>'
-            '<div class="edb-fame-spotlight-person">' + holders + '</div>'
+            '<div class="edb-fame-spotlight-person">' + holders + '</div></div>'
             '<div class="edb-fame-detail">' + escape(leading["detail"]) + '</div>'
-            '</section>', unsafe_allow_html=True
+            '</section>'
         )
+    st.markdown(
+        '<div class="edb-fame-duo">' + henio_markup + spotlight_markup + '</div>',
+        unsafe_allow_html=True
+    )
+    if not hall:
+        st.info("Ainda não há estatísticas suficientes para estabelecer recordes.")
+        return
     if records:
         by_player = {}
         for row in records:
