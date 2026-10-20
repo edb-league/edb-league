@@ -357,3 +357,82 @@ def test_fluxo_nao_grava_partida_que_ja_existe(monkeypatch, capsys):
     script.run_once(args, store)
     assert writes(store) == []
     assert "JÁ EXISTE" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- .gz puro e partidas já cadastradas
+def test_extensao_gz_puro_e_aceita():
+    f = name("md1_inferno_15_10.gz")
+    assert (f.fmt, f.map, f.played_on) == ("bo1", "inferno", date(2026, 10, 15))
+    assert name("md3_anubis_15_10_1.GZ").order == 1
+
+
+def md1_existing(with_details=False):
+    """Uma md1 de 19/10 já cadastrada (como as vindas do SCOPE), com os mesmos 10 jogadores."""
+    runs = [run("md1_mirage_19_10.gz", "mirage", A, B, 13, 6)]
+    series = dp.group_series(runs)[0]
+    ids = {str(i): f"p{i}" for i in range(1, 11)}
+    matches = [{"id": "edb-t1-bo1-01-mirage", "played_at": "2026-10-19", "map_name": "Mirage", "notes": "SCOPE"}]
+    stats = [{"match_id": "edb-t1-bo1-01-mirage", "player_id": f"p{i}"} for i in range(1, 11)]
+    return series, ids, matches, stats
+
+
+def test_plano_de_complemento_so_tem_detalhes_e_notas():
+    series, ids, matches, stats = md1_existing()
+    existing = dp.existing_by_demo(series, ids, matches, stats)
+    assert existing == {0: "edb-t1-bo1-01-mirage"}
+    plan = dp.completion_plan(series, ids, existing, matches, set())
+    assert len(plan["details"]) == 10 and plan["match_ids"] == ["edb-t1-bo1-01-mirage"]
+    assert plan["details"][0]["match_id"] == "edb-t1-bo1-01-mirage"
+    notes = plan["notes"]["edb-t1-bo1-01-mirage"]
+    assert notes.startswith("SCOPE; demo sha256:sha-md1_mirage_19_10.gz")
+
+
+def test_complemento_ignora_partida_que_ja_tem_detalhes():
+    series, ids, matches, stats = md1_existing()
+    existing = dp.existing_by_demo(series, ids, matches, stats)
+    plan = dp.completion_plan(series, ids, existing, matches, {"edb-t1-bo1-01-mirage"})
+    assert plan["match_ids"] == [] and plan["details"] == []
+
+
+def test_complemento_grava_na_ordem_e_desfaz_se_falhar():
+    series, ids, matches, stats = md1_existing()
+    plan = dp.completion_plan(series, ids, dp.existing_by_demo(series, ids, matches, stats), matches, set())
+    ok = FakeStore()
+    dp.write_completion(ok, plan, {"edb-t1-bo1-01-mirage": "SCOPE"})
+    assert [(m, t) for m, t, _ in ok.calls] == [("POST", "player_match_detail"), ("PATCH", "matches")]
+
+    class FailOnPatch(FakeStore):
+        def _api(self, method, table, params=None, payload=None):
+            self.calls.append((method, table, params))
+            if method == "PATCH" and payload and "sha256" in str(payload.get("notes")):
+                raise RuntimeError("falha simulada")
+            return []
+
+    bad = FailOnPatch()
+    with pytest.raises(RuntimeError):
+        dp.write_completion(bad, plan, {"edb-t1-bo1-01-mirage": "SCOPE"})
+    assert ("DELETE", "player_match_detail", {"match_id": "in.(edb-t1-bo1-01-mirage)"}) in bad.calls
+
+
+def test_fluxo_completa_detalhes_de_partida_ja_cadastrada(monkeypatch, capsys):
+    series, ids, matches, stats = md1_existing()
+    players = [{"id": f"p{i}", "nickname": f"Nick{i}", "steamid": str(i)} for i in range(1, 11)]
+    script = load_script()
+    monkeypatch.setattr(script, "collect", lambda folder, store, only: (
+        [run("md1_mirage_19_10.gz", "mirage", A, B, 13, 6)], []))
+    store = FlowStore(players)
+    store.matches = lambda: matches
+    store.stats = lambda: stats
+    store.match_details = lambda: []
+    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None,
+                     ancora_pt=["n1"], ancora_pl=["n6"])
+    script.run_once(args, store)
+    tables = [(m, t) for m, t, _ in writes(store)]
+    assert tables == [("POST", "player_match_detail"), ("PATCH", "matches")]   # sem matches/player_stats/rpc
+    assert "sem os dados da demo" in capsys.readouterr().out
+
+    store2 = FlowStore(players)
+    store2.matches, store2.stats = (lambda: matches), (lambda: stats)
+    store2.match_details = lambda: [{"match_id": "edb-t1-bo1-01-mirage"}]
+    script.run_once(args, store2)
+    assert writes(store2) == []

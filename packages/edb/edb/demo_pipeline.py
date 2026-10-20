@@ -1,4 +1,4 @@
-"""Pipeline de importação de demos (.dem / .dem.gz) para a EDB LEAGUE.
+"""Pipeline de importação de demos (.dem / .dem.gz / .gz) para a EDB LEAGUE.
 
 Nome do arquivo: ``<mdN>_<mapa>_<dd>_<mm>[_<n>].dem``
 
@@ -45,10 +45,10 @@ class DemoFile:
 
 def _stem(name: str) -> str:
     low = name.lower()
-    for ext in (".dem.gz", ".dem"):
+    for ext in (".dem.gz", ".dem", ".gz"):
         if low.endswith(ext):
             return name[: -len(ext)]
-    raise ValueError(f"{name}: use a extensão .dem ou .dem.gz.")
+    raise ValueError(f"{name}: use a extensão .dem, .dem.gz ou .gz.")
 
 
 def parse_filename(path: str | Path, today: date | None = None) -> DemoFile:
@@ -406,6 +406,69 @@ def find_existing_series(series: Series, ids: dict[str, str], matches: list[dict
             if by_match.get(str(m["id"])) == roster:
                 found.append(str(m["id"]))
     return found
+
+
+def existing_by_demo(series: Series, ids: dict[str, str], matches: list[dict], stats: list[dict]) -> dict[int, str]:
+    """Posição da demo na série -> id da partida que já está no banco (mesmo critério de find_existing_series)."""
+    roster = {ids[s] for s in ids}
+    by_match: dict[str, set[str]] = {}
+    for row in stats:
+        by_match.setdefault(str(row["match_id"]), set()).add(str(row["player_id"]))
+    found: dict[int, str] = {}
+    for index, run in enumerate(series.demos):
+        for m in matches:
+            if str(m.get("map_name") or "").casefold() != run.file.map:
+                continue
+            if abs((date.fromisoformat(str(m["played_at"])[:10]) - series.played_on).days) > 1:
+                continue
+            if by_match.get(str(m["id"])) == roster and str(m["id"]) not in found.values():
+                found[index] = str(m["id"])
+                break
+    return found
+
+
+def completion_plan(series: Series, ids: dict[str, str], existing: dict[int, str], matches: list[dict],
+                    with_details: set[str]) -> dict:
+    """Só os detalhes da demo para partidas que já existem no banco sem eles (ex.: cadastradas pelo SCOPE).
+
+    Não mexe em placar, times, estatísticas nem série: apenas acrescenta ``player_match_detail`` e registra
+    o hash da demo nas notas da partida, para ela não ser lida de novo.
+    """
+    notes_by_id = {str(m["id"]): str(m.get("notes") or "") for m in matches}
+    plan: dict = {"details": [], "notes": {}, "match_ids": []}
+    for index, match_id in sorted(existing.items()):
+        if match_id in with_details:
+            continue
+        run = series.demos[index]
+        for p in run.analysis["players"]:
+            plan["details"].append(detail_row(match_id, ids[str(p["steamid"])], p))
+        tag = f"demo sha256:{run.sha}; arquivo:{run.file.path.name}; parser v{PARSER_VERSION}"
+        old = notes_by_id.get(match_id, "")
+        plan["notes"][match_id] = f"{old}; {tag}" if old else tag
+        plan["match_ids"].append(match_id)
+    return plan
+
+
+def write_completion(store, plan: dict, old_notes: dict[str, str]) -> None:
+    """Grava os detalhes e as notas. Se algo falhar, remove o que acabou de gravar."""
+    done: list[str] = []
+    try:
+        store._api("POST", "player_match_detail", params={"on_conflict": "match_id,player_id"}, payload=plan["details"])
+        for match_id, notes in plan["notes"].items():
+            store._api("PATCH", "matches", params={"id": f"eq.{match_id}"}, payload={"notes": notes})
+            done.append(match_id)
+    except Exception:
+        ids = "in.(" + ",".join(plan["match_ids"]) + ")"
+        try:
+            store._api("DELETE", "player_match_detail", params={"match_id": ids})
+        except Exception:  # noqa: BLE001 - desfazer é melhor esforço; o erro original segue
+            pass
+        for match_id in done:
+            try:
+                store._api("PATCH", "matches", params={"id": f"eq.{match_id}"}, payload={"notes": old_notes.get(match_id) or None})
+            except Exception:  # noqa: BLE001
+                pass
+        raise
 
 
 # --------------------------------------------------------------------------- gravação

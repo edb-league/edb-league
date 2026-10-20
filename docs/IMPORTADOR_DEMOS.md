@@ -14,7 +14,7 @@ A demo nunca sobe (o limite do Storage gratuito é 50 MB por arquivo e a demo te
 | `dd_mm` | Data. O ano é o atual (data futura cai no ano anterior). |
 | ordem | md3: obrigatório, 1 a 3, na ordem em que os mapas foram jogados. md1: opcional (só para duas md1 no mesmo dia). |
 
-Também vale `.dem.gz`. Uma md3 só é gravada com os três mapas e o mesmo elenco de dez jogadores nos três.
+Também valem `.dem.gz` e `.gz` (o arquivo compactado com gzip, como `md1_inferno_19_10.gz`). Arquivo com outra extensão aparece como ignorado. Uma md3 só é gravada com os três mapas e o mesmo elenco de dez jogadores nos três.
 
 ## Instalação (uma vez)
 
@@ -64,7 +64,13 @@ Para mudar: `--ancora-pt Fulano` e `--ancora-pl Ciclano`. Se nenhuma âncora jog
 ## Partidas que já estão no banco
 
 Antes de gravar, o importador procura no banco um mapa igual, com os mesmos 10 jogadores e data a até 1 dia de
-distância. Se achar (por exemplo, partida cadastrada pelos prints do SCOPE), não grava de novo e avisa.
+distância. Se achar (por exemplo, partida cadastrada pelos prints do SCOPE), não cria outra partida.
+
+- Se a partida existe **sem** os dados da demo, o importador oferece gravar só os detalhes da demo nela
+  (`player_match_detail`) e guarda o hash da demo nas notas. Placar, times, série e estatísticas já cadastradas
+  não mudam. Se algo falhar, os detalhes recém-gravados são removidos.
+- Se a partida já tem os dados da demo, avisa e não faz nada.
+- Se só parte de uma série existe no banco, não grava, para não duplicar.
 
 ## Rating e campos que a demo não tem
 

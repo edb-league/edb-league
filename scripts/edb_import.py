@@ -134,8 +134,13 @@ def resolve_identities(series: dp.Series, directory: dp.Directory, interactive: 
 def collect(folder: Path, store, only: list[str] | None) -> tuple[list[dp.DemoRun], list[str]]:
     notes: list[str] = []
     runs: list[dp.DemoRun] = []
-    files = sorted(p for p in folder.iterdir()
-                   if p.is_file() and p.name.lower().endswith((".dem", ".dem.gz")))
+    everything = sorted(p for p in folder.iterdir() if p.is_file() and not p.name.startswith("."))
+    files = [p for p in everything if p.name.lower().endswith((".dem", ".dem.gz", ".gz"))]
+    for p in everything:
+        if p not in files:
+            notes.append(f"{p.name}: ignorado (a extensão deve ser .dem, .dem.gz ou .gz).")
+    if not everything:
+        notes.append(f"A pasta {folder} está vazia.")
     if only:
         wanted = {o.lower() for o in only}
         files = [p for p in files if p.name.lower() in wanted]
@@ -216,9 +221,30 @@ def run_once(args, store) -> int:
             print("  Série não gravada (identidades pendentes).")
             continue
         ids, bind, new_players = resolved
-        already = dp.find_existing_series(series, ids, store.matches(), store.stats())
+        known_matches, known_stats = store.matches(), store.stats()
+        already = dp.find_existing_series(series, ids, known_matches, known_stats)
         if already:
-            print(f"  JÁ EXISTE no banco (provavelmente cadastrada pelo SCOPE): {', '.join(already)}. Não gravada.")
+            existing_map = dp.existing_by_demo(series, ids, known_matches, known_stats)
+            if len(existing_map) != len(series.demos):
+                print(f"  JÁ EXISTE no banco só parte desta série ({', '.join(already)}). Não gravada, para não duplicar.")
+                continue
+            have = {str(d["match_id"]) for d in store.match_details()}
+            completion = dp.completion_plan(series, ids, existing_map, known_matches, have)
+            if not completion["match_ids"]:
+                print(f"  JÁ EXISTE no banco, com os dados da demo: {', '.join(already)}. Nada a fazer.")
+                continue
+            print(f"  JÁ EXISTE no banco sem os dados da demo: {', '.join(completion['match_ids'])}.")
+            print("  Posso gravar só os detalhes da demo nessas partidas (placar, times e série não mudam).")
+            if not args.sim and not ask("  Gravar só os detalhes? [s/N] ").lower().startswith("s"):
+                print("  Pulada.")
+                continue
+            try:
+                dp.write_completion(store, completion, {str(m["id"]): str(m.get("notes") or "") for m in known_matches})
+            except Exception as exc:  # noqa: BLE001
+                print(f"  FALHOU e foi desfeito: {exc}")
+                continue
+            written += 1
+            print(f"  Detalhes gravados: {', '.join(completion['match_ids'])}")
             continue
         if not args.sim:
             if not ask(f"\n  Gravar {series.label} na temporada {season['number']}? [s/N] ").lower().startswith("s"):
