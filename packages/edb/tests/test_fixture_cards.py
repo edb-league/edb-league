@@ -1,5 +1,5 @@
 """Regression tests for displayed matchup titles."""
-from fixture_cards import fixture_title, match_stat_coverage
+from edb.fixture_cards import fixture_title, match_stat_coverage
 
 def test_verified_legacy_score():
     match={"map_name":"Dust2","played_at":"2026-10-14","notes":"Placar oficial: Team 1 13–11 Team 2. 23:35"}
@@ -55,7 +55,7 @@ def test_stat_coverage_handles_absent_scope_data():
 
 def test_basic_team_tables_group_teams_and_keep_match_nicks():
     import pandas as pd
-    from fixture_cards import basic_team_tables, match_team_names
+    from edb.fixture_cards import basic_team_tables, match_team_names
     match = {"id": "m1", "map_name": "Dust2", "played_at": "2026-10-14",
              "notes": "Placar oficial: Team 1 13–11 Team 2."}
     players = pd.DataFrame([
@@ -82,7 +82,7 @@ def test_basic_team_tables_group_teams_and_keep_match_nicks():
 
 def test_basic_team_tables_unknown_score_uses_known_winner_only():
     import pandas as pd
-    from fixture_cards import basic_team_tables, match_team_names
+    from edb.fixture_cards import basic_team_tables, match_team_names
     match={"id":"m2","map_name":"Anubis","rounds_total":21,
            "notes":"Team 2 venceu; Team 1 perdeu."}
     assert match_team_names(match) == ("Team 2", "Team 1")

@@ -1,20 +1,20 @@
 # API EDB LEAGUE
 
-API FastAPI que serve o frontend Next.js (`web/`). Ela reaproveita as regras Python do projeto
-(`core.py`, `season_rankings.py`, `team_draw.py` e demais módulos da raiz) sem alterá-las. Os formatos
-JSON estão em `web/src/lib/types.ts`; a lista de rotas está em `api/CONTRACT.md`.
+API FastAPI que serve o frontend Next.js (`apps/web/`). Ela reaproveita as regras Python do pacote compartilhado `edb`
+(`packages/edb`: `core`, `season_rankings`, `team_draw` e demais módulos) sem alterá-las. Os formatos
+JSON estão em `apps/web/src/lib/types.ts`; a lista de rotas está em `apps/api/CONTRACT.md`.
 
 ## Rodar localmente
 
 ```bash
 python -m venv .venv && source .venv/bin/activate      # fora do repositório, se preferir
-pip install -r api/requirements-dev.txt
+pip install -r apps/api/requirements-dev.txt
 
 # Dados sintéticos, sem banco e sem chaves (ideal para desenvolver o frontend)
-EDB_DEMO=1 XINXAS_ADMIN_PASSWORD=demo-senha-123 uvicorn api.main:app --port 8000
+EDB_DEMO=1 XINXAS_ADMIN_PASSWORD=demo-senha-123 uvicorn --app-dir apps/api edb_api.main:app --port 8000
 
 # Dados reais (Supabase)
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... XINXAS_ADMIN_PASSWORD=... uvicorn api.main:app --port 8000
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... XINXAS_ADMIN_PASSWORD=... uvicorn --app-dir apps/api edb_api.main:app --port 8000
 ```
 
 Abra `http://localhost:8000/docs` para a documentação interativa e `http://localhost:8000/api/health`
@@ -23,11 +23,11 @@ para o teste de saúde. Sem `SUPABASE_URL` e sem `EDB_DEMO`, a API usa o SQLite 
 ## Testes
 
 ```bash
-pytest -q
+python -m pytest -q apps/api/tests     # a partir da raiz do repositório
 ```
 
 Os testes rodam sempre em modo demonstração ou com SQLite temporário e validam as respostas contra o
-próprio `web/src/lib/types.ts`.
+próprio `apps/web/src/lib/types.ts`.
 
 ## Variáveis de ambiente
 
@@ -56,17 +56,17 @@ próprio `web/src/lib/types.ts`.
 
 ## Deploy
 
-A imagem precisa dos módulos Python da raiz, por isso o build parte da **raiz do repositório**:
+A imagem precisa do pacote `packages/edb`, por isso o build parte da **raiz do repositório**:
 
 ```bash
-docker build -f api/Dockerfile -t edb-api .
+docker build -f apps/api/Dockerfile -t edb-api .
 docker run --rm -p 8000:8000 -e EDB_DEMO=1 -e XINXAS_ADMIN_PASSWORD=demo-senha-123 edb-api
 ```
 
 ### Render
 
 1. Novo **Web Service** a partir do repositório, ambiente **Docker**.
-2. Dockerfile path: `api/Dockerfile`. Docker build context directory: `.` (raiz).
+2. Dockerfile path: `apps/api/Dockerfile`. Docker build context directory: `.` (raiz).
 3. Health check path: `/api/health`.
 4. Em Environment, defina `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `XINXAS_ADMIN_PASSWORD`,
    `EDB_SESSION_SECRET`, `EDB_ALLOWED_ORIGINS` (domínio do frontend), `EDB_COOKIE_SECURE=1`,
@@ -76,7 +76,7 @@ docker run --rm -p 8000:8000 -e EDB_DEMO=1 -e XINXAS_ADMIN_PASSWORD=demo-senha-1
 ### Fly.io
 
 ```bash
-fly launch --no-deploy --dockerfile api/Dockerfile --internal-port 8000   # a partir da raiz do repositório
+fly launch --no-deploy --dockerfile apps/api/Dockerfile --internal-port 8000   # a partir da raiz do repositório
 fly secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... XINXAS_ADMIN_PASSWORD=... \
   EDB_SESSION_SECRET=... EDB_ALLOWED_ORIGINS=https://seu-frontend.vercel.app
 fly deploy

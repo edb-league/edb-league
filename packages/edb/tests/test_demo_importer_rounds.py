@@ -5,7 +5,7 @@ import types
 import pandas as pd
 import pytest
 
-from demo_importer import (
+from edb.demo_importer import (
     _trim_outside_rounds, _trim_warmup, _validate_combat_stats, parse_demo,
 )
 

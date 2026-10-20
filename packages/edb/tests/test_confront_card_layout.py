@@ -2,9 +2,9 @@
 from html import unescape
 from pathlib import Path
 
-from season_system import bo3_cards
+from edb.season_system import bo3_cards
 
-CSS=(Path(__file__).resolve().parents[1]/"season_system.py").read_text("utf-8")
+CSS=(Path(__file__).resolve().parents[1]/"edb"/"season_system.py").read_text("utf-8")
 
 
 def fixture():

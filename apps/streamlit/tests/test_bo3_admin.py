@@ -2,7 +2,7 @@
 from datetime import date
 import pytest
 
-from bo3_admin import build_bo3_bundle, roster_for_preview
+from edb.bo3_admin import build_bo3_bundle, roster_for_preview
 
 
 def sample_staged():

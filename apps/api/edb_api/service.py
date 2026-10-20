@@ -7,15 +7,15 @@ from threading import RLock
 
 import pandas as pd
 
-from core import enrich
-from league_legacy import match_records
-from season_rankings import season_boards
-from season_system import (
+from edb.core import enrich
+from edb.league_legacy import match_records
+from edb.season_rankings import season_boards
+from edb.season_system import (
     DEFAULT_SEASONS, chosen_season_number, confirmed_bo3_count, season_match_ids,
 )
-from steam_profile import fetch_steam_profile
-from storage import Store
-from team_draw import player_level, player_name
+from edb.steam_profile import fetch_steam_profile
+from edb.storage import Store
+from edb.team_draw import player_level, player_name
 
 from . import settings
 

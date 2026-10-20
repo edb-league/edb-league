@@ -1,7 +1,7 @@
 """Painel administrativo para registrar séries BO1 e BO3 de forma auditável."""
 from __future__ import annotations
 
-from confront_registry import prepare_confront_bundle
+from edb.confront_registry import prepare_confront_bundle
 
 
 def render_confront_admin(st, store, seasons, matches, stats, players,

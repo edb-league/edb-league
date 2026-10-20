@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from confront_registry import prepare_confront_bundle
-from season_system import bo3_cards, confirmed_bo3_count, season_match_ids, series_format
+from edb.confront_registry import prepare_confront_bundle
+from edb.season_system import bo3_cards, confirmed_bo3_count, season_match_ids, series_format
 
 ROOT=Path(__file__).resolve().parents[1]
 APP=(ROOT/"app.py").read_text(encoding="utf-8")

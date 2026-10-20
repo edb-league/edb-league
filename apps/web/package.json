@@ -2,7 +2,7 @@
   "name": "edb-web",
   "version": "1.0.0",
   "private": true,
-  "description": "Frontend da EDB LEAGUE (Next.js). Consome a API FastAPI da pasta api/.",
+  "description": "Frontend da EDB LEAGUE (Next.js). Consome a API FastAPI de apps/api.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

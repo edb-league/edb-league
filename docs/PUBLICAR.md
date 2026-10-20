@@ -16,7 +16,7 @@ Estado em 17/10/2026: repositório e banco criados, migração aplicada, deploy 
 2. Selecione **Create app** → **Deploy a public app from GitHub**.
 3. Repository: `matheusbsc6/xinxas-league`
 4. Branch: `main`
-5. Main file path: `app.py`
+5. Main file path: `apps/streamlit/app.py` (o `app.py` da raiz também funciona, como entrada de compatibilidade)
 6. Abra **Advanced settings → Secrets**, e configure **lá**, nunca no GitHub nem nesta conversa:
 
 ```toml

@@ -2,8 +2,8 @@ from pathlib import Path
 import sys
 import tempfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from storage import Store
-from core import enrich,leaderboard,cap_weekly,historical_progress,weekly_awards
+from edb.storage import Store
+from edb.core import enrich,leaderboard,cap_weekly,historical_progress,weekly_awards
 
 
 def fixture():

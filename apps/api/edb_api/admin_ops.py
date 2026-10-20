@@ -8,18 +8,18 @@ from datetime import date
 
 import pandas as pd
 
-from bo3_admin import STATS_FIELDS  # noqa: F401  (mantido para referência dos campos)
-from confront_registry import prepare_confront_bundle
-from core import enrich
-from demo_importer import parse_demo, prepare_upload
-from season_rankings import has_technical_tie, season_boards
-from season_system import season_match_ids
+from edb import SAMPLE_SCOREBOARD
+from edb.bo3_admin import STATS_FIELDS  # noqa: F401  (mantido para referência dos campos)
+from edb.confront_registry import prepare_confront_bundle
+from edb.core import enrich
+from edb.demo_importer import parse_demo, prepare_upload
+from edb.season_rankings import has_technical_tie, season_boards
+from edb.season_system import season_match_ids
 
 from . import settings, views
 from .service import LeagueService, Snap
 from .views import Conflict, NotFound, _int, _none, _num, player_item, season_info
 
-ROOT = __import__("pathlib").Path(__file__).resolve().parent.parent
 MAX_CSV_BYTES = 5 * 1024 * 1024
 EXPORTS = {"players": ("jogadores", "players"), "matches": ("partidas", "matches"),
            "stats": ("estatisticas", "stats")}
@@ -253,7 +253,7 @@ def _is_invalid_demo(source: str, players: list[dict]) -> bool:
 
 def preview_import(service: LeagueService, method: str, upload) -> dict:
     if method == "sample":
-        df = _read_csv_text((ROOT / "sample_scoreboard.csv").read_text(encoding="utf-8"))
+        df = _read_csv_text(SAMPLE_SCOREBOARD.read_text(encoding="utf-8"))
         fingerprint, map_name, rounds = "scope_1648990866439220", "Inferno", 17
         records = df.where(pd.notna(df), None).to_dict("records")
         warnings = ["Dado transcrito do print do SCOPE.GG; rounds estimados, não validados pela demo."]

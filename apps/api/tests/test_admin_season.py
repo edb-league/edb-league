@@ -40,7 +40,7 @@ def test_homologation_requires_closed_pending_season(admin):
 def test_homologation_rejects_incomplete_series(admin, monkeypatch):
     monkeypatch.setenv("EDB_TODAY", "2026-11-20")
     admin.get("/api/meta")
-    from api import service
+    from edb_api import service
     service.get_service().invalidate()
     overview = admin.get("/api/admin/overview").json()
     check(overview, "AdminOverview")
@@ -54,7 +54,7 @@ def test_homologation_rejects_incomplete_series(admin, monkeypatch):
 
 def test_homologation_success_after_closing_pending_series(admin, monkeypatch):
     monkeypatch.setenv("EDB_TODAY", "2026-11-20")
-    from api import service
+    from edb_api import service
     svc = service.get_service()
     data = svc.store.data
     dropped = {s["id"] for s in data["bo3_series"] if s["season_number"] == 1 and s["status"] != "completed"}
@@ -115,7 +115,7 @@ def test_confront_validations(admin):
 
 
 def test_steam_view_without_key_is_no_key(demo):
-    from api import views
+    from edb_api import views
     detail = views.build_player_detail(demo, demo.snap(), demo.snap().players[0]["id"])
     check(detail["steam"], "SteamView")
     assert detail["steam"]["state"] in ("no_key", "unlinked")

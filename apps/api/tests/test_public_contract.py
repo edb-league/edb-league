@@ -1,4 +1,4 @@
-"""Cada rota pública confere com os tipos de web/src/lib/types.ts."""
+"""Cada rota pública confere com os tipos de apps/web/src/lib/types.ts."""
 from __future__ import annotations
 
 import json

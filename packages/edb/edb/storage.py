@@ -3,13 +3,24 @@
 Chaves Supabase são usadas APENAS pelo servidor, nunca no navegador.
 """
 from __future__ import annotations
+import os
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
 import requests
 
-ROOT=Path(__file__).resolve().parent
-DB_FILE=ROOT/'xinxas.db'
+def _default_db_file():
+    """SQLite local: EDB_DB_FILE, ou xinxas.db na raiz do repositório (na pasta atual se não houver repositório)."""
+    env=os.environ.get('EDB_DB_FILE')
+    if env:
+        return Path(env)
+    root=Path(__file__).resolve().parents[3]
+    if not (root/'packages').is_dir():
+        root=Path.cwd()
+    return root/'xinxas.db'
+
+
+DB_FILE=_default_db_file()
 FIELDS_STATS=['match_id','player_id','kills','deaths','assists','damage','rounds',
               'won','headshots','plants','defuses','rating','kast','open_kills','trade_kills','observed_nickname']
 

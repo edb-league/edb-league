@@ -2,7 +2,7 @@
 from datetime import date
 from pathlib import Path
 
-from season_system import (
+from edb.season_system import (
     DEFAULT_SEASONS, bo3_cards, chosen_season_number, confirmed_bo3_count,
     season_dates,
     current_season_number, season_bar, season_match_ids, series_maps,

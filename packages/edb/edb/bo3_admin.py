@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 
-from demo_importer import prepare_upload, parse_demo, _validate_combat_stats
+from edb.demo_importer import prepare_upload, parse_demo, _validate_combat_stats
 
 STATS_FIELDS = (
     "kills","deaths","assists","damage","rounds","headshots",

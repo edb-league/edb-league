@@ -263,7 +263,7 @@ def render_achievement_collection(st, medals):
 
 def render_medal_catalogue(st, players, medals_by_id):
     """Painel de conquistas oficiais, sem simular medalhas ou vencedores."""
-    from league_social import MEDALS
+    from edb.league_social import MEDALS
     st.markdown(SOCIAL_CSS,unsafe_allow_html=True)
     types = len(MEDALS)
     earned = [m for medals in medals_by_id.values() for m in medals if m["earned"]]

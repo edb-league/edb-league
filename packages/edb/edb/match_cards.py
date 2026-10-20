@@ -6,7 +6,7 @@ from urllib.parse import quote
 import re
 import pandas as pd
 
-from fixture_cards import fixture_overview
+from edb.fixture_cards import fixture_overview
 
 
 MATCH_GRID_CSS = """

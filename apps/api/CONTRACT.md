@@ -1,7 +1,7 @@
 # Contrato da API EDB LEAGUE
 
-Os formatos JSON estão em `web/src/lib/types.ts` (fonte de verdade). A API não altera os módulos
-Python existentes (`core.py`, `season_rankings.py` etc.); apenas os importa.
+Os formatos JSON estão em `apps/web/src/lib/types.ts` (fonte de verdade). A API não altera o pacote
+compartilhado `edb` (`core`, `season_rankings` etc.); apenas o importa.
 
 Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português" }`.
 

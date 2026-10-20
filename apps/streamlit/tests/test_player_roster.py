@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from storage import Store
+from edb.storage import Store
 
 ROOT=Path(__file__).resolve().parents[1]
 APP=(ROOT/"app.py").read_text(encoding="utf-8")
-STORAGE=(ROOT/"storage.py").read_text(encoding="utf-8")
+STORAGE=(ROOT.parents[1] / "packages" / "edb" / "edb"/"storage.py").read_text(encoding="utf-8")
 
 
 def test_archiving_player_preserves_stats_and_prevents_draw_selection(tmp_path):

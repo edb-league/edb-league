@@ -1,7 +1,9 @@
 """Inspecione uma demo local sem precisar abrir o painel."""
 import argparse
+import sys
 from pathlib import Path
-from demo_importer import parse_demo,prepare_upload
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'packages'/'edb'))
+from edb.demo_importer import parse_demo,prepare_upload
 import io
 import pandas as pd
 

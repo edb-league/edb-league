@@ -8,10 +8,10 @@ warnings.filterwarnings("ignore")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from api import auth, service  # noqa: E402
-from api.main import create_app  # noqa: E402
-from api.service import LeagueService  # noqa: E402
-from storage import Store  # noqa: E402
+from edb_api import auth, service  # noqa: E402
+from edb_api.main import create_app  # noqa: E402
+from edb_api.service import LeagueService  # noqa: E402
+from edb.storage import Store  # noqa: E402
 
 PASSWORD = "senha-de-teste-123"
 ORIGIN = {"Origin": "http://localhost:3000"}

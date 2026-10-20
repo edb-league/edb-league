@@ -1,7 +1,7 @@
 # EDB LEAGUE, frontend
 
-Next.js 16 (App Router), React 19, TypeScript, Tailwind 4. Consome a API da pasta `../api`.
-Visão geral, decisões e publicação: `../docs/ARQUITETURA.md`.
+Next.js 16 (App Router), React 19, TypeScript, Tailwind 4. Consome a API de `../api`.
+Visão geral, decisões e publicação: `../../docs/ARQUITETURA.md`.
 
 ## Começar
 
@@ -11,8 +11,8 @@ npm install
 npm run dev                    # http://localhost:3000
 ```
 
-Precisa da API no ar. Para desenvolver sem banco: `EDB_DEMO=1 XINXAS_ADMIN_PASSWORD=demo-senha-123 uvicorn api.main:app --port 8000`
-na raiz do repositório.
+Precisa da API no ar. Para desenvolver sem banco: `EDB_DEMO=1 XINXAS_ADMIN_PASSWORD=demo-senha-123 uvicorn --app-dir apps/api edb_api.main:app --port 8000`
+a partir da raiz do repositório.
 
 ## Scripts
 

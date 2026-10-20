@@ -4,7 +4,7 @@ from pathlib import Path
 import requests
 
 from player_page import PLAYER_CSS, SILHOUETTE, format_hours, player_banner
-from steam_profile import (
+from edb.steam_profile import (
     SteamUnavailable, fetch_steam_profile, normalize_steamid64,
     safe_avatar_url, steam_view,
 )
@@ -252,6 +252,12 @@ def test_key_is_found_at_top_level_or_inside_a_toml_section():
 
 def test_no_steam_key_is_ever_committed_to_the_project():
     import re
-    for name in ("app.py", "steam_profile.py", "player_page.py", "tests/test_steam_profile.py"):
-        text = (ROOT / name).read_text(encoding="utf-8")
-        assert not re.search(r"\b[0-9A-Fa-f]{32}\b", text), name
+    files = (
+        ROOT / "app.py",
+        ROOT.parents[1] / "packages" / "edb" / "edb" / "steam_profile.py",
+        ROOT / "player_page.py",
+        ROOT / "tests" / "test_steam_profile.py",
+    )
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        assert not re.search(r"\b[0-9A-Fa-f]{32}\b", text), path.name

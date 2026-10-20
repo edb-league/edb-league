@@ -25,8 +25,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "python -m uvicorn api.main:app --port 8000",
-      cwd: "..",
+      command: "python -m uvicorn --app-dir apps/api edb_api.main:app --port 8000",
+      cwd: "../..",
       url: "http://127.0.0.1:8000/api/health",
       reuseExistingServer: true,
       timeout: 60_000,

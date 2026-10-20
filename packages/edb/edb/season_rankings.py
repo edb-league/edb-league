@@ -6,9 +6,9 @@ A Temporada 0 usa o calculo legado e nao sofre recalculo retroativo.
 from __future__ import annotations
 
 import pandas as pd
-from season_system import season_dates
+from edb.season_system import season_dates
 
-from core import TARGET_KPR, leaderboard
+from edb.core import TARGET_KPR, leaderboard
 
 RANK_TYPES = ("elite", "superacao", "xp")
 MAX_MAPS = 6

@@ -6,7 +6,7 @@ from urllib.parse import quote
 import pandas as pd
 from social_views import render_achievement_collection
 from chart_theme import style_edb_line
-from bagres import premio_henio
+from edb.bagres import premio_henio
 
 LEGACY_CSS = """
 <style>

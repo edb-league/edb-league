@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from team_draw import (
+from edb.team_draw import (
     draw_balanced_teams, draw_message, player_name, player_level,
     team_cards_html,
 )
@@ -131,7 +131,7 @@ def test_home_integrates_sorteio_without_touching_rankings_or_database():
     assert "st.button('Sortear times',type='primary'" in APP
     assert "🎲 Sortear times equilibrados" not in APP
     assert "st.code(draw_message(team_a,team_b),language=None)" in APP
-    module=(ROOT/"team_draw.py").read_text(encoding="utf-8")
+    module=(ROOT.parents[1] / "packages" / "edb" / "edb"/"team_draw.py").read_text(encoding="utf-8")
     assert "supabase" not in module.lower()
     assert "st.session_state.pop('edb_draw_result',None)" in APP
     assert "não salva equipes nem registra partidas" in APP

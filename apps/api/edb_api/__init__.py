@@ -1,14 +1,15 @@
 """API FastAPI da EDB LEAGUE.
 
-Os módulos de regras (core.py, season_rankings.py etc.) vivem na pasta pai e são
-apenas importados, nunca alterados. A execução parte da raiz do projeto:
-    uvicorn api.main:app
+As regras vivem no pacote compartilhado `edb` (packages/edb) e são apenas importadas.
+A partir da raiz do repositório:
+    PYTHONPATH=packages/edb:apps/api uvicorn edb_api.main:app
+Sem PYTHONPATH, o pacote `edb` é localizado automaticamente (ver abaixo).
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+_EDB = Path(__file__).resolve().parents[3] / "packages" / "edb"
+if _EDB.is_dir() and str(_EDB) not in sys.path:
+    sys.path.insert(0, str(_EDB))

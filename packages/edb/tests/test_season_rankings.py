@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 import pandas as pd
 
-from season_rankings import season_boards, has_technical_tie
+from edb.season_rankings import season_boards, has_technical_tie
 
 
 def _rows(total=15, players=("A",), starts=date(2026, 10, 19)):

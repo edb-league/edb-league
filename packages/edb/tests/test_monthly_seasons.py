@@ -4,10 +4,10 @@ from datetime import date, timedelta
 import pandas as pd
 import pytest
 
-from season_system import (
+from edb.season_system import (
     season_dates, season_bar, current_season_number, chosen_season_number,
 )
-from season_rankings import season_boards
+from edb.season_rankings import season_boards
 
 
 @pytest.mark.parametrize("number,begin,finish",[

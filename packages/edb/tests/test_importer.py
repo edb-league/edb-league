@@ -2,7 +2,7 @@ import io, gzip, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
-from demo_importer import prepare_upload, parse_demo
+from edb.demo_importer import prepare_upload, parse_demo
 
 class Upload(io.BytesIO):
     def __init__(self, content, name):
@@ -91,7 +91,7 @@ def test_warmup_teamkill_and_post_round_are_ignored(monkeypatch):
 
 
 def test_warmup_flag_filter():
-    from demo_importer import _trim_warmup
+    from edb.demo_importer import _trim_warmup
     f=pd.DataFrame({'tick':[1,2,3], 'is_warmup_period':[True,False,'true']})
     filtered=_trim_warmup(f)
     assert filtered['tick'].tolist()==[2]

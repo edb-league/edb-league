@@ -13,7 +13,11 @@ def test_imports_are_not_reloaded_on_every_streamlit_rerun():
     for name in ("fixture_cards", "match_cards", "season_system", "season_rankings",
                  "ranking_cards", "ranking_navigation", "league_legacy", "legacy_views",
                  "league_social", "social_views", "brand_shell", "top_navigation"):
-        assert f"import {name} as _{name}" in APP
+        # Módulos de regras vivem no pacote edb; os de interface ficam ao lado do app.
+        shared = name in {"fixture_cards", "match_cards", "season_system", "season_rankings",
+                          "league_legacy", "league_social"}
+        expected = f"from edb import {name} as _{name}" if shared else f"import {name} as _{name}"
+        assert expected in APP
 
 
 def test_calendar_rpc_runs_on_hourly_cache_and_daily_key():
@@ -48,5 +52,5 @@ def test_admin_writes_clear_derived_and_source_caches():
 def test_art_and_historical_rules_remain_unchanged():
     assert 'data:image/webp;base64,' in BRAND
     assert '/app/static/' not in BRAND
-    assert "if int(season_number) == 0:" in (ROOT/"season_rankings.py").read_text(encoding="utf-8")
+    assert "if int(season_number) == 0:" in (ROOT.parents[1] / "packages" / "edb" / "edb"/"season_rankings.py").read_text(encoding="utf-8")
     assert "season_boards(selected,season_number,season_stars)" in APP

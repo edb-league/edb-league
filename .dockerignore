@@ -5,3 +5,9 @@ web
 *.db
 .env
 .streamlit
+**/node_modules
+apps/web
+apps/streamlit
+docs
+db
+scripts

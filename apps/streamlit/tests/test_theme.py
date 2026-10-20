@@ -4,8 +4,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP = (ROOT / "app.py").read_text(encoding="utf-8")
 RANK = (ROOT / "ranking_cards.py").read_text(encoding="utf-8")
-FIXTURE = (ROOT / "fixture_cards.py").read_text(encoding="utf-8")
-CONFIG = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
+FIXTURE = (ROOT.parents[1] / "packages" / "edb" / "edb" / "fixture_cards.py").read_text(encoding="utf-8")
+CONFIG = (ROOT.parents[1] / ".streamlit" / "config.toml").read_text(encoding="utf-8")
 
 
 def test_primary_color_is_blue_in_streamlit_and_app():

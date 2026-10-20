@@ -77,7 +77,7 @@ def compare_players(first_id, second_id, records):
     a, b = str(first_id), str(second_id)
     if a == b:
         raise ValueError("Selecione dois jogadores diferentes")
-    from league_legacy import player_summary
+    from edb.league_legacy import player_summary
     totals = {pid: player_summary(pid, records) for pid in (a, b)}
     left = {r["match_id"]: r for r in totals[a]["matches"]}
     right = {r["match_id"]: r for r in totals[b]["matches"]}

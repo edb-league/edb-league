@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from api import auth
-from api.main import create_app
+from edb_api import auth
+from edb_api.main import create_app
 
 from .conftest import ORIGIN, PASSWORD
 from .ts_contract import check

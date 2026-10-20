@@ -1,5 +1,5 @@
 """Test all-time records, nick aliases, ties and missing measurements."""
-from league_legacy import match_records, player_summary, hall_of_fame
+from edb.league_legacy import match_records, player_summary, hall_of_fame
 from ranking_cards import ranking_cards
 
 

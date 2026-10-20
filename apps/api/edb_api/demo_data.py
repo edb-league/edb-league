@@ -12,7 +12,7 @@ import uuid
 from datetime import date, timedelta
 from threading import RLock
 
-from storage import Store
+from edb.storage import Store
 
 NAMESPACE = uuid.UUID("5d1c0f4e-7a3b-4c52-9d10-0e6b2f4a9c11")
 
@@ -198,7 +198,7 @@ def build_demo_data() -> dict:
               for s in (0, 1) for p in players]
 
     # Classificação final e títulos da Temporada 0, calculados pelo método legado.
-    from core import enrich, leaderboard
+    from edb.core import enrich, leaderboard
     t0_ids = {m["match_id"] for m in series_maps if m["series_id"].startswith("ser-t0")}
     t0_matches = [m for m in matches if m["id"] in t0_ids]
     t0_stats = [s for s in stats if s["match_id"] in t0_ids]

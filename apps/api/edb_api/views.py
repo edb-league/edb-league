@@ -3,17 +3,17 @@ from __future__ import annotations
 
 import pandas as pd
 
-from bagres import bagres_board, premio_henio
-from core import TARGET_KPR, enrich, historical_progress
-from fixture_cards import basic_team_tables, fixture_overview, match_stat_coverage
-from league_legacy import hall_of_fame, player_summary
-from league_social import MEDALS, achievements, compare_players
-from match_cards import ordered_matches
-from season_system import (
+from edb.bagres import bagres_board, premio_henio
+from edb.core import TARGET_KPR, enrich, historical_progress
+from edb.fixture_cards import basic_team_tables, fixture_overview, match_stat_coverage
+from edb.league_legacy import hall_of_fame, player_summary
+from edb.league_social import MEDALS, achievements, compare_players
+from edb.match_cards import ordered_matches
+from edb.season_system import (
     _confront_first_date, _confront_result, _confront_sides, _parse_date, series_format, series_maps,
 )
-from steam_profile import steam_view
-from team_draw import draw_balanced_teams, draw_message
+from edb.steam_profile import steam_view
+from edb.team_draw import draw_balanced_teams, draw_message
 
 from . import settings
 from .service import LeagueService, Snap, display_name, safe_level

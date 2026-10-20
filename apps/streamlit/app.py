@@ -1,4 +1,4 @@
-"""EDB LEAGUE — Aplicativo Streamlit. Executar: streamlit run app.py"""
+"""EDB LEAGUE — Aplicativo Streamlit. Executar a partir da raiz: streamlit run apps/streamlit/app.py"""
 from __future__ import annotations
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -10,25 +10,29 @@ import os
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import sys
+# Pacote compartilhado de regras (packages/edb); dispensa instalação no Streamlit Cloud, no Docker e localmente.
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'packages'/'edb'))
+from edb import SAMPLE_SCOREBOARD
 from chart_theme import style_edb_bar
-from team_draw import draw_balanced_teams, draw_message, player_name, player_level, team_cards_html
-from core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
-from bagres import bagres_board
-from demo_importer import parse_demo, prepare_upload
-from bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
+from edb.team_draw import draw_balanced_teams, draw_message, player_name, player_level, team_cards_html
+from edb.core import TARGET_KPR, cap_weekly, enrich, historical_progress, leaderboard, weekly_awards
+from edb.bagres import bagres_board
+from edb.demo_importer import parse_demo, prepare_upload
+from edb.bo3_admin import analyze_one_bo3_upload, validate_three_bo3_demos, roster_for_preview, build_bo3_bundle
 from confront_views import render_confront_admin
-from storage import Store
+from edb.storage import Store
 # Os imports Python ja sao reutilizados entre reruns; nao forcar reload
 # a cada interacao. O deploy atualiza os modulos pelo reinicio do aplicativo.
-import fixture_cards as _fixture_cards
+from edb import fixture_cards as _fixture_cards
 fixture_title = _fixture_cards.fixture_title
 match_stat_coverage = _fixture_cards.match_stat_coverage
 basic_team_tables = _fixture_cards.basic_team_tables
 CARD_CSS = _fixture_cards.CARD_CSS
-import match_cards as _match_cards
+from edb import match_cards as _match_cards
 match_cards = _match_cards.match_cards
 selected_match_header = _match_cards.selected_match_header
-import season_system as _season_system
+from edb import season_system as _season_system
 DEFAULT_SEASONS = _season_system.DEFAULT_SEASONS
 chosen_season_number = _season_system.chosen_season_number
 season_match_ids = _season_system.season_match_ids
@@ -36,7 +40,7 @@ confirmed_bo3_count = _season_system.confirmed_bo3_count
 season_bar = _season_system.season_bar
 bo3_cards = _season_system.bo3_cards
 series_maps = _season_system.series_maps
-import season_rankings as _season_rankings
+from edb import season_rankings as _season_rankings
 season_boards = _season_rankings.season_boards
 has_technical_tie = _season_rankings.has_technical_tie
 import ranking_cards as _ranking_cards
@@ -44,13 +48,13 @@ render_ranking_cards = _ranking_cards.ranking_cards
 RANKING_CSS = _ranking_cards.RANKING_CSS
 import ranking_navigation as _ranking_navigation
 rank_switch = _ranking_navigation.rank_switch
-import league_legacy as _league_legacy
+from edb import league_legacy as _league_legacy
 match_records = _league_legacy.match_records
 player_summary = _league_legacy.player_summary
 hall_of_fame = _league_legacy.hall_of_fame
 import legacy_views as _legacy_views
 render_hall_of_fame = _legacy_views.render_hall
-import league_social as _league_social
+from edb import league_social as _league_social
 compare_players = _league_social.compare_players
 achievements = _league_social.achievements
 import social_views as _social_views
@@ -60,7 +64,7 @@ import brand_shell as _brand_shell
 BRAND_CSS = _brand_shell.BRAND_CSS
 hero_banner = _brand_shell.hero_banner
 import admin_panel as _admin_panel
-import steam_profile as _steam_profile
+from edb import steam_profile as _steam_profile
 import player_page as _player_page
 steam_view = _steam_profile.steam_view
 fetch_steam_profile = _steam_profile.fetch_steam_profile
@@ -1182,7 +1186,7 @@ elif page=='Administração':
             else:
                 st.caption('Os dados abaixo vieram do print enviado na conversa. Rounds são estimados por dano ÷ ADR; a data da partida deve ser informada.')
                 if st.button('Carregar amostra do SCOPE.GG'):
-                    df=pd.read_csv(ROOT/'sample_scoreboard.csv')
+                    df=pd.read_csv(SAMPLE_SCOREBOARD)
                     st.session_state['pending_import']={
                         'fingerprint':'scope_1648990866439220','map':'Inferno','rounds_total':17,
                         'players':df.where(pd.notna(df),None).to_dict('records'),

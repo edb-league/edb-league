@@ -1,4 +1,4 @@
-"""Aplicação FastAPI da EDB LEAGUE. Execução: uvicorn api.main:app"""
+"""Aplicação FastAPI da EDB LEAGUE. Execução (da raiz): uvicorn --app-dir apps/api edb_api.main:app"""
 from __future__ import annotations
 
 import logging

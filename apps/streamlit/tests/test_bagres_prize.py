@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from bagres import bagres_board, premio_henio
+from edb.bagres import bagres_board, premio_henio
 from ranking_cards import ranking_cards
 from ranking_navigation import RANK_OPTIONS, rank_switch
 

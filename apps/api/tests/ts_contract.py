@@ -1,4 +1,4 @@
-"""Valida respostas JSON contra os tipos declarados em web/src/lib/types.ts.
+"""Valida respostas JSON contra os tipos declarados em apps/web/src/lib/types.ts.
 
 Lê o arquivo TypeScript real (subconjunto usado pelo contrato) e confere formato, nulos,
 literais e chaves, inclusive chaves a mais ou a menos.

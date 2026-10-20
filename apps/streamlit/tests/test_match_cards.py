@@ -1,6 +1,6 @@
 """Testes dos cards de partidas da EDB League, com ordem e resultado íntegros."""
-from fixture_cards import fixture_overview
-from match_cards import match_cards, match_sort_key, ordered_matches, selected_match_header, MATCH_GRID_CSS
+from edb.fixture_cards import fixture_overview
+from edb.match_cards import match_cards, match_sort_key, ordered_matches, selected_match_header, MATCH_GRID_CSS
 
 
 def test_three_column_grid_and_latest_match_in_top_left():

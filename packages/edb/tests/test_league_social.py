@@ -1,6 +1,6 @@
 """Medalhas e comparação de jogadores: identidade, confrontos e dados faltantes."""
-from league_legacy import match_records
-from league_social import MEDALS, achievements, compare_players
+from edb.league_legacy import match_records
+from edb.league_social import MEDALS, achievements, compare_players
 
 
 def sample():

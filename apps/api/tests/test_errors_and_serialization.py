@@ -6,7 +6,7 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from api.serializers import clean
+from edb_api.serializers import clean
 
 
 def test_clean_converts_numpy_nan_and_dates():
@@ -46,8 +46,8 @@ def test_draw_validation(client):
 
 
 def test_boards_match_direct_calculation(client, demo):
-    from core import enrich
-    from season_rankings import season_boards
+    from edb.core import enrich
+    from edb.season_rankings import season_boards
     snap = demo.snap()
     frame = enrich(snap.players, snap.matches, snap.stats)
     selected = frame[frame["match_id"].astype(str).isin(snap.season_ids(1))]
