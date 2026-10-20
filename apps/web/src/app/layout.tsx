@@ -5,6 +5,14 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { NAV_ITEMS } from "@/lib/nav";
 import type { Meta } from "@/lib/types";
+// Fontes carregadas aqui (e não no CSS) para o Next resolver os pacotes, inclusive no Windows.
+import "@fontsource/barlow/400.css";
+import "@fontsource/barlow/500.css";
+import "@fontsource/barlow/600.css";
+import "@fontsource/barlow/700.css";
+import "@fontsource/barlow-condensed/500.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
 import "./globals.css";
 
 // Os dados mudam durante o dia; as consultas à API têm cache curto próprio.
