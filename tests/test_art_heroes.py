@@ -52,7 +52,8 @@ def test_comparison_and_medals_keep_real_data():
     assert "Temporada 3" not in FAME
     assert 'top = sorted(by_player.values()' in FAME
     assert "Destaque da liga" in FAME
-    assert "total_kills = sum(int(row" in FAME
+    assert "edb-fame-overview" not in FAME
+    assert "Recordes ativos" not in FAME
 
 
 def test_comparison_selectors_follow_approved_copy():
