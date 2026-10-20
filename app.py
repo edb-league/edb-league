@@ -253,6 +253,21 @@ def secret(k):
     except (FileNotFoundError,KeyError):
         return os.getenv(k,'')
 
+def steam_api_key():
+    """Chave da Steam nos Secrets; também acha a linha posta por engano dentro de uma seção [..]."""
+    value=secret('STEAM_API_KEY')
+    if value.strip():
+        return value
+    try:
+        for section in st.secrets.values():
+            if hasattr(section,'get'):
+                nested=section.get('STEAM_API_KEY','')
+                if nested:
+                    return str(nested)
+    except Exception:
+        pass
+    return ''
+
 @st.cache_data(ttl=21600, max_entries=64, show_spinner=False)
 def cached_steam_profile(steamid64: str, _api_key: str):
     """Foto e horas de CS por 6 h; falhas levantam exceção e não ficam em cache."""
@@ -768,7 +783,7 @@ elif page=='Jogadores':
         )
         who=by_id[profile_id]
         career_records=get_career_records()
-        steam=steam_view(who.get('steamid'),secret('STEAM_API_KEY'),cached_steam_profile)
+        steam=steam_view(who.get('steamid'),steam_api_key(),cached_steam_profile)
         st.markdown(
             player_banner(player_label(who['nickname']),steam,
                           player_summary(profile_id,career_records)),

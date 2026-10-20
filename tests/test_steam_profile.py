@@ -170,8 +170,8 @@ def test_menu_lists_jogadores_right_below_partidas():
 def test_page_wiring_uses_secret_cache_and_simple_layout():
     page = APP.split("elif page=='Jogadores':", 1)[1].split("elif page=='Hall da Fama':", 1)[0]
     assert page.index("st.selectbox(") < page.index("player_banner(")
-    assert "secret('STEAM_API_KEY')" in page and "cached_steam_profile" in page
-    assert "STEAM_API_KEY" not in APP.replace("secret('STEAM_API_KEY')", "")
+    assert "steam_api_key()" in page and "cached_steam_profile" in page
+    assert APP.count("STEAM_API_KEY") == 2  # só os nomes dos segredos, nunca o valor
     assert "def cached_steam_profile(steamid64: str, _api_key: str):" in APP
     assert "@st.cache_data(ttl=21600, max_entries=64, show_spinner=False)\ndef cached_steam_profile" in APP
     assert "render_player_profile" not in APP
@@ -223,3 +223,35 @@ def test_missing_profile_is_reported_and_key_is_cleaned():
     steam_view("76561198000000001", "  'abc123'", spy)
     assert seen == ["abc123", "abc123"]
     assert steam_view("76561198000000001", "  ", spy)["state"] == "no_key"
+
+
+def _load_steam_api_key(secrets_top, secrets_tree):
+    import ast
+    tree = ast.parse(APP)
+    func = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "steam_api_key")
+    fake_st = type("St", (), {"secrets": secrets_tree})()
+    namespace = {"st": fake_st, "secret": lambda name: secrets_top.get(name, "")}
+    exec(compile(ast.Module([func], []), "app.py", "exec"), namespace)
+    return namespace["steam_api_key"]
+
+
+def test_key_is_found_at_top_level_or_inside_a_toml_section():
+    top = _load_steam_api_key({"STEAM_API_KEY": "abc"}, {})
+    assert top() == "abc"
+    nested = _load_steam_api_key({}, {"supabase": {"URL": "x"}, "outra": {"STEAM_API_KEY": "xyz"}})
+    assert nested() == "xyz"
+    assert _load_steam_api_key({}, {"supabase": {"URL": "x"}, "TOKEN": "t"})() == ""
+    assert _load_steam_api_key({}, {})() == ""
+
+    class Broken:
+        def values(self):
+            raise FileNotFoundError("sem secrets")
+
+    assert _load_steam_api_key({}, Broken())() == ""
+
+
+def test_no_steam_key_is_ever_committed_to_the_project():
+    import re
+    for name in ("app.py", "steam_profile.py", "player_page.py", "tests/test_steam_profile.py"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert not re.search(r"\b[0-9A-Fa-f]{32}\b", text), name
