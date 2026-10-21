@@ -292,6 +292,15 @@ def test_grava_e_desfaz_segundas_contas():
     assert ("DELETE", "player_aliases", {"alias": "eq.76561199000000001"}, None) in store.calls
 
 
+def test_detecta_duas_contas_do_mesmo_jogador_no_mesmo_mapa():
+    s = dp.group_series(bo3_runs())[0]
+    ids = {str(i): f"p{i}" for i in range(1, 11)}
+    assert dp.duplicate_players(s, ids) == []
+    ids["10"] = "p1"   # a segunda conta (SteamID 10) foi ligada ao jogador p1, que também joga com a conta 1
+    problems = dp.duplicate_players(s, ids)
+    assert len(problems) == 3 and all("duas contas" in x and "SteamID 10" in x for x in problems)
+
+
 def test_temporada():
     seasons = [{"number": 1, "starts_on": "2026-10-19", "ends_on": "2026-11-18", "homologated_at": None},
                {"number": 2, "starts_on": "2026-11-19", "ends_on": "2026-12-18", "homologated_at": None},

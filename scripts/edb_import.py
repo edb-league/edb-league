@@ -254,6 +254,13 @@ def run_once(args, store) -> int:
             print("  Série não gravada (identidades pendentes).")
             continue
         ids, bind, new_players, extra = resolved
+        duplicated = dp.duplicate_players(series, ids)
+        if duplicated:
+            for line in duplicated:
+                print(f"  NÃO GRAVADO: {line}")
+            print("  Uma segunda conta não pode jogar junto com a conta principal. Confira os vínculos em "
+                  "player_aliases e os SteamIDs dos jogadores.")
+            continue
         known_matches, known_stats = store.matches(), store.stats()
         already = dp.find_existing_series(series, ids, known_matches, known_stats)
         if already:
@@ -303,9 +310,11 @@ def run_once(args, store) -> int:
         except Exception as exc:  # noqa: BLE001
             for pid in created:
                 try:
+                    # o gatilho de estrelas cria uma linha por jogador novo; sem apagá-la o jogador não sai
+                    store._api("DELETE", "season_player_stars", params={"player_id": f"eq.{pid}"})
                     store._api("DELETE", "players", params={"id": f"eq.{pid}"})
-                except Exception:  # noqa: BLE001
-                    pass
+                except Exception as undo_exc:  # noqa: BLE001
+                    print(f"  AVISO: não consegui remover o jogador novo {new_players.get(pid, pid)}: {undo_exc}")
             dp.remove_steam_aliases(store, created_aliases)
             print(f"  FALHOU e foi desfeito: {exc}")
             if "exatamente cinco" in str(exc) or "mesmo elenco" in str(exc):

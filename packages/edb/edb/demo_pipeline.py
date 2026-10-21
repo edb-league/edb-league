@@ -535,6 +535,22 @@ def write_completion(store, plan: dict, old_notes: dict[str, str]) -> None:
 
 
 # --------------------------------------------------------------------------- gravação
+def duplicate_players(series: Series, ids: dict[str, str]) -> list[str]:
+    """Descreve jogadores que aparecem duas vezes na mesma demo (duas contas do mesmo jogador no mesmo mapa)."""
+    problems: list[str] = []
+    for run in series.demos:
+        by_player: dict[str, list[str]] = {}
+        for p in run.analysis["players"]:
+            steam = str(p["steamid"])
+            if steam in ids:
+                by_player.setdefault(ids[steam], []).append(f"{p.get('nick') or steam} (SteamID {steam})")
+        for pid, accounts in by_player.items():
+            if len(accounts) > 1:
+                problems.append(f"{run.file.path.name}: o mesmo jogador aparece com duas contas no mesmo mapa: "
+                                + " e ".join(accounts) + ".")
+    return problems
+
+
 def write_steam_aliases(store, extra: dict[str, str]) -> list[str]:
     """Grava em player_aliases as segundas contas ({steamid: player_id}). Devolve os aliases criados."""
     created: list[str] = []
