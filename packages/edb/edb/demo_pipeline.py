@@ -308,6 +308,11 @@ class Directory:
     def __init__(self, players: list[dict], aliases: list[dict] | None = None):
         self.players = {str(p["id"]): p for p in players}
         self.by_steam = {str(p["steamid"]): str(p["id"]) for p in players if p.get("steamid")}
+        # Segunda conta: um alias que é um SteamID (só dígitos) liga essa conta ao jogador.
+        for a in aliases or []:
+            key = str(a["alias"]).strip()
+            if key.isdigit() and len(key) >= 15:
+                self.by_steam.setdefault(key, str(a["player_id"]))
         self.by_name: dict[str, set[str]] = {}
         for p in players:
             self.by_name.setdefault(str(p["nickname"]).casefold(), set()).add(str(p["id"]))
@@ -512,6 +517,28 @@ def write_completion(store, plan: dict, old_notes: dict[str, str]) -> None:
 
 
 # --------------------------------------------------------------------------- gravação
+def write_steam_aliases(store, extra: dict[str, str]) -> list[str]:
+    """Grava em player_aliases as segundas contas ({steamid: player_id}). Devolve os aliases criados."""
+    created: list[str] = []
+    try:
+        for steamid, player_id in extra.items():
+            store._api("POST", "player_aliases", params={"on_conflict": "alias"},
+                       payload={"alias": str(steamid), "player_id": str(player_id)})
+            created.append(str(steamid))
+    except Exception:
+        remove_steam_aliases(store, created)
+        raise
+    return created
+
+
+def remove_steam_aliases(store, aliases: list[str]) -> None:
+    for alias in aliases:
+        try:
+            store._api("DELETE", "player_aliases", params={"alias": f"eq.{alias}"})
+        except Exception:  # noqa: BLE001 - desfazer é melhor esforço
+            pass
+
+
 def find_imported(store, sha: str) -> str | None:
     rows = store._api("GET", "matches", params={"notes": f"ilike.*sha256:{sha}*", "select": "id"})
     return rows[0]["id"] if rows else None

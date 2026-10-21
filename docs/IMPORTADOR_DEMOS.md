@@ -47,7 +47,10 @@ A primeira leitura de cada demo leva alguns minutos; o resultado fica em `.edb_c
 4. Agrupa md3 por data e elenco. Série incompleta ou com erro não é gravada.
 5. Identifica jogadores pelo SteamID. Sem SteamID cadastrado:
    - nick igual ao de um jogador sem SteamID (ex.: VnD): sugere o vínculo (com `--sim`, vincula sozinho);
-   - qualquer outro caso: pergunta qual jogador é (ou cria um novo). Com `--sim`, a série fica pendente.
+   - qualquer outro caso: pergunta qual jogador é: número da lista (jogadores sem SteamID), `n` para criar um novo
+     ou `o` para **outra conta de um jogador já cadastrado** (informa o nick dele). A segunda conta fica em
+     `player_aliases` com o SteamID como alias e é reconhecida automaticamente nas próximas demos.
+     Com `--sim`, a série fica pendente.
 6. Grava `matches`, `player_stats`, `player_match_detail`, `player_scope_stats` (só utilitários) e chama
    `register_edb_confronto`, que cria a série, os times e o vencedor. Se algo falhar, desfaz o que gravou.
 7. IDs no padrão `edb-t1-bo3-02-mirage`; a temporada vem da data (precisa estar aberta).

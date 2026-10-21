@@ -218,6 +218,40 @@ def test_directory_steamid_automatico_e_nick_so_como_sugestao():
     assert d.suggest("Nick3") is None  # já tem outro SteamID: nunca sugerir
 
 
+def test_directory_segunda_conta_por_alias_de_steamid():
+    d = dp.Directory(players_db(), [{"alias": "76561199012257243", "player_id": "p3"}])
+    assert d.resolve("76561199012257243") == "p3" and d.resolve("3") == "p3"
+    # alias comum (nick) não vira SteamID
+    d2 = dp.Directory(players_db(), [{"alias": "vnd2", "player_id": "p10"}])
+    assert d2.resolve("vnd2") is None
+    # o SteamID principal vence se houver conflito
+    d3 = dp.Directory(players_db(), [{"alias": "5", "player_id": "p9"}])
+    assert d3.resolve("5") == "p5"
+
+
+class AliasStore:
+    def __init__(self, fail_on=None):
+        self.calls, self.fail_on = [], fail_on
+
+    def _api(self, method, table, *, params=None, payload=None):
+        self.calls.append((method, table, params, payload))
+        if self.fail_on and payload and payload.get("alias") == self.fail_on:
+            raise RuntimeError("falhou")
+        return []
+
+
+def test_grava_e_desfaz_segundas_contas():
+    store = AliasStore()
+    done = dp.write_steam_aliases(store, {"76561199012257243": "p3"})
+    assert done == ["76561199012257243"]
+    assert store.calls[0][:2] == ("POST", "player_aliases")
+    assert store.calls[0][3] == {"alias": "76561199012257243", "player_id": "p3"}
+    store = AliasStore(fail_on="76561199000000002")
+    with pytest.raises(RuntimeError):
+        dp.write_steam_aliases(store, {"76561199000000001": "p1", "76561199000000002": "p2"})
+    assert ("DELETE", "player_aliases", {"alias": "eq.76561199000000001"}, None) in store.calls
+
+
 def test_temporada():
     seasons = [{"number": 1, "starts_on": "2026-10-19", "ends_on": "2026-11-18", "homologated_at": None},
                {"number": 2, "starts_on": "2026-11-19", "ends_on": "2026-12-18", "homologated_at": None},

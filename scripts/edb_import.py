@@ -97,10 +97,14 @@ def print_series(series: dp.Series, directory: dp.Directory | None, a_sets: list
 
 
 def resolve_identities(series: dp.Series, directory: dp.Directory, interactive: bool):
-    """Devolve (ids, bind, novos) ou None se alguma identidade ficou sem resolver."""
+    """Devolve (ids, bind, novos, extra) ou None se alguma identidade ficou sem resolver.
+
+    ``extra``: {steamid: player_id} para segundas contas de jogadores já cadastrados.
+    """
     ids: dict[str, str] = {}
     bind: dict[str, str] = {}
     new_players: dict[str, str] = {}   # player_id -> nick
+    extra: dict[str, str] = {}         # steamid -> player_id (segunda conta)
     nicks = dp.demo_nicks(series)
     unresolved = []
     for steam, nick in nicks.items():
@@ -130,8 +134,20 @@ def resolve_identities(series: dp.Series, directory: dp.Directory, interactive: 
                 continue
         for i, p in enumerate(candidates, 1):
             print(f"    {i}) {p['nickname']}")
-        choice = ask("  Número do jogador, 'n' para criar novo, Enter para pular esta série: ")
-        if choice.lower() == "n":
+        choice = ask("  Número do jogador, 'n' para criar novo, 'o' para outra conta de jogador já cadastrado, "
+                     "Enter para pular esta série: ")
+        if choice.lower() == "o":
+            taken_ids = set(ids.values())
+            registered = [p for p in directory.players.values() if str(p["id"]) not in taken_ids]
+            wanted = ask("  Nick do jogador já cadastrado: ").strip().casefold()
+            found = [p for p in registered if str(p["nickname"]).casefold() == wanted]
+            if len(found) != 1:
+                print("  Jogador não encontrado (ou já está na série com outra conta).")
+                return None
+            pid = str(found[0]["id"])
+            ids[steam] = pid
+            extra[steam] = pid
+        elif choice.lower() == "n":
             nickname = ask(f"  Nick do novo jogador [{nick}]: ", nick)
             pid = str(uuid4())
             new_players[pid] = nickname
@@ -141,7 +157,7 @@ def resolve_identities(series: dp.Series, directory: dp.Directory, interactive: 
             ids[steam], bind[pid] = pid, steam
         else:
             return None
-    return ids, bind, new_players
+    return ids, bind, new_players, extra
 
 
 # --------------------------------------------------------------------------- execução
@@ -234,7 +250,7 @@ def run_once(args, store) -> int:
         if resolved is None:
             print("  Série não gravada (identidades pendentes).")
             continue
-        ids, bind, new_players = resolved
+        ids, bind, new_players, extra = resolved
         known_matches, known_stats = store.matches(), store.stats()
         already = dp.find_existing_series(series, ids, known_matches, known_stats)
         if already:
@@ -252,11 +268,16 @@ def run_once(args, store) -> int:
             if not args.sim and not ask("  Gravar só os detalhes? [s/N] ").lower().startswith("s"):
                 print("  Pulada.")
                 continue
+            aliases_done: list[str] = []
             try:
+                aliases_done = dp.write_steam_aliases(store, extra)
                 dp.write_completion(store, completion, {str(m["id"]): str(m.get("notes") or "") for m in known_matches})
             except Exception as exc:  # noqa: BLE001
+                dp.remove_steam_aliases(store, aliases_done)
                 print(f"  FALHOU e foi desfeito: {exc}")
                 continue
+            for steam, pid in extra.items():
+                directory.by_steam[steam] = pid
             written += 1
             print(f"  Detalhes gravados: {', '.join(completion['match_ids'])}")
             continue
@@ -268,7 +289,9 @@ def run_once(args, store) -> int:
         match_ids = dp.next_match_ids(series, season, existing, taken, reserved.get(key, 0))
         plan = dp.build_plan(series, season, match_ids, ids, args.time_a, args.time_b, args.trocar_times, anchors)
         created: list[str] = []
+        created_aliases: list[str] = []
         try:
+            created_aliases = dp.write_steam_aliases(store, extra)
             for pid, nickname in new_players.items():
                 store.save_player(nickname, stars=3, steamid=bind[pid], player_id=pid)
                 created.append(pid)
@@ -280,11 +303,14 @@ def run_once(args, store) -> int:
                     store._api("DELETE", "players", params={"id": f"eq.{pid}"})
                 except Exception:  # noqa: BLE001
                     pass
+            dp.remove_steam_aliases(store, created_aliases)
             print(f"  FALHOU e foi desfeito: {exc}")
             if "exatamente cinco" in str(exc) or "mesmo elenco" in str(exc):
                 print("  Esta série tem jogadores que entraram ou saíram. O banco ainda não aceita isso: "
                       "falta aplicar a migração db/migrations/20261021_confronto_com_substituicoes.sql.")
             continue
+        for steam, pid in extra.items():
+            directory.by_steam[steam] = pid
         reserved[key] = reserved.get(key, 0) + 1
         taken.update(match_ids)
         written += 1
