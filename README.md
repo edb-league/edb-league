@@ -23,12 +23,12 @@ py -m venv .venv
 python -m pip install -r requirements.txt
 Copy-Item .streamlit\secrets.example.toml .streamlit\secrets.toml
 # Edite .streamlit\secrets.toml e substitua a senha de exemplo.
-streamlit run app.py
+streamlit run apps/streamlit/app.py
 ```
 
 Caso o PowerShell não permita ativar ambientes virtuais, use diretamente
 `.venv\Scripts\python.exe -m pip install -r requirements.txt` e
-`.venv\Scripts\python.exe -m streamlit run app.py`.
+`.venv\Scripts\python.exe -m streamlit run apps/streamlit/app.py`.
 
 ### macOS / Linux
 
@@ -39,7 +39,7 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .streamlit/secrets.example.toml .streamlit/secrets.toml
 # Edite .streamlit/secrets.toml e substitua a senha de exemplo.
-streamlit run app.py
+streamlit run apps/streamlit/app.py
 ```
 
 No navegador, abra o endereço local mostrado pelo Streamlit,
@@ -65,7 +65,7 @@ jogadores e outros eventos que exigem ajustes na leitura.
 Para inspecionar a demo sem abrir o painel:
 
 ```bash
-python inspect_demo.py "sua_partida.dem.gz"
+python scripts/inspect_demo.py "sua_partida.dem.gz"
 ```
 
 Se a leitura real apresentar valores diferentes do SCOPE.GG, compare os eventos
@@ -82,7 +82,7 @@ testes locais, mas o disco da hospedagem gratuita do Streamlit não garante
 persistência dos dados inseridos ao longo do tempo.
 
 1. Crie um projeto no [Supabase](https://supabase.com).
-2. Em **SQL Editor**, execute o conteúdo de `supabase_schema.sql`. O SQL ativa
+2. Em **SQL Editor**, execute o conteúdo de `db/supabase_schema.sql`. O SQL ativa
    Row Level Security e não cria políticas de acesso anônimo.
 3. Localize a URL do projeto e a **chave `service_role`** (somente servidor).
    Não use a chave `anon`, e **nunca** publique a chave `service_role`.
@@ -90,7 +90,7 @@ persistência dos dados inseridos ao longo do tempo.
    `xinxas-league`, e envie os arquivos desta pasta, **sem**
    `.streamlit/secrets.toml`, demos, senhas ou banco `.db`.
 5. Acesse [Streamlit Community Cloud](https://share.streamlit.io), escolha
-   **Create app**, selecione o repositório e o arquivo `app.py`.
+   **Create app**, selecione o repositório e o arquivo `apps/streamlit/app.py`.
 6. Na área **Advanced settings → Secrets**, defina:
 
 ```toml
@@ -109,7 +109,7 @@ o CSV resultante pode ser enviado pelo painel, ou optar por hospedagem mais fort
 
 ## D) Temporadas e regras oficiais
 
-O regulamento v1.0 esta em [REGULAMENTO.md](REGULAMENTO.md).
+O regulamento v1.0 esta em [docs/REGULAMENTO.md](docs/REGULAMENTO.md).
 
 - **Temporada 0 (experimental):** encerrada em 18/10/2026; as duas BO3 reais permanecem no banco e seus resultados nao sao recalculados.
 - **Temporada 1:** 19/10/2026 a 01/11/2026; ciclos sucessivos de 14 dias, sem limite de BO3.
@@ -138,18 +138,27 @@ O regulamento v1.0 esta em [REGULAMENTO.md](REGULAMENTO.md).
 - Modo de administrador por senha compartilhada, não contas individuais.
   Defina senha forte e não a compartilhe com o grupo.
 
-## F) Arquivos principais
+## F) Estrutura do repositório
 
-- `app.py`: interface Streamlit.
-- `demo_importer.py`: decompressão e leitura dos eventos.
-- `core.py`: calculo legado, missões, XP e evolução.
-- `season_rankings.py`: 6 melhores mapas por indicador para temporadas quinzenais.
-- `season_system.py`: calendario e cartões das BO3.
-- `REGULAMENTO.md`: texto consolidado das regras em vigor.
-- `storage.py`: SQLite local / Supabase REST.
-- `supabase_schema.sql`: criação do banco online.
-- `sample_scoreboard.csv`: transcrição da partida mostrada por print.
-- `inspect_demo.py`: teste da demo pelo terminal.
-- `tests/`: testes automatizados.
+```
+apps/
+  streamlit/    app Streamlit (app.py, telas, estilos, assets/ e tests/)
+  api/          API FastAPI (edb_api/), Dockerfile e testes
+  web/          novo frontend Next.js e testes de acessibilidade (Playwright)
+packages/
+  edb/          regras e dados compartilhados: core, season_rankings, season_system,
+                storage, demo_importer, team_draw etc.
+db/             supabase_schema.sql e migrations/
+docs/           ARQUITETURA, PUBLICAR e REGULAMENTO
+scripts/        inspect_demo.py (testar uma demo pelo terminal)
+.streamlit/     configuração e secrets do Streamlit (a hospedagem lê daqui)
+app.py          entrada de compatibilidade que chama apps/streamlit/app.py
+requirements.txt  dependências do app Streamlit (a hospedagem lê daqui)
+pytest.ini      configuração dos testes de todo o repositório
+```
 
-Para verificar as regras: `python -m pytest -q` (se `pytest` estiver instalado).
+Regras e cálculos ficam em `packages/edb`; as telas do Streamlit e a API só os importam.
+Visão geral do novo frontend e da API: [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
+
+Para verificar as regras: `python -m pytest -q` na raiz (os testes da API pedem
+`pip install -r apps/api/requirements-dev.txt`).

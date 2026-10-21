@@ -1,0 +1,13 @@
+web
+**/__pycache__
+**/.pytest_cache
+.git
+*.db
+.env
+.streamlit
+**/node_modules
+apps/web
+apps/streamlit
+docs
+db
+scripts

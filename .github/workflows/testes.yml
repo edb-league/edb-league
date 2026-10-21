@@ -16,8 +16,10 @@ jobs:
       - name: Instalar dependências dos testes
         run: python -m pip install "pandas>=2.1,<3" "requests>=2.31,<3" "pytest>=8,<10"
       - name: Verificar sintaxe do aplicativo
-        run: python -m compileall -q app.py core.py storage.py demo_importer.py fixture_cards.py ranking_cards.py league_legacy.py legacy_views.py league_social.py social_views.py brand_shell.py
+        run: python -m compileall -q apps/streamlit packages/edb/edb
       - name: Conferir componentes importados pelo aplicativo
-        run: python -c "from fixture_cards import fixture_title, match_stat_coverage, basic_team_tables, CARD_CSS; from ranking_cards import ranking_cards, RANKING_CSS; from league_legacy import match_records, player_summary, hall_of_fame; from legacy_views import render_profile, render_hall; from league_social import compare_players, achievements; from social_views import render_compare, render_medal_catalogue; from brand_shell import BRAND_CSS, sidebar_header, hero_banner; assert CARD_CSS and RANKING_CSS and BRAND_CSS"
+        env:
+          PYTHONPATH: packages/edb:apps/streamlit
+        run: python -c "from edb.fixture_cards import fixture_title, match_stat_coverage, basic_team_tables, CARD_CSS; from ranking_cards import ranking_cards, RANKING_CSS; from edb.league_legacy import match_records, player_summary, hall_of_fame; from legacy_views import render_profile, render_hall; from edb.league_social import compare_players, achievements; from social_views import render_compare, render_medal_catalogue; from brand_shell import BRAND_CSS, sidebar_header, hero_banner; assert CARD_CSS and RANKING_CSS and BRAND_CSS"
       - name: Executar testes unitários
-        run: python -m pytest -q
+        run: python -m pytest -q packages/edb/tests apps/streamlit/tests
