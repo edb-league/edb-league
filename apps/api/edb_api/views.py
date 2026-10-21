@@ -9,7 +9,7 @@ from edb.fixture_cards import basic_team_tables, fixture_overview, match_stat_co
 from edb.hltv_stats import empty_profile
 from edb.league_legacy import hall_of_fame, player_summary
 from edb.league_social import MEDALS, achievements, compare_players
-from edb.match_cards import ordered_matches
+from edb.match_cards import match_sort_key, ordered_matches
 from edb.season_system import (
     _confront_first_date, _confront_result, _confront_sides, _parse_date, series_format, series_maps,
 )
@@ -521,6 +521,7 @@ def build_matches(snap: Snap, season: int | None) -> dict:
     eligible = sorted((s for s in snap.bo3 if int(s["season_number"]) == number),
                       key=lambda x: int(x["sequence_number"]))
     grouped = {"bo1": [], "bo3": []}
+    when: dict[str, tuple] = {}
     for s in eligible:
         sid = str(s["id"])
         maps = sorted(linked.get(sid, []), key=lambda row: int(row["map_number"]))
@@ -540,6 +541,14 @@ def build_matches(snap: Snap, season: int | None) -> dict:
         winner = None
         if complete and s.get("winner_side") in ("a", "b"):
             winner = "left" if s["winner_side"] == left_side else "right"
+        # A data do confronto é a do primeiro mapa (a mesma do cartão); sem mapa, a data do cadastro.
+        first = games.get(str(maps[0].get("match_id"))) if maps else None
+        if first is not None:
+            stamp = match_sort_key(first)[0]
+        else:
+            stamp = pd.to_datetime(s.get("played_on"), errors="coerce")
+            stamp = pd.Timestamp("1900-01-01") if pd.isna(stamp) else stamp
+        when[sid] = (stamp, int(s["sequence_number"]))
         grouped[fmt].append({
             "id": sid, "format": fmt, "date_label": _confront_first_date(s, maps, games),
             "status": status, "complete": bool(complete), "left": left, "right": right,
@@ -547,6 +556,9 @@ def build_matches(snap: Snap, season: int | None) -> dict:
             "winner": winner, "summary": summary,
             "maps": [map_card(m) for m in series_maps(sid, snap.bo3_maps, snap.matches)],
         })
+    # Mais recente primeiro; no mesmo horário, o confronto registrado depois vem antes.
+    for items in grouped.values():
+        items.sort(key=lambda card: when[card["id"]], reverse=True)
     assigned = {str(m["match_id"]) for m in snap.bo3_maps}
     legacy = [m for m in snap.matches if str(m["id"]) not in assigned]
     return {

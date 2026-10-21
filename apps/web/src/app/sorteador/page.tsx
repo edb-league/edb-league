@@ -11,7 +11,8 @@ export default async function DrawPage() {
   const roster: RosterPlayer[] = players
     .filter((p) => p.is_active)
     .map((p) => ({ id: p.id, name: p.name, nickname: p.nickname, real_name: p.real_name, level: p.level }))
-    .sort((a, b) => a.nickname.localeCompare(b.nickname, "pt-BR"));
+    // Do maior nível para o menor; no mesmo nível, ordem alfabética.
+    .sort((a, b) => b.level - a.level || a.nickname.localeCompare(b.nickname, "pt-BR"));
 
   return (
     <>
