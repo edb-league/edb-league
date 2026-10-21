@@ -69,8 +69,13 @@ A prévia sempre mostra em que se baseou a escolha.
 Jogadores podem entrar e sair entre os mapas. As demos md3 do mesmo dia com ordens 1, 2 e 3 formam uma série mesmo
 com elenco diferente; a prévia mostra quem entrou e quem saiu em cada mapa e avisa se menos de 6 jogadores se repetem
 de um mapa para o outro. Ninguém pode jogar pelos dois times na mesma série.
-Para gravar série com substituição, o banco precisa da migração `db/migrations/20261021_confronto_com_substituicoes.sql`
-(testada em `db/tests/`). Sem ela, a série é recusada pelo banco e desfeita, com aviso na tela.
+Isso depende da migração `db/migrations/20261021_confronto_com_substituicoes.sql` (testada em `db/tests/`),
+aplicada no Supabase em 20/10/2026. Sem ela, a série é recusada pelo banco e desfeita, com aviso na tela.
+
+## Temporada 1
+
+Começa em 15/10/2026 (primeira demo da liga) e termina em 18/11/2026
+(`db/migrations/20261021_temporada1_desde_15_10.sql`). Demos fora de qualquer temporada aberta não são gravadas.
 
 ## Partidas que já estão no banco
 

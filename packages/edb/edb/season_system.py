@@ -6,7 +6,7 @@ from html import escape
 from urllib.parse import quote
 
 DEFAULT_SEASONS = [
-    {"number":1,"label":"Temporada 1","starts_on":"2026-10-19","ends_on":"2026-11-18","bo3_target":None},
+    {"number":1,"label":"Temporada 1","starts_on":"2026-10-15","ends_on":"2026-11-18","bo3_target":None},
 ]
 
 SEASON_CSS = """
