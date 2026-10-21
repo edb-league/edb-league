@@ -69,7 +69,7 @@ def test_three_legacy_draft_slots_no_fake_matches_and_links_are_scoped():
 
 def test_season_selector_persists_rank_mode_and_has_no_extra_period_filter():
     result=season_bar(DEFAULT_SEASONS,1,"rankings",0,rank="resenha",on_date=date(2026,10,19))
-    assert "Temporada 1" in result and "Dia 1/31" in result
+    assert "Temporada 1" in result and "Dia 5/35" in result  # T1 começa em 15/10/2026
     assert "30 dias restantes" in result
     assert 'href="?page=rankings&amp;season=0&amp;ranking=resenha"' not in result
     assert 'href="?page=rankings&amp;season=1&amp;ranking=resenha"' in result
