@@ -106,11 +106,11 @@ def test_md3_incompleta_e_md1_separadas():
 
 def test_times_seguem_o_primeiro_mapa():
     s = dp.group_series(bo3_runs())[0]
-    team_a, scores, _ = dp.assign_teams(s)
-    assert team_a == set(B)  # B começou de T no primeiro mapa
+    a_sets, scores, _ = dp.assign_teams(s)
+    assert a_sets == [set(B), set(B), set(B)]  # B começou de T no primeiro mapa
     assert scores == [(7, 13), (13, 7), (8, 13)]
-    team_a, scores, _ = dp.assign_teams(s, swap=True)
-    assert team_a == set(A) and scores == [(13, 7), (7, 13), (13, 8)]
+    a_sets, scores, _ = dp.assign_teams(s, swap=True)
+    assert a_sets == [set(A)] * 3 and scores == [(13, 7), (7, 13), (13, 8)]
 
 
 def test_ancoras_definem_pt_e_pl():
@@ -118,23 +118,25 @@ def test_ancoras_definem_pt_e_pl():
     # "n1" é o nick de A na demo; "n6" é o de B
     anchors = {"PT": dp.anchor_steamids(["n1"], s), "PL": dp.anchor_steamids(["n6"], s)}
     assert anchors == {"PT": {"1"}, "PL": {"6"}}
-    team_a, scores, basis = dp.assign_teams(s, anchors=anchors)
-    assert team_a == set(A) and scores == [(13, 7), (7, 13), (13, 8)] and "âncora de PT" in basis
+    a_sets, scores, basis = dp.assign_teams(s, anchors=anchors)
+    assert a_sets == [set(A)] * 3 and scores == [(13, 7), (7, 13), (13, 8)] and "âncora de PT" in basis
     # só a âncora de PL na série: PT é o oposto
-    team_a, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": {"6"}})
-    assert team_a == set(A) and "oposto" in basis
+    a_sets, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": {"6"}})
+    assert a_sets == [set(A)] * 3 and "oposto" in basis
     # --trocar-times inverte depois das âncoras
-    team_a, _, _ = dp.assign_teams(s, swap=True, anchors=anchors)
-    assert team_a == set(B)
+    a_sets, _, _ = dp.assign_teams(s, swap=True, anchors=anchors)
+    assert a_sets == [set(B)] * 3
     # nenhuma âncora presente: volta à regra antiga
-    team_a, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": set()})
-    assert team_a == set(B) and "nenhuma âncora" in basis
+    a_sets, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": set()})
+    assert a_sets == [set(B)] * 3 and "nenhuma âncora" in basis
 
 
-def test_ancoras_no_mesmo_time_dao_erro():
+def test_ancoras_no_mesmo_time_o_time_e_pt():
+    """Regra do João: se Pyetev (Neteb) e Scby jogam juntos, esse time é PT."""
     s = dp.group_series(bo3_runs())[0]
-    with pytest.raises(ValueError, match="mesmo time"):
-        dp.assign_teams(s, anchors={"PT": {"1"}, "PL": {"2"}})
+    a_sets, scores, basis = dp.assign_teams(s, anchors={"PT": {"1"}, "PL": {"2"}})
+    assert a_sets == [set(A)] * 3 and "juntas" in basis
+    assert scores == [(13, 7), (7, 13), (13, 8)]
 
 
 def test_ancora_por_nick_do_banco_e_por_steamid():
@@ -161,11 +163,46 @@ def test_partida_ja_cadastrada_nao_duplica():
     assert dp.find_existing_series(s, ids, matches, stats) == []
 
 
-def test_elenco_trocado_no_meio_da_serie_e_recusado():
+def test_substituicao_no_meio_da_serie_e_aceita():
+    """Alguém entra e alguém sai entre mapas: continua sendo uma série."""
     runs = bo3_runs()
     runs[1] = run("md3_mirage_20_10_2.dem", "mirage", A[:4] + ["99"], B, 7, 13)
     series = dp.group_series(runs)
-    assert all(not s.complete for s in series)
+    assert len(series) == 1 and series[0].complete
+    anchors = {"PT": {"1"}, "PL": {"6"}}
+    a_sets, scores, _ = dp.assign_teams(series[0], anchors=anchors)
+    assert a_sets[1] == set(A[:4]) | {"99"} and scores == [(13, 7), (7, 13), (13, 8)]
+    changes = dp.roster_changes(series[0], a_sets)
+    assert (1, "A", {"99"}, {"5"}) in changes and (2, "A", {"5"}, {"99"}) in changes
+
+
+def test_substituicao_sem_ancora_segue_o_time_do_mapa_anterior():
+    runs = bo3_runs()
+    runs[1] = run("md3_mirage_20_10_2.dem", "mirage", A[:4] + ["99"], B, 7, 13)
+    s = dp.group_series(runs)[0]
+    a_sets, _, basis = dp.assign_teams(s, anchors={"PT": set(), "PL": set()})
+    assert a_sets[0] == set(B) and a_sets[1] == set(B) and "continuidade" in basis
+
+
+def test_jogador_nos_dois_times_da_serie_e_erro():
+    runs = bo3_runs()
+    runs[1] = run("md3_mirage_20_10_2.dem", "mirage", A[:4] + ["6"], B[1:] + ["5"], 7, 13)
+    s = dp.group_series(runs)[0]
+    with pytest.raises(ValueError, match="nos dois times"):
+        dp.assign_teams(s, anchors={"PT": {"1"}, "PL": {"7"}})
+
+
+def test_elenco_muito_diferente_gera_aviso_e_duas_md3_no_dia_separam_por_elenco():
+    runs = bo3_runs()
+    runs[1] = run("md3_mirage_20_10_2.dem", "mirage", ["31", "32", "33", "34", "35"], ["36", "37", "38", "39", "40"], 7, 13)
+    s = dp.group_series(runs)[0]
+    assert any("repetem" in n for n in s.notes)
+    # seis arquivos md3 no mesmo dia: são duas séries, separadas pelo elenco
+    other = [run("md3_nuke_20_10_1.dem", "nuke", ["21", "22", "23", "24", "25"], ["26", "27", "28", "29", "30"], 13, 5),
+             run("md3_ancient_20_10_2.dem", "ancient", ["21", "22", "23", "24", "25"], ["26", "27", "28", "29", "30"], 13, 6),
+             run("md3_vertigo_20_10_3.dem", "vertigo", ["21", "22", "23", "24", "25"], ["26", "27", "28", "29", "30"], 6, 13)]
+    series = dp.group_series(bo3_runs() + other)
+    assert len(series) == 2 and all(x.complete for x in series)
 
 
 def players_db():
@@ -436,3 +473,18 @@ def test_fluxo_completa_detalhes_de_partida_ja_cadastrada(monkeypatch, capsys):
     store2.match_details = lambda: [{"match_id": "edb-t1-bo1-01-mirage"}]
     script.run_once(args, store2)
     assert writes(store2) == []
+
+
+def test_plano_com_substituicao_envia_a_lista_de_cada_mapa():
+    runs = bo3_runs()
+    runs[1] = run("md3_mirage_20_10_2.dem", "mirage", A[:4] + ["99"], B, 7, 13)
+    s = dp.group_series(runs)[0]
+    ids = {str(i): f"p{i}" for i in list(range(1, 11)) + [99]}
+    anchors = {"PT": {"1"}, "PL": {"6"}}
+    mids = dp.next_match_ids(s, {"number": 1}, [], set())
+    plan = dp.build_plan(s, {"number": 1}, mids, ids, "PT", "PL", anchors=anchors)
+    lists = [m["team_a_player_ids"] for m in plan["bundle"]["matches"]]
+    assert lists[0] == sorted(f"p{i}" for i in A)
+    assert lists[1] == sorted(["p1", "p2", "p3", "p4", "p99"])
+    assert plan["bundle"]["team_a_player_ids"] == lists[0] and len(plan["bundle"]["team_a_player_ids"]) == 5
+    assert len(plan["player_stats"]) == 30 and any(r["player_id"] == "p99" for r in plan["player_stats"])

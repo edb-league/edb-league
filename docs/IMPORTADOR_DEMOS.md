@@ -54,12 +54,23 @@ A primeira leitura de cada demo leva alguns minutos; o resultado fica em `.edb_c
 
 ## Times PT e PL
 
-PT é o time em que está o jogador-âncora de PT (Neteb); PL é o time da âncora de PL (The Most).
-A âncora casa com o nick que aparece na demo, com o nick ou alias do banco, ou com um SteamID.
-Padrões: PT = `Neteb`, `Петэв` (nick de Pyetev na demo); PL = `The Most`, `Scby` (mesmo SteamID).
-Para mudar: `--ancora-pt Fulano` e `--ancora-pl Ciclano`. Se nenhuma âncora jogar a série, vale a regra antiga
-(PT = quem começou de T no primeiro mapa) e a prévia avisa. Se as duas âncoras caírem no mesmo time, a série não é gravada.
-`--trocar-times` inverte depois das âncoras. A prévia sempre mostra em que se baseou a escolha.
+PT é o time em que joga o Neteb (nick de demo "Петэв", jogador Pyetev) e PL é o time em que joga o The Most (Scby).
+A regra vale mapa a mapa, nesta ordem:
+1. Pyetev e Scby no mesmo time: esse time é PT;
+2. só o Pyetev joga: o time dele é PT;
+3. só o Scby joga: o time oposto é PT;
+4. nenhum dos dois joga: vale o time com mais jogadores do PT do mapa anterior (no primeiro mapa, quem começou de T).
+
+Para mudar: `--ancora-pt Fulano` e `--ancora-pl Ciclano`. `--trocar-times` inverte depois das âncoras.
+A prévia sempre mostra em que se baseou a escolha.
+
+## Substituições na BO3
+
+Jogadores podem entrar e sair entre os mapas. As demos md3 do mesmo dia com ordens 1, 2 e 3 formam uma série mesmo
+com elenco diferente; a prévia mostra quem entrou e quem saiu em cada mapa e avisa se menos de 6 jogadores se repetem
+de um mapa para o outro. Ninguém pode jogar pelos dois times na mesma série.
+Para gravar série com substituição, o banco precisa da migração `db/migrations/20261021_confronto_com_substituicoes.sql`
+(testada em `db/tests/`). Sem ela, a série é recusada pelo banco e desfeita, com aviso na tela.
 
 ## Partidas que já estão no banco
 

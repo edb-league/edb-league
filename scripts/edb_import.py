@@ -62,21 +62,35 @@ def adr(p: dict) -> float:
     return p["damage"] / p["rounds"] if p["rounds"] else 0.0
 
 
-def print_series(series: dp.Series, directory: dp.Directory | None, team_a: set[str], names: tuple[str, str],
+def print_series(series: dp.Series, directory: dp.Directory | None, a_sets: list[set[str]], names: tuple[str, str],
                  scores: list[tuple[int, int]], basis: str = "") -> None:
     print(f"\n=== {series.label} ===")
     if basis:
         print(f"  {names[0]} = {basis}")
-    for run, (a, b) in zip(series.demos, scores):
+    for note in series.notes:
+        print(f"  AVISO: {note}")
+
+    def who_is(steam: str, nick: str = "") -> str:
+        pid = directory.resolve(steam) if directory else None
+        return directory.name(pid) if pid else f"{nick or steam} (SteamID {steam})"
+
+    nicks = dp.demo_nicks(series)
+    for index, label, came, left in dp.roster_changes(series, a_sets):
+        team = names[0] if label == "A" else names[1]
+        parts = []
+        if came:
+            parts.append("entrou " + ", ".join(who_is(x, nicks.get(x, "")) for x in sorted(came)))
+        if left:
+            parts.append("saiu " + ", ".join(who_is(x, nicks.get(x, "")) for x in sorted(left)))
+        print(f"  Substituição no mapa {index + 1} ({series.demos[index].file.map}), {team}: {'; '.join(parts)}")
+    for run, (a, b), team_a in zip(series.demos, scores, a_sets):
         print(f"\n  {run.file.path.name}  |  {run.analysis['map']}  |  {names[0]} {a} x {b} {names[1]}"
               f"  |  {run.analysis['rounds']} rounds")
         for label, in_a in ((names[0], True), (names[1], False)):
             print(f"    {label}")
             rows = [p for p in run.analysis["players"] if (str(p["steamid"]) in team_a) == in_a]
             for p in sorted(rows, key=lambda x: -x["kills"]):
-                pid = directory.resolve(p["steamid"]) if directory else None
-                who = directory.name(pid) if pid else f"{p['nick']} (SteamID {p['steamid']})"
-                print(f"      {who:<34} {p['kills']:>2}/{p['deaths']:>2}/{p['assists']:>2}  "
+                print(f"      {who_is(str(p['steamid']), str(p['nick'])):<34} {p['kills']:>2}/{p['deaths']:>2}/{p['assists']:>2}  "
                       f"ADR {adr(p):5.1f}  KAST {p['kast']:>3}%  HS {p['headshots']:>2}")
         for w in run.warnings:
             print(f"    AVISO: {w}")
@@ -195,17 +209,17 @@ def run_once(args, store) -> int:
         anchors = {"PT": dp.anchor_steamids(args.ancora_pt, series, directory),
                    "PL": dp.anchor_steamids(args.ancora_pl, series, directory)}
         try:
-            team_a, scores, basis = dp.assign_teams(series, args.trocar_times, anchors)
+            a_sets, scores, basis = dp.assign_teams(series, args.trocar_times, anchors)
         except ValueError as exc:
             problems.append(str(exc))
-            team_a, scores, basis = set(), [], ""
+            a_sets, scores, basis = [], [], ""
         if problems:
             print(f"\n=== {series.label} ===")
             for p in problems:
                 print(f"  NÃO IMPORTÁVEL: {p}")
             continue
         names = (args.time_a, args.time_b)
-        print_series(series, directory, team_a, names, scores, basis)
+        print_series(series, directory, a_sets, names, scores, basis)
         if not args.gravar:
             continue
         if store is None:
@@ -267,6 +281,9 @@ def run_once(args, store) -> int:
                 except Exception:  # noqa: BLE001
                     pass
             print(f"  FALHOU e foi desfeito: {exc}")
+            if "exatamente cinco" in str(exc) or "mesmo elenco" in str(exc):
+                print("  Esta série tem jogadores que entraram ou saíram. O banco ainda não aceita isso: "
+                      "falta aplicar a migração db/migrations/20261021_confronto_com_substituicoes.sql.")
             continue
         reserved[key] = reserved.get(key, 0) + 1
         taken.update(match_ids)
