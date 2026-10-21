@@ -226,6 +226,9 @@ def run_once(args, store) -> int:
                    "PL": dp.anchor_steamids(args.ancora_pl, series, directory)}
         try:
             a_sets, scores, basis = dp.assign_teams(series, args.trocar_times, anchors)
+            result_problem = dp.series_result_problem(series, scores)
+            if result_problem:
+                problems.append(result_problem)
         except ValueError as exc:
             problems.append(str(exc))
             a_sets, scores, basis = [], [], ""

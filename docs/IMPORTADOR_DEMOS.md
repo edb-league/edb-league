@@ -14,7 +14,7 @@ A demo nunca sobe (o limite do Storage gratuito é 50 MB por arquivo e a demo te
 | `dd_mm` | Data. O ano é o atual (data futura cai no ano anterior). |
 | ordem | md3: obrigatório, 1 a 3, na ordem em que os mapas foram jogados. md1: opcional (só para duas md1 no mesmo dia). |
 
-Também valem `.dem.gz` e `.gz` (o arquivo compactado com gzip, como `md1_inferno_19_10.gz`). Arquivo com outra extensão aparece como ignorado. Uma md3 só é gravada com os três mapas e o mesmo elenco de dez jogadores nos três.
+Também valem `.dem.gz` e `.gz` (o arquivo compactado com gzip, como `md1_inferno_19_10.gz`). Arquivo com outra extensão aparece como ignorado. Uma md3 acaba em 2x0 (dois mapas) ou 2x1 (três): só é gravada quando um time chegou a dois mapas. Se depois de dois mapas está 1x1, o importador espera o mapa 3.
 
 ## Instalação (uma vez)
 
@@ -44,7 +44,7 @@ A primeira leitura de cada demo leva alguns minutos; o resultado fica em `.edb_c
 1. Ignora arquivos ainda sendo copiados (mexidos há menos de 20 s) e nomes fora do padrão (avisa).
 2. Calcula o SHA-256 e pula demos já importadas (o hash fica em `matches.notes`).
 3. Processa a demo (round faca fora, regras validadas contra o SCOPE) e confere mapa, 10 jogadores e placar.
-4. Agrupa md3 por data e elenco. Série incompleta ou com erro não é gravada.
+4. Agrupa md3 por data (e elenco, se houver mais de uma série no dia). Série incompleta ou com erro não é gravada.
 5. Identifica jogadores pelo SteamID. Sem SteamID cadastrado:
    - nick igual ao de um jogador sem SteamID (ex.: VnD): sugere o vínculo (com `--sim`, vincula sozinho);
    - qualquer outro caso: pergunta qual jogador é: número da lista (jogadores sem SteamID), `n` para criar um novo
@@ -72,7 +72,8 @@ A prévia sempre mostra em que se baseou a escolha.
 Jogadores podem entrar e sair entre os mapas. As demos md3 do mesmo dia com ordens 1, 2 e 3 formam uma série mesmo
 com elenco diferente; a prévia mostra quem entrou e quem saiu em cada mapa e avisa se menos de 6 jogadores se repetem
 de um mapa para o outro. Ninguém pode jogar pelos dois times na mesma série.
-Isso depende da migração `db/migrations/20261021_confronto_com_substituicoes.sql` (testada em `db/tests/`),
+Para a série de dois mapas (2x0), o banco precisa também de `db/migrations/20261021_md3_dois_mapas.sql` (testada em `db/tests/md3_dois_mapas*.sql`).
+A substituição depende da migração `db/migrations/20261021_confronto_com_substituicoes.sql` (testada em `db/tests/`),
 aplicada no Supabase em 20/10/2026. Sem ela, a série é recusada pelo banco e desfeita, com aviso na tela.
 
 ## Temporada 1

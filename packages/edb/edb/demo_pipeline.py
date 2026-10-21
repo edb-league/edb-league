@@ -201,8 +201,10 @@ def group_series(runs: list[DemoRun]) -> list[Series]:
             orders = [r.file.order for r in items]
             if len(set(orders)) != len(orders):
                 s.problems.append("Há dois arquivos com a mesma ordem na série (mesmos jogadores e data).")
-            elif orders != [1, 2, 3]:
-                missing = [str(n) for n in (1, 2, 3) if n not in orders]
+            elif orders not in ([1, 2], [1, 2, 3]):
+                # A md3 acaba 2x0 ou 2x1: dois mapas bastam se o mesmo time venceu os dois (conferido depois
+                # de definir os times, em series_result_problem).
+                missing = [str(n) for n in (1, 2) if n not in orders]
                 s.problems.append(f"Série incompleta: faltam os mapas de ordem {', '.join(missing)}.")
             if len({r.file.map for r in items}) != len(items):
                 s.problems.append("A série repete o mesmo mapa.")
@@ -286,6 +288,22 @@ def assign_teams(series: Series, swap: bool = False, anchors: dict[str, set[str]
         raise ValueError("O mesmo jogador aparece nos dois times da série "
                          f"({', '.join(sorted(in_a & in_b))}); confira o nome dos arquivos e as âncoras.")
     return a_sets, scores, "; ".join(bases)
+
+
+def series_result_problem(series: Series, scores: list[tuple[int, int]]) -> str | None:
+    """Confere se os placares formam uma md3 completa: 2x0 (dois mapas) ou 2x1 (três mapas)."""
+    if series.fmt != "bo3":
+        return None
+    a_wins = b_wins = 0
+    for i, (a, b) in enumerate(scores, 1):
+        a_wins, b_wins = a_wins + (a > b), b_wins + (b > a)
+        if i < len(scores) and 2 in (a_wins, b_wins):
+            return (f"A série já estava decidida em 2x0 depois do mapa {i}; os mapas seguintes parecem ser de "
+                    "outra série (confira a ordem no nome dos arquivos).")
+    if 2 not in (a_wins, b_wins):
+        return (f"Série incompleta: depois de {len(scores)} mapa(s) está {a_wins}x{b_wins}; "
+                f"falta o mapa de ordem {len(scores) + 1}.")
+    return None
 
 
 def roster_changes(series: Series, a_sets: list[set[str]]) -> list[tuple[int, str, set[str], set[str]]]:

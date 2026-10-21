@@ -98,10 +98,50 @@ def test_agrupa_md3_por_data_e_elenco():
 
 
 def test_md3_incompleta_e_md1_separadas():
-    runs = bo3_runs()[:2] + [run("md1_nuke_20_10.dem", "nuke", A, B, 13, 5)]
+    # falta o mapa 1 (só as ordens 2 e 3): incompleta no agrupamento
+    runs = bo3_runs()[1:] + [run("md1_nuke_20_10.dem", "nuke", A, B, 13, 5)]
     series = {s.fmt: s for s in dp.group_series(runs)}
     assert not series["bo3"].complete and "faltam" in series["bo3"].problems[0]
     assert series["bo1"].complete
+
+
+def two_maps(score2=(13, 5)):
+    return [run("md3_anubis_20_10_1.dem", "anubis", A, B, 13, 7),
+            run("md3_mirage_20_10_2.dem", "mirage", A, B, *score2)]
+
+
+def test_md3_pode_acabar_2x0_com_dois_mapas():
+    s = dp.group_series(two_maps())[0]
+    assert s.complete
+    _, scores, _ = dp.assign_teams(s)
+    assert scores == [(13, 7), (13, 5)] and dp.series_result_problem(s, scores) is None
+
+
+def test_md3_com_dois_mapas_1x1_esta_incompleta():
+    s = dp.group_series(two_maps(score2=(5, 13)))[0]
+    _, scores, _ = dp.assign_teams(s)
+    problem = dp.series_result_problem(s, scores)
+    assert problem and "1x1" in problem and "ordem 3" in problem
+
+
+def test_md3_com_terceiro_mapa_depois_de_2x0_nao_fecha():
+    runs = two_maps() + [run("md3_inferno_20_10_3.dem", "inferno", A, B, 13, 9)]
+    s = dp.group_series(runs)[0]
+    _, scores, _ = dp.assign_teams(s)
+    assert "decidida em 2x0 depois do mapa 2" in dp.series_result_problem(s, scores)
+    # 2x1 normal continua valendo
+    ok = dp.group_series(bo3_runs())[0]
+    _, scores, _ = dp.assign_teams(ok)
+    assert dp.series_result_problem(ok, scores) is None
+
+
+def test_plano_de_md3_2x0_tem_dois_mapas():
+    s = dp.group_series(two_maps())[0]
+    ids = {str(i): f"p{i}" for i in range(1, 11)}
+    mids = dp.next_match_ids(s, {"number": 1}, [], set())
+    plan = dp.build_plan(s, {"number": 1}, mids, ids, "PT", "PL")
+    assert len(mids) == 2 and len(plan["matches"]) == 2 and len(plan["player_stats"]) == 20
+    assert plan["bundle"]["format"] == "bo3" and len(plan["bundle"]["matches"]) == 2
 
 
 def test_times_seguem_o_primeiro_mapa():
