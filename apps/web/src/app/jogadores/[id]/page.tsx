@@ -335,7 +335,12 @@ export default async function PlayerPage({
               <Comparison label="Kills por round" value={row.kpr} avg={mean(rowsAll.map((r) => r.kpr))} decimals={2} />
               <Comparison label="ADR" value={row.adr} avg={mean(rowsAll.map((r) => r.adr))} decimals={1} />
               <Comparison label="Aproveitamento" value={winRate(row)} avg={mean(rowsAll.map(winRate))} decimals={0} suffix="%" />
-              <Comparison label="Partidas" value={row.matches} avg={mean(rowsAll.map((r) => r.matches))} decimals={0} />
+              <Comparison
+                label="Mapas disputados"
+                value={row.maps_played ?? row.matches}
+                avg={mean(rowsAll.map((r) => r.maps_played ?? r.matches))}
+                decimals={0}
+              />
             </ul>
           ) : (
             <EmptyState>Sem partidas na {elite.season.label}. Os totais de todas as temporadas estão abaixo.</EmptyState>

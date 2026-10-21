@@ -38,7 +38,10 @@ export function RankingList({ ranking }: { ranking: Ranking }) {
     <ol className="grid gap-3 lg:grid-cols-2" aria-label={ranking.title}>
       {ranking.rows.map((row) => {
         const metrics: [string, string][] = [
-          ["Partidas", num(row.matches)],
+          // O ranking conta só os melhores mapas de cada jogador (Regulamento): "6 de 12".
+          ["Mapas", row.maps_played != null && row.maps_played !== row.matches
+            ? `${num(row.matches)} de ${num(row.maps_played)}`
+            : num(row.matches)],
           ["Kills", num(row.kills)],
           ["K/D", num(row.kd, 2)],
           ["KPR", num(row.kpr, 3)],

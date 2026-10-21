@@ -33,7 +33,8 @@ RANK_TITLES = {
 }
 RANK_NOTES = {
     "elite": [
-        "Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível.",
+        "Performance absoluta, com índice baseado em kills por round (KPR) e ADR quando há dano disponível. "
+        "Conta os 6 melhores mapas de cada jogador na temporada; \"Mapas\" mostra quantos contam do total jogado.",
         "Índice = 100 × (60% × KPR/0,75 + 40% × ADR/75); sem dano, usa KPR. Compare a mesma fonte para maior justiça.",
     ],
     "superacao": [
@@ -233,7 +234,7 @@ def build_home(snap: Snap, season: int | None) -> dict:
     if not elite_rows.empty:
         r = elite_rows.sort_values("Elite", ascending=False).iloc[0]
         highlights.append({"title": "MVP", "ranking": "elite", "player": person(r),
-                           "detail": f"Índice {_comma(float(r['Elite']))} • {int(r['Partidas'])} partidas"})
+                           "detail": f"Índice {_comma(float(r['Elite']))} • {int(r['Partidas'])} melhores mapas"})
     else:
         highlights.append({"title": "MVP", "ranking": "elite", "player": None,
                            "detail": "Exige pelo menos 6 mapas"})
