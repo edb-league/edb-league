@@ -351,6 +351,14 @@ class Directory:
     def name(self, player_id: str) -> str:
         return str(self.players[player_id]["nickname"])
 
+    def register(self, player_id: str, steamid: str, nickname: str | None = None) -> None:
+        """Anota um vínculo recém-gravado, para as próximas séries da mesma rodada não pedirem de novo."""
+        pid = str(player_id)
+        row = self.players.setdefault(pid, {"id": pid, "nickname": nickname or pid})
+        row["steamid"] = str(steamid)
+        self.by_steam[str(steamid)] = pid
+        self.by_name.setdefault(str(row["nickname"]).casefold(), set()).add(pid)
+
 
 def demo_nicks(series: Series) -> dict[str, str]:
     out: dict[str, str] = {}

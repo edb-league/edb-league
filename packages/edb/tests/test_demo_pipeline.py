@@ -583,3 +583,14 @@ def test_painel_gera_um_json_por_demo_sem_gravar_nada(tmp_path, capsys):
     data = json.loads(files[0].read_text(encoding="utf-8"))
     assert data["kind"] == "edb-analise" and data["sha"] == runs[0].sha and data["file"] == runs[0].file.path.name
     assert data["analysis"]["players"] and "para_o_painel" in capsys.readouterr().out
+
+
+def test_directory_register_reconhece_jogador_novo_na_serie_seguinte():
+    d = dp.Directory(players_db())
+    assert d.resolve("76561198369718619") is None
+    d.register("novo-id", "76561198369718619", "HStr1ker")
+    assert d.resolve("76561198369718619") == "novo-id"
+    assert d.name("novo-id") == "HStr1ker"
+    # jogador já cadastrado sem SteamID: o vínculo gravado passa a valer na hora
+    d.register("p3", "111", None)
+    assert d.resolve("111") == "p3"
