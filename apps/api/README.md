@@ -40,10 +40,24 @@ próprio `apps/web/src/lib/types.ts`.
 | `EDB_ALLOWED_ORIGINS` | produção | Origens permitidas (CORS e verificação de `Origin`), separadas por vírgula. Padrão `http://localhost:3000`. Ex.: `https://edb-league.vercel.app`. |
 | `EDB_COOKIE_SECURE` | produção | `1` marca o cookie como `Secure`. Obrigatório com HTTPS. |
 | `EDB_TRUST_PROXY` | atrás de proxy | `1` usa `X-Forwarded-For` para o limite de tentativas de login por IP. Ligue só se o proxy for confiável. |
-| `STEAM_API_KEY` | opcional | Avatar e horas de jogo na página do jogador. |
+| `STEAM_API_KEY` | opcional | Avatar e horas de jogo na página do jogador e fotos nas listas. |
+| `EDB_SESSION_SECRET` | para o login com a Steam | Mínimo de 16 caracteres, aleatório e só seu. Sem ele o login com a Steam fica desligado. |
+| `EDB_ADMIN_STEAMID` | para o admin pela Steam | SteamID64 da única conta que acessa a Administração pela Steam. |
+| `EDB_PUBLIC_URL` | produção | Endereço público do site (ex.: `https://edb-league.vercel.app`), usado como retorno do login da Steam. Sem ele vale a primeira origem de `EDB_ALLOWED_ORIGINS`. |
 | `EDB_DEMO` | desenvolvimento | `1` usa dados sintéticos em memória. |
 | `EDB_TODAY` | testes | Data fixa `AAAA-MM-DD` para simular o calendário. |
 | `PORT` | container | Porta do servidor (Docker, Render e Fly já definem). |
+
+## Login com a Steam
+
+Entra só quem tem o SteamID cadastrado como jogador (ou o SteamID do admin). O fluxo é OpenID 2.0 e a API confirma
+tudo com a própria Steam, de servidor para servidor; nada que vem do navegador vale sozinho.
+
+1. Defina na API: `EDB_SESSION_SECRET` (longo e aleatório), `EDB_ADMIN_STEAMID` e `EDB_PUBLIC_URL` (o domínio do site).
+2. O site chama `/api/*` no mesmo domínio (rewrite do Next.js). O retorno do login é
+   `EDB_PUBLIC_URL/api/auth/steam/callback`, e o cookie de sessão é de primeira parte.
+3. A sessão dura 14 dias, é `HttpOnly` e `SameSite=Lax`, e vira `Secure` com `EDB_COOKIE_SECURE=1`.
+4. Para deixar o admin só pela Steam, apague `XINXAS_ADMIN_PASSWORD` do servidor.
 
 ## Segurança
 

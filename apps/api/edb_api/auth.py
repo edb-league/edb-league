@@ -40,7 +40,7 @@ def make_token(issued_at: float | None = None) -> str:
 
 
 def verify_token(token: str | None) -> bool:
-    if not token or "." not in token or not settings.admin_configured():
+    if not token or "." not in token or not settings.password_login_enabled():
         return False
     expiry, _, signature = token.partition(".")
     if not expiry.isdigit() or not hmac.compare_digest(signature, _sign(expiry)):
@@ -83,7 +83,7 @@ def clear_failures(ip: str) -> None:
 
 
 def check_password(candidate: str) -> bool:
-    return settings.admin_configured() and hmac.compare_digest(
+    return settings.password_login_enabled() and hmac.compare_digest(
         candidate.encode("utf-8"), settings.admin_password().encode("utf-8")
     )
 
@@ -117,12 +117,25 @@ def check_origin(request: Request) -> None:
         raise HTTPException(403, "Origem não autorizada para esta operação.")
 
 
+def steam_admin(request: Request) -> bool:
+    """True quando quem fez a requisição entrou com a Steam na conta do administrador."""
+    from . import identity
+
+    admin = settings.admin_steamid()
+    steamid = identity.session_steamid(request)
+    return bool(admin) and steamid is not None and hmac.compare_digest(steamid, admin)
+
+
+def is_admin(request: Request) -> bool:
+    return verify_token(request.cookies.get(COOKIE_NAME)) or steam_admin(request)
+
+
 def require_admin(request: Request) -> None:
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         check_origin(request)
     if not settings.admin_configured():
         raise HTTPException(
-            503, "Administração bloqueada: configure XINXAS_ADMIN_PASSWORD no servidor."
+            503, "Administração bloqueada: configure EDB_ADMIN_STEAMID (e EDB_SESSION_SECRET) ou XINXAS_ADMIN_PASSWORD no servidor."
         )
-    if not verify_token(request.cookies.get(COOKIE_NAME)):
+    if not is_admin(request):
         raise HTTPException(401, "Sessão de administrador ausente ou expirada. Entre novamente.")

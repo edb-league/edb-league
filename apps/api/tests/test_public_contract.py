@@ -235,3 +235,25 @@ def test_perfil_avancado_nomes_com_significado(client, demo):
     _, detail = _first_with_demo(client)
     metrics = [m for ms in detail["advanced"]["sections"].values() for m in ms]
     assert metrics and all(m["label"].isascii() and m["meaning"] for m in metrics)
+
+
+def test_missions_weekly_status(client):
+    data = get(client, "/api/missions")
+    week = data["week"]
+    assert week and 1 <= week["number"] <= week["total"] and week["starts_on"] <= week["ends_on"]
+    assert data["players"], "a demonstração tem jogadores ativos"
+    statuses = {p["status"] for p in data["players"]}
+    assert statuses <= {"done", "unselected", "open", "none"}
+    # Ordenados: cumpridas primeiro, sem partidas por último.
+    order = {"done": 0, "unselected": 1, "open": 2, "none": 3}
+    ranks = [order[p["status"]] for p in data["players"]]
+    assert ranks == sorted(ranks)
+    for p in data["players"]:
+        assert p["target"] in (0.42, 0.57, 0.72, 0.87, 1.02)
+        if p["status"] == "none":
+            assert p["maps_in_week"] == 0
+
+
+def test_missions_week_clipped_in_old_season(client):
+    data = get(client, "/api/missions?season=0")
+    assert data["week"] is None and data["players"] == []

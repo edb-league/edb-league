@@ -16,7 +16,7 @@ def login(client, password=PASSWORD, headers=ORIGIN):
 def test_session_reports_state(client):
     data = client.get("/api/admin/session").json()
     check(data, "AdminSession")
-    assert data == {"authenticated": False, "configured": True}
+    assert data == {"authenticated": False, "configured": True, "steam": False, "password": True}
 
 
 def test_protected_routes_require_login(client):
@@ -115,9 +115,9 @@ def test_unconfigured_password_blocks_admin(demo, monkeypatch):
     for value in ("", "SUBSTITUA-POR-UMA-SENHA-FORTE"):
         monkeypatch.setenv("XINXAS_ADMIN_PASSWORD", value)
         client = TestClient(create_app())
-        assert client.get("/api/admin/session").json() == {"authenticated": False, "configured": False}
+        assert client.get("/api/admin/session").json() == {"authenticated": False, "configured": False, "steam": False, "password": False}
         response = login(client, value or "x")
-        assert response.status_code == 503 and "XINXAS_ADMIN_PASSWORD" in response.json()["detail"]
+        assert response.status_code == 503 and "senha" in response.json()["detail"].lower()
         assert client.get("/api/admin/overview").status_code == 503
 
 

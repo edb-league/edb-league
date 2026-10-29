@@ -39,6 +39,11 @@ def missions(season: str | None = None):
     return views.build_missions(get_service().snap(), season)
 
 
+@router.get("/steam/avatars")
+def steam_avatars():
+    return views.build_avatars(get_service())
+
+
 @router.get("/players")
 def players(include_inactive: bool = False):
     return views.build_players(get_service().snap(), include_inactive)

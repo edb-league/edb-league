@@ -261,3 +261,32 @@ def test_no_steam_key_is_ever_committed_to_the_project():
     for path in files:
         text = path.read_text(encoding="utf-8")
         assert not re.search(r"\b[0-9A-Fa-f]{32}\b", text), path.name
+
+
+def test_fetch_steam_avatars_batches_and_filters_hosts():
+    from edb.steam_profile import fetch_steam_avatars
+
+    calls = []
+
+    class Response:
+        def __init__(self, players):
+            self._players = players
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"response": {"players": self._players}}
+
+    class Session:
+        def get(self, url, params=None, timeout=None):
+            calls.append(params["steamids"].split(","))
+            players = [{"steamid": s, "avatarfull": f"https://avatars.steamstatic.com/{s}.jpg"} for s in calls[-1]]
+            players.append({"steamid": "evil", "avatarfull": "https://evil.example.com/x.jpg"})
+            return Response(players)
+
+    ids = [str(76561198000000000 + i) for i in range(150)]
+    found = fetch_steam_avatars(ids, "chave", session=Session())
+    assert [len(c) for c in calls] == [100, 50]  # a Steam aceita 100 ids por chamada
+    assert len(found) == 150 and "evil" not in found
+    assert found[ids[0]].startswith("https://avatars.steamstatic.com/")

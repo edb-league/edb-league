@@ -14,7 +14,7 @@ from edb.season_rankings import season_boards
 from edb.season_system import (
     DEFAULT_SEASONS, chosen_season_number, confirmed_bo3_count, season_match_ids, series_format,
 )
-from edb.steam_profile import fetch_steam_profile
+from edb.steam_profile import SteamUnavailable, fetch_steam_avatars, fetch_steam_profile
 from edb.storage import Store
 from edb.team_draw import player_level, player_name
 
@@ -195,6 +195,7 @@ class LeagueService:
         self._loaded_at = 0.0
         self._scope_cache: tuple[float, list] | None = None
         self._steam: dict[str, tuple[float, dict]] = {}
+        self._avatars: dict[str, tuple[float, str]] = {}
         self._calendar: tuple[float, str] | None = None
 
     # Leitura ---------------------------------------------------------------------
@@ -261,6 +262,28 @@ class LeagueService:
         with self._lock:
             self._steam[steamid64] = (time.time(), data)
         return data
+
+    def steam_avatars(self, steamids: list[str], api_key: str) -> dict[str, str]:
+        """Fotos por 6 h, numa consulta em lote só para quem ainda não está em cache.
+
+        Se a Steam falhar, devolve o que já havia (mesmo vencido) e tenta de novo na próxima chamada.
+        """
+        now = time.time()
+        with self._lock:
+            fresh = {s: hit[1] for s in steamids if (hit := self._avatars.get(s)) and now - hit[0] < STEAM_TTL}
+        missing = [s for s in steamids if s not in fresh]
+        if missing:
+            try:
+                got = fetch_steam_avatars(missing, api_key)
+            except SteamUnavailable:
+                with self._lock:
+                    return {s: hit[1] for s in steamids if (hit := self._avatars.get(s))}
+            with self._lock:
+                for steamid in missing:
+                    # Sem foto também fica em cache (url vazia): não vale perguntar de novo a cada visita.
+                    self._avatars[steamid] = (now, got.get(steamid, ""))
+            fresh.update(got)
+        return {s: url for s, url in fresh.items() if url}
 
 
 _service: LeagueService | None = None

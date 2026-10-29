@@ -38,9 +38,35 @@ def admin_password() -> str:
     return env("XINXAS_ADMIN_PASSWORD")
 
 
-def admin_configured() -> bool:
+def password_login_enabled() -> bool:
+    """Entrada por senha: só vale com uma senha de verdade configurada."""
     password = admin_password()
     return bool(password) and password != PLACEHOLDER_PASSWORD
+
+
+def steam_login_enabled() -> bool:
+    """Login com a Steam exige um segredo de sessão próprio; sem ele, ficaria preso à senha do admin."""
+    return len(env("EDB_SESSION_SECRET")) >= 16
+
+
+def admin_steamid() -> str:
+    """SteamID64 da única conta com acesso à administração pela Steam (EDB_ADMIN_STEAMID)."""
+    from edb.steam_profile import normalize_steamid64
+
+    return normalize_steamid64(env("EDB_ADMIN_STEAMID")) or ""
+
+
+def admin_configured() -> bool:
+    return password_login_enabled() or (steam_login_enabled() and bool(admin_steamid()))
+
+
+def public_url() -> str:
+    """Endereço público do site (o domínio que o visitante vê), usado no retorno do login da Steam."""
+    configured = env("EDB_PUBLIC_URL").strip().rstrip("/")
+    if configured:
+        return configured
+    origins = allowed_origins()
+    return origins[0] if origins else "http://localhost:3000"
 
 
 def session_secret() -> bytes:
