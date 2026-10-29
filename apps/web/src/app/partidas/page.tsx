@@ -1,6 +1,7 @@
-import { MapCardItem, SeriesCardItem } from "@/components/matches/Cards";
+import { MapCardItem, MapRowItem, SeriesCardItem } from "@/components/matches/Cards";
 import { SeasonBar } from "@/components/layout/SeasonBar";
 import { EmptyState, SectionTitle } from "@/components/ui/Card";
+import { Fmt } from "@/components/ui/MapTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { api, qs } from "@/lib/api";
 import { first, seasonQuery } from "@/lib/format";
@@ -18,7 +19,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
   const selected = all.find((s) => s.id === selectedId) ?? null;
 
   const seriesHref = (s: SeriesCard) =>
-    s.id === selected?.id ? `/partidas${seasonQuery(season)}` : `/partidas${seasonQuery(season, { confronto: s.id })}#mapas-do-confronto`;
+    s.id === selected?.id ? `/partidas${seasonQuery(season)}` : `/partidas${seasonQuery(season, { confronto: s.id })}#confronto-${s.id}`;
   const mapHref = (id: string, confronto?: string) =>
     `/partidas/mapa/${encodeURIComponent(id)}${seasonQuery(season, { confronto })}`;
 
@@ -28,7 +29,6 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
         title="Histórico de partidas"
         subtitle="BO1 e BO3: cada mapa conta igualmente na temporada."
         art="matches"
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       >
         <SeasonBar meta={meta} season={season} path="/partidas" variant="strip" />
       </PageHeader>
@@ -41,13 +41,25 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           ] as const
         ).map(([label, description, items]) => (
           <section key={label} aria-labelledby={`grupo-${label}`}>
-            <SectionTitle id={`grupo-${label}`} title={`${label} · ${items.length}`}>
+            <SectionTitle id={`grupo-${label}`} title={<><Fmt format={label} /> · {items.length}</>}>
               {description}
             </SectionTitle>
             {items.length ? (
               <ul className="flex flex-col gap-3">
                 {items.map((s) => (
-                  <SeriesCardItem key={s.id} series={s} href={seriesHref(s)} active={s.id === selected?.id} />
+                  <SeriesCardItem key={s.id} series={s} href={seriesHref(s)} active={s.id === selected?.id}>
+                    {s.maps.length ? (
+                      <ul className="flex flex-col gap-2" aria-label={`Mapas desta ${s.format.toUpperCase()}`}>
+                        {s.maps.map((m) => (
+                          <MapRowItem key={m.id} card={m} href={mapHref(m.id, s.id)} />
+                        ))}
+                      </ul>
+                    ) : (
+                      <EmptyState>
+                        Este confronto ainda não tem mapas vinculados. Os registros serão adicionados após a conferência dos prints.
+                      </EmptyState>
+                    )}
+                  </SeriesCardItem>
                 ))}
               </ul>
             ) : (
@@ -56,24 +68,6 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           </section>
         ))}
       </div>
-
-      {selected && (
-        <section id="mapas-do-confronto" aria-labelledby="mapas-titulo" className="scroll-mt-4">
-          <SectionTitle id="mapas-titulo" title={`Mapas desta ${selected.format.toUpperCase()}`} />
-          {selected.maps.length ? (
-            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {selected.maps.map((m) => (
-                <MapCardItem key={m.id} card={m} href={mapHref(m.id, selected.id)} />
-              ))}
-            </ul>
-          ) : (
-            <EmptyState>
-              Este confronto ainda não tem mapas vinculados. Os registros serão adicionados após a conferência dos
-              prints.
-            </EmptyState>
-          )}
-        </section>
-      )}
 
       {list.legacy.length > 0 && (
         <details className="card p-4">

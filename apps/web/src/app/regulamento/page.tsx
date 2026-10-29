@@ -4,11 +4,13 @@ import { TierBadge } from "@/components/players/MedalCard";
 import { MedalShape } from "@/components/players/MedalCard";
 import { Card } from "@/components/ui/Card";
 import { LEVEL_TIERS } from "@/components/ui/LevelBadge";
+import { TocNav } from "@/components/layout/TocNav";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stat } from "@/components/ui/Stat";
 import { api } from "@/lib/api";
 import { num, plural } from "@/lib/format";
 import type { MedalCatalogue, Meta, Missions, Ranking, RankingType } from "@/lib/types";
+import { Icon, StarRow } from "@/components/ui/Icon";
 
 export const metadata = { title: "Regulamento" };
 
@@ -65,25 +67,10 @@ export default async function RulesPage() {
       <PageHeader
         title="Regulamento"
         subtitle="Como funcionam as temporadas, os rankings, os títulos e a experiência. Tudo em um só lugar."
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-8 xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <nav aria-label="Neste regulamento" className="xl:sticky xl:top-24">
-          <p className="kicker mb-2">Neste regulamento</p>
-          <ol className="flex flex-wrap gap-1 xl:flex-col xl:flex-nowrap xl:gap-0 xl:border-l-2 xl:border-line-soft">
-            {SECTIONS.map(([id, label]) => (
-              <li key={id}>
-                <a
-                  href={`#${id}`}
-                  className="flex min-h-11 items-center rounded-lg border border-line-soft px-3.5 text-lg text-muted no-underline hover:text-fg xl:-ml-0.5 xl:rounded-none xl:border-0 xl:border-l-[3px] xl:border-transparent xl:hover:border-gold-bg"
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <TocNav sections={SECTIONS} />
 
         <div className="flex min-w-0 flex-col gap-4">
           <Card aria-labelledby="sobre" className="flex flex-wrap items-center gap-6">
@@ -91,7 +78,6 @@ export default async function RulesPage() {
               <Image src="/president.avif" alt="Retrato cerimonial do Presidente Dudu no Elenco de Bosta" fill sizes="5rem" className="object-contain" />
             </div>
             <div className="min-w-0 flex-1 basis-64">
-              <p className="kicker">Sobre a liga</p>
               <h2 id="sobre" className="text-3xl">Inaugurada na gestão do Presidente Dudu</h2>
               <p className="num mt-1 text-2xl text-gold">19 de outubro de 2026</p>
             </div>
@@ -104,7 +90,7 @@ export default async function RulesPage() {
               evolução e tente conquistar as primeiras posições. Cada novo mapa pode melhorar sua classificação.
             </p>
             <dl className="mt-3 grid gap-2 sm:grid-cols-3 md:gap-3">
-              <Stat label="Duração" value="1 mês" hint="Do dia 19 ao dia 18 do mês seguinte" />
+              <Stat label="Duração" value="1 mês" hint="Do dia 19 ao dia 18 do mês seguinte. A Temporada 1 começou em 15/10, dia da primeira partida." />
               <Stat label="Rankings" value="Reiniciam" hint="Toda nova temporada começa do zero" />
               <Stat label="Mapas que contam" value="Top 6" hint="Os 6 melhores de cada jogador, em cada ranking" />
             </dl>
@@ -138,7 +124,7 @@ export default async function RulesPage() {
               <Stat label="Limite" value="Nenhum" hint="Confrontos e mapas por temporada" />
             </dl>
             <p className="mt-4">
-              <Link href="/partidas" className="inline-flex min-h-11 items-center text-base font-bold">Ver o histórico de partidas →</Link>
+              <Link href="/partidas" className="link-cta">Ver o histórico de partidas <Icon name="arrow-right" /></Link>
             </p>
           </Card>
 
@@ -197,7 +183,7 @@ export default async function RulesPage() {
             <h2 id="t5" className={H2}><span aria-hidden="true" className={NO}>5</span>XP, níveis e medalhas</h2>
             <p className="mt-3 max-w-prose text-lg text-muted">
               Todo nível tem uma meta. O prêmio é igual; o desafio é proporcional. Concluir uma partida de pelo menos 8 rounds
-              com KPR acima da meta rende 100 XP, uma vez por semana.
+              com KPR igual ou acima da meta rende 100 XP, uma vez a cada semana da temporada.
             </p>
             <div className="mt-4 grid gap-6 md:grid-cols-2">
               <div>
@@ -215,7 +201,7 @@ export default async function RulesPage() {
                       {missions.targets.map((t) => (
                         <tr key={t.stars}>
                           <th scope="row" className="border-t border-line-soft px-3 py-2.5 text-left font-semibold">
-                            <span aria-hidden="true" className="mr-2 tracking-widest text-gold">{"★".repeat(t.stars)}</span>
+                            <StarRow count={t.stars} className="mr-2 text-gold" />
                             {plural(t.stars, "estrela", "estrelas")}
                           </th>
                           <td className="num border-t border-line-soft px-3 py-2.5 text-right text-2xl">{num(t.kpr, 2)}</td>
@@ -275,12 +261,12 @@ export default async function RulesPage() {
                   ))}
                 </ul>
                 <p className="mt-2">
-                  <Link href="/medalhas" className="inline-flex min-h-11 items-center text-base font-bold">Ver todas as medalhas →</Link>
+                  <Link href="/medalhas" className="link-cta">Ver todas as medalhas <Icon name="arrow-right" /></Link>
                 </p>
               </div>
             </div>
             <p className="mt-2">
-              <Link href="/missoes-xp" className="inline-flex min-h-11 items-center text-base font-bold">Ver as missões da temporada →</Link>
+              <Link href="/missoes-xp" className="link-cta">Ver as missões da temporada <Icon name="arrow-right" /></Link>
             </p>
           </Card>
 

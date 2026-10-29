@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { AdvancedStatsView, STAT_VIEWS, type StatView } from "@/components/players/AdvancedStats";
 import { Evolution } from "@/components/players/Evolution";
@@ -6,6 +5,7 @@ import { MedalCard } from "@/components/players/MedalCard";
 import { Badge, OutcomeBadge } from "@/components/ui/Badge";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/Card";
 import { StyleBars, type StyleItem } from "@/components/players/StyleBars";
+import { Avatar } from "@/components/ui/Avatar";
 import { FormStrip, LevelBadge } from "@/components/ui/LevelBadge";
 import { LinkButton } from "@/components/ui/Button";
 import { Stat, StatGrid } from "@/components/ui/Stat";
@@ -15,6 +15,7 @@ import { dateBR, hoursLabel, num, seasonQuery, signed } from "@/lib/format";
 import { seasonContext } from "@/lib/season";
 import type { Hall, PlayerDetail, Ranking, RankingRow } from "@/lib/types";
 import { NoData } from "@/components/ui/NoData";
+import { Icon, StarRow } from "@/components/ui/Icon";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -24,16 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   } catch {
     return { title: "Jogador" };
   }
-}
-
-function Silhouette() {
-  return (
-    <svg role="img" aria-label="Sem foto da Steam" viewBox="0 0 96 96" className="size-24 rounded-full border-2 border-line">
-      <rect width="96" height="96" fill="var(--surface-3)" />
-      <circle cx="48" cy="36" r="17" fill="var(--text-subtle)" />
-      <path d="M14 96c0-21 15-34 34-34s34 13 34 34z" fill="var(--text-subtle)" />
-    </svg>
-  );
 }
 
 /** Posição (0 a 100) entre os jogadores da liga: 100 = melhor valor, 0 = pior. */
@@ -58,12 +49,15 @@ function Comparison({
   avg,
   decimals,
   suffix = "",
+  diffSuffix = suffix,
 }: {
   label: string;
   value: number | null;
   avg: number | null;
   decimals: number;
   suffix?: string;
+  /** Sufixo da diferença; em percentuais é pontos percentuais, não variação relativa. */
+  diffSuffix?: string;
 }) {
   const diff = value !== null && avg !== null ? value - avg : null;
   const tone =
@@ -83,7 +77,7 @@ function Comparison({
       {diff !== null && (
         <span className={`mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-bold ${tone}`}>
           <span aria-hidden="true">{mark}</span>
-          {signed(diff, decimals, suffix)}
+          {signed(diff, decimals, diffSuffix)}
           <span className="sr-only">
             {diff > 0 ? " acima da média da liga" : diff < 0 ? " abaixo da média da liga" : " na média da liga"}
           </span>
@@ -161,7 +155,19 @@ export default async function PlayerPage({
   const titles = hall.titles.filter((t) => t.player?.id === player.id);
   const ratings = d.matches.map((m) => m.rating).filter((r): r is number => r !== null);
   const meanRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
-  const form = d.matches.slice(0, 10).map((m) => m.result);
+  const recent = d.matches.slice(0, 10);
+  const form = recent.map((m) => m.result);
+  const formItems = recent.map((m) => ({
+    result: m.result,
+    map: m.map,
+    detail: `${dateBR(m.date)} · ${m.kills} kills, ${m.deaths} mortes`,
+  }));
+  const leagueAverages = {
+    kd: mean(rowsAll.map((r) => r.kd)),
+    adr: mean(rowsAll.map((r) => r.adr)),
+    kpr: mean(rowsAll.map((r) => r.kpr)),
+    kills: mean(rowsAll.map((r) => (r.matches > 0 ? r.kills / r.matches : null))),
+  };
   const wins10 = form.filter((r) => r === "win").length;
   const losses10 = form.filter((r) => r === "loss").length;
 
@@ -202,7 +208,7 @@ export default async function PlayerPage({
   return (
     <>
       <p>
-        <Link href="/jogadores" className="inline-flex min-h-11 items-center text-base font-bold">
+        <Link href="/jogadores" className="link-cta">
           ← Todos os jogadores
         </Link>
       </p>
@@ -210,20 +216,8 @@ export default async function PlayerPage({
       <header className="card border-t-4 border-t-gold-bg p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="flex flex-wrap items-center gap-5">
-            {steam.avatar ? (
-              <Image
-                src={steam.avatar}
-                alt={`Foto de ${player.name}`}
-                width={96}
-                height={96}
-                unoptimized
-                className="size-24 rounded-full border-[3px] border-gold-bg object-cover"
-              />
-            ) : (
-              <Silhouette />
-            )}
+            <Avatar name={player.name} src={steam.avatar} size={96} />
             <div className="min-w-0">
-              <p className="kicker">Perfil do jogador</p>
               <h1 className="text-5xl leading-none break-words">{player.nickname}</h1>
               {player.real_name && <p className="mt-1 text-xl text-muted">{player.real_name}</p>}
               <ul className="mt-3 flex flex-wrap items-center gap-2 text-base">
@@ -233,9 +227,7 @@ export default async function PlayerPage({
                 </li>
                 {player.stars > 0 && (
                   <li className="rounded-full border border-line-soft bg-surface-2 px-3 py-1 font-semibold">
-                    <span aria-hidden="true" className="mr-1.5 tracking-widest text-gold">
-                      {"★".repeat(player.stars)}
-                    </span>
+                    <StarRow count={player.stars} className="mr-1.5 text-gold" />
                     {player.stars} {player.stars === 1 ? "estrela" : "estrelas"}
                   </li>
                 )}
@@ -253,21 +245,30 @@ export default async function PlayerPage({
                   <li className="rounded-full border border-line-soft bg-surface-2 px-3 py-1">Steam: {steam.persona}</li>
                 )}
               </ul>
-              <p className="mt-2 flex items-baseline gap-2">
-                <b className="num text-3xl leading-none text-gold">{hoursLabel(steam.hours)}</b>
-                <span className="text-sm font-bold tracking-wider text-muted">HORAS DE CS</span>
-              </p>
+              {steam.hours ? (
+                <p className="mt-2 flex items-baseline gap-2">
+                  <b className="num text-3xl leading-none">{hoursLabel(steam.hours)}</b>
+                  <span className="text-base text-muted">jogadas em CS</span>
+                </p>
+              ) : null}
               {steam.note && <p className="text-sm text-muted">{steam.note}</p>}
             </div>
           </div>
-          <dl className="flex flex-wrap gap-3">
+          <dl className="flex flex-wrap items-stretch gap-3">
+            <div className="card min-w-48 border-[3px] border-gold-bg bg-surface-2 px-5 py-3">
+              <dt className="text-base font-bold">Índice Elite</dt>
+              <dd className="num text-7xl leading-none text-gold">{num(row?.elite, 1)}</dd>
+              <dd className="text-sm text-muted">
+                {row ? `${row.rank}º de ${rowsAll.length}` : `Sem partidas na ${elite.season.label}`}
+              </dd>
+            </div>
             {d.headline ? (
               <>
-                <div className="card min-w-44 border-[3px] border-gold-bg bg-surface-2 px-5 py-3">
-                  <dt className="text-base font-bold">
-                    Rating 2.0 <span className="text-sm font-normal text-muted">estimado</span>
+                <div className="card min-w-36 bg-surface-2 px-4 py-3">
+                  <dt className="text-base font-semibold text-muted">
+                    Rating 2.0 <span className="text-sm font-normal">estimado</span>
                   </dt>
-                  <dd className="num text-7xl leading-none text-gold">{num(d.headline.rating2, 2)}</dd>
+                  <dd className="num text-5xl leading-none">{num(d.headline.rating2, 2)}</dd>
                   <dd className="text-sm text-muted">
                     T {num(d.headline.rating2_t, 2)} · CT {num(d.headline.rating2_ct, 2)}
                   </dd>
@@ -285,19 +286,12 @@ export default async function PlayerPage({
             ) : (
               <div className="card min-w-36 bg-surface-2 px-4 py-3">
                 <dt className="text-base font-semibold text-muted">Rating médio</dt>
-                <dd className="num text-5xl leading-none text-gold">{num(meanRating, 2)}</dd>
+                <dd className="num text-5xl leading-none">{num(meanRating, 2)}</dd>
                 <dd className="text-sm text-muted">
                   {games} {games === 1 ? "partida" : "partidas"}
                 </dd>
               </div>
             )}
-            <div className="card min-w-36 bg-surface-2 px-4 py-3">
-              <dt className="text-base font-semibold text-muted">Índice Elite</dt>
-              <dd className="num text-5xl leading-none">{num(row?.elite, 1)}</dd>
-              <dd className="text-sm text-muted">
-                {row ? `${row.rank}º de ${rowsAll.length}` : `Sem partidas na ${elite.season.label}`}
-              </dd>
-            </div>
           </dl>
         </div>
       </header>
@@ -334,7 +328,7 @@ export default async function PlayerPage({
               <Comparison label="K/D" value={row.kd} avg={mean(rowsAll.map((r) => r.kd))} decimals={2} />
               <Comparison label="Kills por round" value={row.kpr} avg={mean(rowsAll.map((r) => r.kpr))} decimals={2} />
               <Comparison label="ADR" value={row.adr} avg={mean(rowsAll.map((r) => r.adr))} decimals={1} />
-              <Comparison label="Aproveitamento" value={winRate(row)} avg={mean(rowsAll.map(winRate))} decimals={0} suffix="%" />
+              <Comparison label="Aproveitamento" value={winRate(row)} avg={mean(rowsAll.map(winRate))} decimals={0} suffix="%" diffSuffix=" p.p." />
               <Comparison
                 label="Mapas disputados"
                 value={row.maps_played ?? row.matches}
@@ -359,7 +353,7 @@ export default async function PlayerPage({
             )}
             <div className="flex flex-col gap-5">
               <Card aria-labelledby="melhor" className="border-2 border-gold-bg">
-                <h3 id="melhor" className="kicker mb-2">
+                <h3 id="melhor" className="mb-2 text-xl font-bold">
                   Melhor partida
                 </h3>
                 {summary.best ? (
@@ -372,9 +366,9 @@ export default async function PlayerPage({
                     </p>
                     <Link
                       href={`/partidas/mapa/${encodeURIComponent(summary.best.match_id)}`}
-                      className="inline-flex min-h-11 items-center text-base font-bold"
+                      className="link-cta"
                     >
-                      Ver a partida →
+                      Ver a partida <Icon name="arrow-right" />
                     </Link>
                   </>
                 ) : (
@@ -382,13 +376,13 @@ export default async function PlayerPage({
                 )}
               </Card>
               <Card aria-labelledby="forma">
-                <h3 id="forma" className="kicker mb-3">
+                <h3 id="forma" className="mb-3 text-xl font-bold">
                   Forma nas últimas {form.length || 10} partidas
                 </h3>
                 {form.length ? (
                   <>
                     <FormStrip
-                      results={form}
+                      items={formItems}
                       label={`Últimas ${form.length} partidas, da mais recente: ${wins10} ${wins10 === 1 ? "vitória" : "vitórias"} e ${losses10} ${losses10 === 1 ? "derrota" : "derrotas"}`}
                     />
                     <p className="mt-3 text-base text-muted">
@@ -405,7 +399,7 @@ export default async function PlayerPage({
           <Card aria-labelledby="evolucao">
             <SectionTitle id="evolucao" title="Evolução por partida" level={3} />
             {d.matches.length ? (
-              <Evolution matches={d.matches} />
+              <Evolution matches={d.matches} averages={row ? leagueAverages : undefined} />
             ) : (
               <EmptyState>Este jogador ainda não tem partidas registradas.</EmptyState>
             )}
@@ -523,7 +517,7 @@ export default async function PlayerPage({
                 {titles.map((t) => (
                   <li key={`${t.season_number}-${t.title}`} className="flex items-center justify-between gap-2">
                     <span>
-                      <b className="text-gold">★ {t.title}</b> · Temporada {t.season_number}
+                      <b className="text-gold"><Icon name="star" /> {t.title}</b> · Temporada {t.season_number}
                     </span>
                     <span className="num text-xl">{num(t.score, t.ranking === "xp" ? 0 : 1)}</span>
                   </li>

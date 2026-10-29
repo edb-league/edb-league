@@ -1,42 +1,82 @@
 "use client";
 
 import clsx from "clsx";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Avatar } from "@/components/ui/Avatar";
 import { TeamTag } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { controlClass } from "@/components/ui/Field";
-import { LevelBadge } from "@/components/ui/LevelBadge";
 import { Notice } from "@/components/ui/Notice";
 import { sendJson } from "@/lib/client";
 import type { DrawResult } from "@/lib/types";
+import { Icon } from "@/components/ui/Icon";
 
 const TEAM_SIZE = 10;
 
-export type RosterPlayer = { id: string; name: string; nickname: string; real_name: string | null; level: number };
+export type RosterPlayer = { id: string; name: string; nickname: string; real_name: string | null; level: number; avatar?: string };
 
 const BANDS = { "1-3": [1, 3], "4-6": [4, 6], "7-8": [7, 8], "9-10": [9, 10] } as const;
 
 function TeamCard({ label, players, total, roster }: { label: "PT" | "PL"; players: DrawResult["team_a"]; total: number; roster: Map<string, RosterPlayer> }) {
+  const sorted = [...players].sort((x, y) => y.level - x.level);
   return (
-    <section aria-label={`Time ${label}`} className="rounded-xl border border-line-soft bg-surface-2 p-4">
+    <section
+      aria-label={`Time ${label}`}
+      className={clsx("rounded-xl border border-line-soft border-t-4 bg-surface-2 p-4", label === "PT" ? "border-t-pt" : "border-t-pl")}
+    >
       <div className="mb-2 flex items-center justify-between border-b border-line-soft pb-3">
-        <span className="text-lg">
+        <span className="text-xl">
           <TeamTag name={label} />
         </span>
-        <span className="num text-3xl leading-none">
+        <span className="num text-4xl leading-none">
           {total} <span className="font-sans text-base font-medium text-muted">pontos</span>
         </span>
       </div>
       <ul>
-        {players.map((p) => (
-          <li key={p.id} className="flex min-h-11 items-center gap-3 text-lg">
-            <LevelBadge level={p.level} />
-            <span className="min-w-0 flex-1 break-words">{roster.get(p.id)?.nickname ?? p.name}</span>
-          </li>
-        ))}
+        {sorted.map((p) => {
+          const r = roster.get(p.id);
+          const name = r?.nickname ?? p.name;
+          return (
+            <li key={p.id} className="flex min-h-14 items-center gap-3 text-lg">
+              <Avatar name={name} src={r?.avatar} size={48} level={p.level} decorative className="border-2" />
+              <span className="min-w-0 flex-1 font-bold break-words">{name}</span>
+            </li>
+          );
+        })}
       </ul>
     </section>
+  );
+}
+
+/** Dez vagas que se preenchem com a foto de cada jogador escolhido. */
+function Slots({ selected, roster }: { selected: string[]; roster: Map<string, RosterPlayer> }) {
+  return (
+    <ul
+      role="progressbar"
+      aria-label="Jogadores selecionados"
+      aria-valuemin={0}
+      aria-valuemax={TEAM_SIZE}
+      aria-valuenow={selected.length}
+      aria-valuetext={`${selected.length} de ${TEAM_SIZE}`}
+      className="mb-4 flex flex-wrap gap-2"
+    >
+      {Array.from({ length: TEAM_SIZE }, (_, i) => {
+        const id = selected[i];
+        const p = id ? roster.get(id) : undefined;
+        return (
+          <li key={i} aria-hidden="true" title={p?.nickname}>
+            {p ? (
+              <span className="reveal block">
+                <Avatar name={p.nickname} src={p.avatar} size={40} decorative className="border-2" />
+              </span>
+            ) : (
+              <span className="block size-10 rounded-full border-2 border-dashed border-line-soft" />
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -56,7 +96,7 @@ function Step({ n, title, hint, state }: { n: number; title: string; hint: strin
           state === "todo" ? "border-line text-muted" : "border-gold-bg bg-gold-bg text-on-gold",
         )}
       >
-        {state === "done" ? "✓" : n}
+        {state === "done" ? <Icon name="check" /> : n}
       </span>
       <span>
         <b className="block text-lg">
@@ -80,6 +120,13 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const resultRef = useRef<HTMLElement>(null);
+  // Depois de sortear, leva o olhar ao resultado (que fica abaixo da lista), sem movimento se o usuário pediu menos.
+  useEffect(() => {
+    if (!result) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    resultRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+  }, [result]);
 
   const byId = useMemo(() => new Map(roster.map((p) => [p.id, p])), [roster]);
   const visible = useMemo(() => {
@@ -141,7 +188,7 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
         <Step n={3} title="Compartilhar" hint="Copiar a mensagem para o grupo" state={state(3)} />
       </ol>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6">
         <Card aria-labelledby="presentes">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="presentes" className="text-3xl">1. Jogadores presentes</h2>
@@ -166,21 +213,11 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
             </div>
           </div>
 
-          <div
-            role="progressbar"
-            aria-label="Jogadores selecionados"
-            aria-valuemin={0}
-            aria-valuemax={TEAM_SIZE}
-            aria-valuenow={selected.length}
-            aria-valuetext={`${selected.length} de ${TEAM_SIZE}`}
-            className="mb-4 h-2.5 overflow-hidden rounded-full bg-surface-3"
-          >
-            <div className="h-full rounded-full bg-gold-bg" style={{ width: `${(100 * selected.length) / TEAM_SIZE}%` }} />
-          </div>
+          <Slots selected={selected} roster={byId} />
 
           <fieldset>
             <legend className="sr-only">Jogadores presentes</legend>
-            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visible.map((p) => {
                 const checked = selected.includes(p.id);
                 const id = `draw-${p.id}`;
@@ -189,12 +226,12 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
                     <label
                       htmlFor={id}
                       className={clsx(
-                        "flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60",
+                        "flex min-h-14 cursor-pointer press items-center gap-3 rounded-xl border px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60",
                         checked ? "border-gold-bg bg-surface-2" : "border-line-soft bg-surface",
                       )}
                     >
                       <input id={id} type="checkbox" checked={checked} disabled={!checked && full} onChange={() => toggle(p.id)} />
-                      <LevelBadge level={p.level} />
+                      <Avatar name={p.nickname} src={p.avatar} size={48} level={p.level} decorative className="border-2" />
                       <span className="min-w-0 flex-1">
                         <b className="block text-lg break-words">{p.nickname}</b>
                         <span className="block text-base text-muted">{p.real_name ?? "Nome real não cadastrado"}</span>
@@ -218,7 +255,7 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
           {!ready && <p className="mt-3 text-base text-muted">Selecionar exatamente 10 jogadores libera o sorteio.</p>}
         </Card>
 
-        <Card aria-labelledby="resultado" className={clsx(result && "border-2 border-gold-bg")}>
+        <Card aria-labelledby="resultado" className={clsx("scroll-mt-4", result && "border-2 border-gold-bg")} ref={resultRef}>
           <h2 id="resultado" className="text-3xl">2. Resultado</h2>
           {error && <Notice tone="error" className="mt-4">{error}</Notice>}
           <div aria-live="polite">
@@ -248,7 +285,7 @@ export function TeamDraw({ roster }: { roster: RosterPlayer[] }) {
                     <span>PL {result.total_b}</span>
                   </p>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div key={result.message} className="reveal-list grid gap-4 md:grid-cols-2">
                   <TeamCard label="PT" players={result.team_a} total={result.total_a} roster={byId} />
                   <TeamCard label="PL" players={result.team_b} total={result.total_b} roster={byId} />
                 </div>

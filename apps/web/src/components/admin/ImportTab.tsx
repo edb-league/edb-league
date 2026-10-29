@@ -13,7 +13,7 @@ import { Feedback, useAction } from "./useAction";
 type Method = "demo" | "csv" | "sample";
 
 const METHODS: { value: Method; label: string; hint: string }[] = [
-  { value: "demo", label: "Arquivo de demo (.dem)", hint: "Lê o replay da partida automaticamente." },
+  { value: "demo", label: "Arquivo de demo (.dem ou .gz)", hint: "Lê o replay da partida automaticamente." },
   { value: "csv", label: "Placar em CSV", hint: "Planilha com as estatísticas de cada jogador." },
   { value: "sample", label: "Exemplo da liga", hint: "Carrega um placar de teste, sem enviar arquivo." },
 ];
@@ -100,7 +100,7 @@ export function ImportTab({ onChanged }: { onChanged: () => void }) {
               {METHODS.map((m) => (
                 <label
                   key={m.value}
-                  className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-line bg-surface p-3 has-[:checked]:border-accent has-[:checked]:bg-surface-2"
+                  className="flex min-h-11 cursor-pointer press items-start gap-3 rounded-lg border border-line bg-surface p-3 has-[:checked]:border-accent has-[:checked]:bg-surface-2"
                 >
                   <input
                     type="radio"
@@ -132,7 +132,7 @@ export function ImportTab({ onChanged }: { onChanged: () => void }) {
                 key={fileKey}
                 id="import-arquivo"
                 type="file"
-                accept={method === "demo" ? ".dem" : ".csv,text/csv"}
+                accept={method === "demo" ? ".dem,.gz" : ".csv,text/csv"}
                 required
                 className="min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:font-bold file:text-fg"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}

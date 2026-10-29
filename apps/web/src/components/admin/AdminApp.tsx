@@ -17,18 +17,18 @@ type State =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "not-configured" }
-  | { kind: "login" }
+  | { kind: "login"; steam: boolean; password: boolean }
   | { kind: "ready"; overview: AdminOverview };
 
 async function fetchState(): Promise<State> {
   try {
     const session = await getJson<AdminSession>("/admin/session");
     if (!session.configured) return { kind: "not-configured" };
-    if (!session.authenticated) return { kind: "login" };
+    if (!session.authenticated) return { kind: "login", steam: session.steam, password: session.password };
     const overview = await getJson<AdminOverview>("/admin/overview");
     return { kind: "ready", overview };
   } catch (e) {
-    if (e instanceof ClientError && e.status === 401) return { kind: "login" };
+    if (e instanceof ClientError && e.status === 401) return { kind: "login", steam: false, password: true };
     return { kind: "error", message: e instanceof Error ? e.message : "Falha ao carregar a administração." };
   }
 }
@@ -61,7 +61,7 @@ export function AdminApp() {
       await sendJson("POST", "/admin/logout");
     } finally {
       setLoggingOut(false);
-      setState({ kind: "login" });
+      setState({ kind: "login", steam: false, password: true });
     }
   }
 
@@ -87,12 +87,12 @@ export function AdminApp() {
   if (state.kind === "not-configured") {
     return (
       <Notice tone="warning" title="Administração desativada" className="max-w-xl">
-        Defina a variável de ambiente XINXAS_ADMIN_PASSWORD no servidor da API para liberar o acesso.
+        Defina EDB_ADMIN_STEAMID (com EDB_SESSION_SECRET) ou XINXAS_ADMIN_PASSWORD no servidor da API para liberar o acesso.
       </Notice>
     );
   }
   if (state.kind === "login") {
-    return <LoginForm onLogin={() => reload(true)} />;
+    return <LoginForm onLogin={() => reload(true)} steam={state.steam} password={state.password} />;
   }
 
   const { overview } = state;

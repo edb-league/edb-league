@@ -2,20 +2,25 @@ import Link from "next/link";
 import { AchievementTabs } from "@/components/layout/SectionTabs";
 import { SeasonBar } from "@/components/layout/SeasonBar";
 import { Card, SectionTitle } from "@/components/ui/Card";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge, YouBadge } from "@/components/ui/Badge";
+import { getMe } from "@/lib/me";
+import { Progress } from "@/components/ui/Charts";
 import { LevelBadge } from "@/components/ui/LevelBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Stat } from "@/components/ui/Stat";
 import { TableWrap, Td, Th } from "@/components/ui/Table";
-import { api, qs } from "@/lib/api";
-import { num, seasonQuery } from "@/lib/format";
+import { api, qs, steamAvatars } from "@/lib/api";
+import { dayMonth, num, plural, seasonQuery } from "@/lib/format";
 import { seasonContext } from "@/lib/season";
-import type { Missions } from "@/lib/types";
+import type { MissionPlayer, Missions } from "@/lib/types";
+import { Icon, StarRow } from "@/components/ui/Icon";
 
 export const metadata = { title: "Missões e XP" };
 
 export default async function MissionsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { meta, season } = await seasonContext((await searchParams).temporada);
-  const missions = await api<Missions>(`/missions${qs({ season })}`);
+  const [missions, avatars, me] = await Promise.all([api<Missions>(`/missions${qs({ season })}`), steamAvatars(), getMe()]);
   const top = missions.xp.rows.slice(0, 5);
 
   return (
@@ -24,7 +29,6 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
         title="Missões e conquistas"
         subtitle="Todo nível tem uma meta. O prêmio é igual; o desafio é proporcional."
         art="xp"
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       >
         <SeasonBar meta={meta} season={season} path="/missoes-xp" variant="strip" />
       </PageHeader>
@@ -32,7 +36,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
 
       <Card aria-labelledby="meta-semanal">
         <SectionTitle id="meta-semanal" title="Meta semanal: kills por round">
-          Concluir uma partida de pelo menos 8 rounds com KPR acima da meta rende 100 XP, uma vez por semana.
+          Concluir uma partida de pelo menos 8 rounds com KPR igual ou acima da meta rende 100 XP, uma vez a cada semana da temporada.
         </SectionTitle>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {missions.targets.map((t) => (
@@ -44,6 +48,8 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
           <Link href="/regulamento#xp">Regulamento</Link>.
         </p>
       </Card>
+
+      {missions.week && missions.players.length > 0 && <WeekMission missions={missions} avatars={avatars} meId={me.player?.id} />}
 
       <section aria-labelledby="xp-ranking">
         <SectionTitle id="xp-ranking" title="Quem lidera em XP">
@@ -78,11 +84,86 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
           <p className="text-base text-muted">O ranking aparece após as primeiras partidas.</p>
         )}
         <p className="mt-3">
-          <Link href={`/rankings/xp${seasonQuery(season)}`} className="inline-flex min-h-11 items-center text-base font-bold">
-            Ver o ranking XP completo →
+          <Link href={`/rankings/xp${seasonQuery(season)}`} className="link-cta">
+            Ver o ranking XP completo <Icon name="arrow-right" />
           </Link>
         </p>
       </section>
     </>
+  );
+}
+
+const STATUS_TEXT: Record<MissionPlayer["status"], string> = {
+  done: "Cumprida",
+  unselected: "Meta batida, fora dos 6 mapas do XP",
+  open: "Ainda não bateu a meta",
+  none: "Sem partidas na semana",
+};
+
+function WeekMission({ missions, avatars, meId }: { missions: Missions; avatars: Record<string, string>; meId?: string }) {
+  const week = missions.week!;
+  const done = missions.players.filter((p) => p.status === "done").length;
+  return (
+    <section aria-labelledby="missao-semana">
+      <SectionTitle id="missao-semana" title={`Missão da semana ${week.number} de ${week.total}`}>
+        {dayMonth(week.starts_on)} a {dayMonth(week.ends_on)} ·{" "}
+        {week.closed ? "semana encerrada" : week.days_left === 0 ? "último dia" : `faltam ${plural(week.days_left, "dia", "dias")}`} ·{" "}
+        <b className="text-fg">{done}</b> de {missions.players.length} já cumpriram.
+      </SectionTitle>
+      <ul className="card divide-y divide-line-soft">
+        {missions.players.map((p) => {
+          const pct = p.status === "done" || p.status === "unselected" ? 100 : p.best_kpr ? Math.min(99, (100 * p.best_kpr) / p.target) : 0;
+          return (
+            <li
+              key={p.player.id}
+              className={`grid grid-cols-[minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto] ${p.player.id === meId ? "bg-surface-2" : ""}`}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar name={p.player.name} src={avatars[p.player.id]} size={44} level={p.level} decorative className="border-2" />
+                <div className="min-w-0">
+                  <Link href={`/jogadores/${encodeURIComponent(p.player.id)}`} className="block truncate text-lg leading-tight font-bold text-fg">
+                    {p.player.name}
+                  </Link>
+                  {p.player.id === meId && <YouBadge />}
+                  <p className="text-sm text-muted">
+                    <span role="img" aria-label={`${p.stars} ${p.stars === 1 ? "estrela" : "estrelas"}`} className="text-gold">
+                      <StarRow count={p.stars} />
+                    </span>{" "}
+                    meta {num(p.target, 2)} KPR
+                  </p>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <Progress value={pct} tone={p.status === "done" ? "gold" : "accent"} label={`Progresso da missão de ${p.player.name}`} />
+                <p className="mt-1 text-sm text-muted">
+                  {p.status === "open" && p.best_kpr !== null
+                    ? `Melhor KPR da semana: ${num(p.best_kpr, 2)} de ${num(p.target, 2)}`
+                    : p.status === "none"
+                      ? "Nenhuma partida de 8 rounds ou mais ainda"
+                      : p.best_kpr !== null
+                        ? `Melhor KPR da semana: ${num(p.best_kpr, 2)}`
+                        : ""}
+                </p>
+              </div>
+              <div className="md:text-right">
+                {p.status === "done" ? (
+                  <Badge tone="win">
+                    <Icon name="check" /> {STATUS_TEXT.done} · +100 XP
+                  </Badge>
+                ) : p.status === "unselected" ? (
+                  <Badge tone="gold">{STATUS_TEXT.unselected}</Badge>
+                ) : (
+                  <Badge>{STATUS_TEXT[p.status]}</Badge>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-3 text-sm text-muted">
+        Só valem os mapas de pelo menos 8 rounds que entram entre os 6 do ranking de XP do jogador. Se a meta foi batida em um mapa
+        que ficou de fora, a missão não rende XP.
+      </p>
+    </section>
   );
 }

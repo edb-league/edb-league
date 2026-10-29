@@ -34,7 +34,7 @@ export function useAction() {
 }
 
 export function Feedback({ error, ok }: { error: string | null; ok: string | null }) {
-  if (error) return <Notice tone="error">{error}</Notice>;
-  if (ok) return <Notice tone="success">{ok}</Notice>;
+  if (error) return <div className="reveal"><Notice tone="error">{error}</Notice></div>;
+  if (ok) return <div className="reveal"><Notice tone="success">{ok}</Notice></div>;
   return null;
 }

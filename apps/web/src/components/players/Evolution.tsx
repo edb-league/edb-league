@@ -1,8 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { LineChart } from "@/components/ui/Charts";
-import { controlClass } from "@/components/ui/Field";
+import { useMemo, useState } from "react";
+import { LineChart } from "@/components/ui/LineChart";
 import { dayMonth } from "@/lib/format";
 import type { PlayerMatchRow } from "@/lib/types";
 
@@ -15,15 +14,22 @@ const METRICS = {
 
 type MetricKey = keyof typeof METRICS;
 
-/** Evolução por partida, da mais antiga para a mais recente, com métrica escolhida pelo usuário. */
-export function Evolution({ matches }: { matches: PlayerMatchRow[] }) {
-  const id = useId();
+/** Evolução por partida, da mais antiga para a mais recente. A métrica troca por abas. */
+export function Evolution({
+  matches,
+  averages,
+}: {
+  matches: PlayerMatchRow[];
+  /** Média da liga por métrica, quando existe. */
+  averages?: Partial<Record<MetricKey, number | null>>;
+}) {
   const [metric, setMetric] = useState<MetricKey>("kd");
 
   const points = useMemo(
     () =>
       [...matches].reverse().map((m) => ({
-        label: `${dayMonth(m.date)} ${m.map}`,
+        label: `${dayMonth(m.date)} · ${m.map}`,
+        short: dayMonth(m.date),
         value: m[metric],
       })),
     [matches, metric],
@@ -31,19 +37,22 @@ export function Evolution({ matches }: { matches: PlayerMatchRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex max-w-xs flex-col gap-1.5">
-        <label htmlFor={id} className="text-base font-bold">
-          Métrica
-        </label>
-        <select id={id} className={controlClass} value={metric} onChange={(e) => setMetric(e.target.value as MetricKey)}>
-          {Object.entries(METRICS).map(([key, m]) => (
-            <option key={key} value={key}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+      <div role="group" aria-label="Métrica do gráfico" className="flex flex-wrap gap-2">
+        {(Object.keys(METRICS) as MetricKey[]).map((key) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={metric === key}
+            onClick={() => setMetric(key)}
+            className={`press lift min-h-11 rounded-lg border px-4 text-base font-bold ${
+              metric === key ? "border-gold-bg bg-gold-bg text-on-gold" : "border-line bg-surface text-fg hover:bg-surface-2"
+            }`}
+          >
+            {METRICS[key].label}
+          </button>
+        ))}
       </div>
-      <LineChart points={points} metric={METRICS[metric].label} decimals={METRICS[metric].decimals} />
+      <LineChart points={points} metric={METRICS[metric].label} decimals={METRICS[metric].decimals} average={averages?.[metric] ?? null} />
     </div>
   );
 }

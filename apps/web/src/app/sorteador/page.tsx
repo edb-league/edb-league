@@ -1,16 +1,16 @@
 import { TeamDraw, type RosterPlayer } from "@/components/tools/TeamDraw";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { api } from "@/lib/api";
-import type { Meta, PlayerListItem } from "@/lib/types";
+import { api, steamAvatars } from "@/lib/api";
+import type { PlayerListItem } from "@/lib/types";
 
 export const metadata = { title: "Sorteador de times" };
 
 export default async function DrawPage() {
-  const [meta, players] = await Promise.all([api<Meta>("/meta"), api<PlayerListItem[]>("/players")]);
+  const [players, avatars] = await Promise.all([api<PlayerListItem[]>("/players"), steamAvatars()]);
   const roster: RosterPlayer[] = players
     .filter((p) => p.is_active)
-    .map((p) => ({ id: p.id, name: p.name, nickname: p.nickname, real_name: p.real_name, level: p.level }))
+    .map((p) => ({ id: p.id, name: p.name, nickname: p.nickname, real_name: p.real_name, level: p.level, avatar: avatars[p.id] }))
     // Do maior nível para o menor; no mesmo nível, ordem alfabética.
     .sort((a, b) => b.level - a.level || a.nickname.localeCompare(b.nickname, "pt-BR"));
 
@@ -19,7 +19,6 @@ export default async function DrawPage() {
       <PageHeader
         title="Sorteador de times"
         subtitle="Escolha os 10 presentes. O sorteio divide em PT e PL com a menor diferença possível na soma dos níveis."
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       />
       <TeamDraw roster={roster} />
       <Card aria-labelledby="como">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Radar } from "@/components/players/Radar";
 import { StyleBars } from "@/components/players/StyleBars";
 import { Card, EmptyState, SectionTitle } from "@/components/ui/Card";
 import { NoData } from "@/components/ui/NoData";
@@ -170,7 +171,7 @@ function FilterGroup({
               href={o.href}
               scroll={false}
               aria-current={o.on ? "true" : undefined}
-              className={`inline-flex min-h-11 items-center rounded-lg border px-4 font-bold no-underline ${
+              className={`press lift inline-flex min-h-11 items-center rounded-lg border px-4 font-bold no-underline ${
                 o.on ? "border-accent bg-accent text-on-accent" : "border-line bg-surface text-fg hover:border-accent"
               }`}
             >
@@ -279,7 +280,7 @@ export function AdvancedStatsView({
                 href={buildHref({ vista: key === "overview" ? undefined : key })}
                 scroll={false}
                 aria-current={view === key ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center rounded-full border px-4 font-bold no-underline ${
+                className={`press lift inline-flex min-h-11 items-center rounded-full border px-4 font-bold no-underline ${
                   view === key ? "border-gold-bg bg-gold-bg text-on-gold" : "border-line bg-surface text-fg hover:border-gold-bg"
                 }`}
               >
@@ -347,6 +348,14 @@ export function AdvancedStatsView({
                     O Rating 1.0 usa a fórmula pública da HLTV. O 2.0 é uma estimativa com a fórmula pública de 2017 e fica perto
                     do rating do SCOPE. O Rating 3.0 e o Round Swing da HLTV não são públicos e não são calculados.
                   </p>
+                  {hasScores && (
+                    <div className="mt-4 border-t border-line-soft pt-4">
+                      <p className="mb-1 text-base font-bold">
+                        Perfil de jogo <span className="text-sm font-normal text-muted">o anel tracejado é o meio da liga</span>
+                      </p>
+                      <Radar items={scores} />
+                    </div>
+                  )}
                 </Card>
                 <Card aria-labelledby="notas-titulo">
                   <h3 id="notas-titulo" className="kicker mb-3">
@@ -378,7 +387,8 @@ export function AdvancedStatsView({
                 </ul>
               </section>
 
-              <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
+              {/* Colunas (e não grade): as tabelas têm alturas diferentes e assim não sobram buracos. */}
+              <div className="gap-5 lg:columns-2 [&>*]:mb-5 [&>*]:break-inside-avoid">
                 {SECTIONS.map(([key, title, meaning]) => (
                   <MetricsTable key={key} title={title} meaning={meaning} metrics={data.sections[key]} side={side} />
                 ))}

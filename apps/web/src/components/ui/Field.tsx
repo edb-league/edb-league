@@ -2,7 +2,7 @@ import clsx from "clsx";
 import type { ComponentProps, ReactNode } from "react";
 
 export const controlClass =
-  "min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-fg placeholder:text-subtle";
+  "min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base text-fg transition-colors duration-150 placeholder:text-subtle hover:border-accent focus-visible:border-accent";
 
 /** Rótulo, dica e erro ligados ao controle por id (o controle recebe aria-describedby). */
 export function Field({

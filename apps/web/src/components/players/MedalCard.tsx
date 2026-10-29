@@ -3,9 +3,10 @@ import { Badge, type Tone } from "@/components/ui/Badge";
 import { Progress } from "@/components/ui/Charts";
 import { num } from "@/lib/format";
 import type { Medal } from "@/lib/types";
+import { Icon } from "@/components/ui/Icon";
 
 export const TIER_LABEL = { bronze: "Bronze", silver: "Prata", gold: "Ouro" } as const;
-export const TIER_TONE: Record<Medal["tier"], Tone> = { bronze: "loss", silver: "neutral", gold: "gold" };
+export const TIER_TONE: Record<Medal["tier"], Tone> = { bronze: "neutral", silver: "accent", gold: "gold" };
 
 export function TierBadge({ tier }: { tier: Medal["tier"] }) {
   return <Badge tone={TIER_TONE[tier]}>{TIER_LABEL[tier]}</Badge>;
@@ -17,7 +18,7 @@ const SHAPES = {
   silver: "M22 3 L39 9 V22 C39 32 32 38 22 42 C12 38 5 32 5 22 V9 Z",
   gold: "M22 2 L28 16 L43 17.5 L32 27.5 L35 42 L22 34.5 L9 42 L12 27.5 L1 17.5 L16 16 Z",
 } as const;
-const SHAPE_COLOR = { bronze: "text-loss", silver: "text-muted", gold: "text-gold" } as const;
+const SHAPE_COLOR = { bronze: "text-subtle", silver: "text-accent", gold: "text-gold" } as const;
 
 export function MedalShape({ tier, earned, size = 44 }: { tier: Medal["tier"]; earned: boolean; size?: number }) {
   return (
@@ -44,7 +45,7 @@ export function MedalCard({ medal }: { medal: Medal }) {
           <TierBadge tier={medal.tier} />
           {medal.earned && (
             <Badge tone="win">
-              <span aria-hidden="true">✓</span> Conquistada
+              <Icon name="check" /> Conquistada
             </Badge>
           )}
         </div>

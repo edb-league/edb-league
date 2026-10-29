@@ -41,8 +41,13 @@
   --lv2-fg: light-dark(#ffffff, #08182b);
   --lv3-bg: light-dark(#6e4a00, #e3c794);
   --lv3-fg: light-dark(#ffffff, #10233a);
-  --lv4-bg: light-dark(#a33f00, #ff5a36);
-  --lv4-fg: light-dark(#ffffff, #1a0a00);
+  --lv4-bg: light-dark(#4a3000, #ffd166);
+  --lv4-fg: light-dark(#ffe9a8, #241500);
+
+  /* Mapas: cada mapa tem um tom de azul e de ouro próprio (só decoração, o nome vem sempre em texto). */
+  --map-from: light-dark(#cfe0f1, #12294a);
+  --map-to: light-dark(#e8f0f8, #0c1b30);
+  --map-line: light-dark(#8aa9c6, #2a4668);
 }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }

@@ -4,44 +4,57 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TextField } from "@/components/ui/Field";
+import { SteamLogin } from "@/components/layout/UserMenu";
 import { sendJson } from "@/lib/client";
 import { Feedback, useAction } from "./useAction";
 
-export function LoginForm({ onLogin }: { onLogin: () => void }) {
+export function LoginForm({ onLogin, steam, password: passwordLogin }: { onLogin: () => void; steam: boolean; password: boolean }) {
   const [password, setPassword] = useState("");
   const action = useAction();
 
   return (
-    <Card className="max-w-md" aria-labelledby="login-titulo">
+    <Card className="mx-auto w-full max-w-md" aria-labelledby="login-titulo">
       <h2 id="login-titulo" className="mb-1 text-2xl font-bold">
         Entrar como administrador
       </h2>
-      <p className="mb-4 text-base text-muted">Somente o administrador da liga cadastra jogadores e importa partidas.</p>
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          const result = await action.run(() => sendJson<{ ok: boolean }>("POST", "/admin/login", { password }));
-          if (result?.ok) {
-            setPassword("");
-            onLogin();
-          }
-        }}
-      >
-        <TextField
-          id="admin-senha"
-          label="Senha do administrador"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <Feedback error={action.error} ok={null} />
-        <Button type="submit" disabled={action.busy || password.length === 0}>
-          {action.busy ? "Entrando..." : "Entrar"}
-        </Button>
-      </form>
+      <p className="mb-4 text-base text-muted">
+        {steam
+          ? "Somente a conta Steam do administrador da liga cadastra jogadores e importa partidas."
+          : "Somente o administrador da liga cadastra jogadores e importa partidas."}
+      </p>
+      {steam && <SteamLogin className="w-full" />}
+      {steam && passwordLogin && (
+        <p className="my-4 text-center text-sm text-muted" aria-hidden="true">
+          ou use a senha
+        </p>
+      )}
+      {passwordLogin && (
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const result = await action.run(() => sendJson<{ ok: boolean }>("POST", "/admin/login", { password }));
+            if (result?.ok) {
+              setPassword("");
+              onLogin();
+            }
+          }}
+        >
+          <TextField
+            id="admin-senha"
+            label="Senha do administrador"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Feedback error={action.error} ok={null} />
+          <Button type="submit" disabled={action.busy || password.length === 0}>
+            {action.busy ? "Entrando..." : "Entrar"}
+          </Button>
+        </form>
+      )}
     </Card>
   );
 }

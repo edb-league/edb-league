@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 const tones = {
   neutral: "text-muted border-line-soft",
@@ -27,18 +28,27 @@ export function Badge({ tone = "neutral", children, className }: { tone?: Tone; 
   );
 }
 
+/** Marca a linha ou o cartão de quem está logado. */
+export function YouBadge({ className }: { className?: string }) {
+  return (
+    <Badge tone="accent" className={className}>
+      Você
+    </Badge>
+  );
+}
+
 /** Resultado sempre com ícone e texto, nunca só cor. */
 export function OutcomeBadge({ outcome }: { outcome: "win" | "loss" | "unknown" }) {
   if (outcome === "win")
     return (
       <Badge tone="win">
-        <span aria-hidden="true">✓</span> Vitória
+        <Icon name="check" /> Vitória
       </Badge>
     );
   if (outcome === "loss")
     return (
       <Badge tone="loss">
-        <span aria-hidden="true">✕</span> Derrota
+        <Icon name="x" /> Derrota
       </Badge>
     );
   return (
