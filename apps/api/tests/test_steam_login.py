@@ -193,3 +193,27 @@ def test_session_from_a_removed_player_stops_working(steam):
         assert steam.get("/api/me").json()["authenticated"] is False
     finally:
         views.player_for_steamid = original
+
+
+def test_problems_explain_a_short_secret_without_showing_it(demo, monkeypatch, caplog):
+    from edb_api import settings
+    from edb_api.main import _warn_about_steam_login
+
+    monkeypatch.setenv("EDB_SESSION_SECRET", "curto-123")
+    monkeypatch.setenv("EDB_ADMIN_STEAMID", "123")
+    problems = settings.steam_login_problems()
+    assert any("pelo menos 16" in p and "hoje tem 9" in p for p in problems)
+    assert any("SteamID64 válido" in p for p in problems)
+    assert "curto-123" not in " ".join(problems)
+    with caplog.at_level("WARNING", logger="edb.api"):
+        _warn_about_steam_login()
+    assert any("Login com a Steam" in r.message for r in caplog.records)
+
+
+def test_secret_with_stray_spaces_still_counts_only_real_characters(demo, monkeypatch):
+    from edb_api import settings
+
+    monkeypatch.setenv("EDB_SESSION_SECRET", "   " + "a" * 15 + "  \n")
+    assert settings.steam_login_enabled() is False
+    monkeypatch.setenv("EDB_SESSION_SECRET", "\n" + "a" * 16 + " ")
+    assert settings.steam_login_enabled() is True
