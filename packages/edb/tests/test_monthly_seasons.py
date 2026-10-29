@@ -11,7 +11,7 @@ from edb.season_rankings import season_boards
 
 
 @pytest.mark.parametrize("number,begin,finish",[
-    (1,date(2026,10,19),date(2026,11,18)),
+    (1,date(2026,10,15),date(2026,11,18)),  # T1 começa na primeira partida da liga
     (2,date(2026,11,19),date(2026,12,18)),
     (3,date(2026,12,19),date(2027,1,18)),
     (4,date(2027,1,19),date(2027,2,18)),
@@ -48,12 +48,12 @@ def test_november_18_still_season_one_november_19_activates_two():
 
 def test_monthly_progress_shows_real_days_left():
     s=_seasons()
-    first=season_bar(s,1,"home",3,on_date=date(2026,10,19))
-    assert "Dia 1/31" in first
-    assert "30 dias restantes" in first
-    assert "Dia 1 de 31" in first
+    first=season_bar(s,1,"home",3,on_date=date(2026,10,15))
+    assert "Dia 1/35" in first
+    assert "34 dias restantes" in first
+    assert "Dia 1 de 35" in first
     last=season_bar(s,1,"home",3,on_date=date(2026,11,18))
-    assert "Dia 31/31" in last and "0 dias restantes" in last
+    assert "Dia 35/35" in last and "0 dias restantes" in last
     feb=season_bar(s,5,"home",0,on_date=date(2027,2,19))
     assert "Dia 1/28" in feb
 
@@ -73,3 +73,15 @@ def test_five_xp_weekly_missions_possible_during_long_month():
     assert ranked["Elegível"]
     assert len(ranked["Mapas selecionados"])==6
     assert ranked["XP"]==6*60+5*100
+
+
+def test_xp_week_starts_on_first_match_day_in_season_one():
+    # Semana 1 = 15 a 21/10; 22/10 já é a semana 2. Contando desde 19/10 as duas cairiam na mesma semana.
+    frame=pd.DataFrame([
+        {"player_id":"P","nickname":"P","stars":3,"match_id":f"m{i}",
+         "played_at":pd.Timestamp(day),"kills":20,"deaths":10,"assists":0,
+         "damage":1800,"rounds":20,"won":True}
+        for i,day in enumerate(["2026-10-16","2026-10-22"])
+    ])
+    ranked=season_boards(frame,1)["xp"].iloc[0]
+    assert ranked["XP"]==2*60+2*100

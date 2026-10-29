@@ -1,10 +1,10 @@
 # Regulamento oficial da EDB LEAGUE — v1.0
 
-**Vigencia:** a partir da Temporada 1 (19/10/2026). A Temporada 0, encerrada em 18/10/2026, e experimental; seus resultados, estatisticas e excecoes permanecem preservados.
+**Vigencia:** a partir da Temporada 1 (15/10/2026, dia da primeira partida da liga). A Temporada 0, encerrada em 18/10/2026, e experimental; seus resultados, estatisticas e excecoes permanecem preservados.
 
 ## Calendario
-- Temporadas consecutivas de **14 dias corridos**, segunda a domingo, no fuso America/Sao_Paulo.
-- T1: 19/10/2026 a 01/11/2026; T2: 02/11 a 15/11; seguintes em intervalos sucessivos de 14 dias.
+- Temporadas mensais consecutivas, do dia 19 ao dia 18 do mes seguinte, no fuso America/Sao_Paulo.
+- A **Temporada 1** e a excecao: comeca em 15/10/2026 (primeira partida) e termina em 18/11/2026. T2: 19/11 a 18/12; as seguintes seguem o mesmo padrao.
 - Nao ha quantidade maxima de BO3 por temporada.
 - A BO3 pertence a temporada da data/hora de inicio do primeiro mapa, mesmo se finalizar apos a meia-noite do ultimo dia.
 - Cada BO3 envolve duas equipes de cinco jogadores. A vitoria da serie e obtida em 2x0 ou 2x1, mantendo a equipe da serie. Substituicoes excepcionais exigem registro.
@@ -24,9 +24,9 @@
 ## XP
 - Seis mapas selecionados por pontuacao de participacao/vitoria: 40 XP por mapa + 20 XP por vitoria.
 - Nos empates de pontuacao de mapa, os realizados primeiro sao priorizados.
-- As missoes concedem 100 XP por semana da temporada, no maximo duas por temporada; contam apenas os seis mapas selecionados para XP.
+- As missoes concedem 100 XP por semana da temporada (blocos de 7 dias contados a partir do primeiro dia da temporada), sem limite de missoes alem da quantidade de semanas; contam apenas os seis mapas selecionados para XP.
 - A missao exige KPR pelo menos igual a meta das estrelas, em mapa com no minimo oito rounds.
-- O terceiro mapa de uma BO3 que termine apos o encerramento continua pertencendo a segunda semana da temporada iniciada, sem gerar bonus de terceira semana.
+- O ultimo mapa de uma BO3 que termine apos o encerramento continua na temporada em que a serie comecou, e conta na ultima semana dela, sem gerar bonus de semana extra.
 
 ## Estrelas e historico
 - O nivel de 1 a 5 estrelas e congelado para cada jogador durante a temporada.
@@ -43,7 +43,7 @@
 - Titulos homologados aparecem no Hall da Fama e no perfil do jogador.
 
 ## Encerramento e homologacao
-- A temporada se encerra automaticamente ao fim do ultimo domingo. Novas BO3 iniciadas depois do fim pertencem ao proximo periodo.
+- A temporada se encerra automaticamente no dia 18 do mes seguinte (ou em 18/11 na Temporada 1). Novas BO3 iniciadas depois do fim pertencem ao proximo periodo.
 - Resultados disputados durante o periodo podem ser lancados posteriormente, ate a homologacao.
 - Apos conferir as BO3 e os registros, o administrador homologa as tres classificacoes e os tres titulos. O sistema salva snapshots dos rankings homologados.
 - Nao alterar rankings homologados em correcoes posteriores sem revisao administrativa expressa.

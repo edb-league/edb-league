@@ -3,7 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'packages'/'edb'))
-from edb.demo_importer import parse_demo,prepare_upload
+from edb.demo_importer import parse_demo_stats,prepare_upload
 import io
 import pandas as pd
 
@@ -23,7 +23,7 @@ upload=Upload(args.arquivo)
 folder=None
 try:
     folder,path,fingerprint=prepare_upload(upload)
-    result=parse_demo(path,fingerprint)
+    result=parse_demo_stats(path,fingerprint)
     print('Mapa:',result.map_name,'\nRounds (verificar):',result.rounds_total,
           '\nSHA256:',result.fingerprint)
     print(pd.DataFrame(result.players).to_string(index=False))

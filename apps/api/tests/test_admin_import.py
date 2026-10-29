@@ -140,3 +140,31 @@ def test_exports_are_csv_with_bom(admin):
 
 def test_exports_require_login(client):
     assert client.get("/api/admin/export/players.csv").status_code == 401
+
+
+def test_demo_preview_uses_stats_parser(admin, monkeypatch):
+    from edb.demo_importer import DemoOutput
+    from edb_api import admin_ops
+
+    players = [{"nickname": f"P{i}", "steamid": str(76561198000000000 + i), "kills": 10 + i, "deaths": 12,
+                "assists": 2, "damage": 1500, "rounds": 22, "headshots": 4, "plants": 0, "defuses": 0,
+                "rating": 1.1, "kast": 70, "open_kills": 1, "trade_kills": 1, "won": i < 5} for i in range(10)]
+    seen = {}
+
+    def fake(path, fingerprint):
+        seen["size"] = len(open(path, "rb").read())
+        return DemoOutput(fingerprint, "Inferno", 22, players, ["aviso"])
+
+    monkeypatch.setattr(admin_ops, "parse_demo_stats", fake)
+    content = b"PBDEMS2" + b"0" * 3000
+    import gzip
+    response = admin.post("/api/admin/import/preview", data={"method": "demo"},
+                          files={"file": ("md1_inferno_20_10.gz", io.BytesIO(gzip.compress(content)), "application/gzip")},
+                          headers=ORIGIN)
+    assert response.status_code == 200, response.text
+    data = response.json()
+    check(data, "ImportPreview")
+    assert seen["size"] == len(content)
+    assert data["map"] == "Inferno" and data["rounds_total"] == 22 and len(data["players"]) == 10
+    assert [p["won"] for p in data["players"]] == [True] * 5 + [False] * 5
+    assert data["players"][0]["kast"] == 70 and data["players"][0]["rating"] == 1.1

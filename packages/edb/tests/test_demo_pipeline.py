@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from edb import demo_pipeline as dp
-from edb.demo_stats import COUNT_FIELDS
+from edb.demo_stats import COUNT_FIELDS, PARSER_VERSION
 
 TODAY = date(2026, 10, 20)
 
@@ -343,7 +343,7 @@ def test_plano_tem_as_linhas_certas():
     assert stat["won"] is None and stat["rating"] is not None and stat["kast"] == 70
     assert plan["scope"][0]["grenade_damage"] == 15 and "adr_reported" not in plan["scope"][0]
     detail = plan["details"][0]
-    assert detail["weapon_kills"] == {"ak47": 10} and detail["parser_version"] == 1
+    assert detail["weapon_kills"] == {"ak47": 10} and detail["parser_version"] == PARSER_VERSION
     bundle = plan["bundle"]
     assert bundle["format"] == "bo3" and bundle["team_a_player_ids"] == sorted(f"p{i}" for i in range(6, 11))
     assert [(x["team_a_score"], x["team_b_score"]) for x in bundle["matches"]] == [(7, 13), (13, 7), (8, 13)]

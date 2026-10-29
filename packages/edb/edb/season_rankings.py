@@ -31,7 +31,7 @@ def _score_elite(kills, rounds, damage):
 
 
 def _xp_mensal(g, stars, season_number):
-    """Uma missão por semana de sete dias desde o dia 19 (4 ou 5 semanas/mês).
+    """Uma missão por semana de sete dias desde o início da temporada (4 ou 5 semanas).
 
     Só os seis mapas escolhidos no ranking de XP entram no cálculo.
     """

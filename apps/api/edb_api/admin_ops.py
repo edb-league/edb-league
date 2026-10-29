@@ -12,7 +12,7 @@ from edb import SAMPLE_SCOREBOARD
 from edb.bo3_admin import STATS_FIELDS  # noqa: F401  (mantido para referência dos campos)
 from edb.confront_registry import prepare_confront_bundle
 from edb.core import enrich
-from edb.demo_importer import parse_demo, prepare_upload
+from edb.demo_importer import parse_demo_stats, prepare_upload
 from edb.season_rankings import has_technical_tie, season_boards
 from edb.season_system import season_match_ids
 
@@ -278,11 +278,11 @@ def preview_import(service: LeagueService, method: str, upload) -> dict:
         source = "CSV de placar"
     elif method == "demo":
         if upload is None:
-            raise ValueError("Envie o arquivo da demo (.dem ou .dem.gz).")
+            raise ValueError("Envie o arquivo da demo (.dem, .dem.gz ou .gz).")
         folder = None
         try:
             folder, path, fingerprint = prepare_upload(_Upload(upload))
-            result = parse_demo(path, fingerprint)
+            result = parse_demo_stats(path, fingerprint)
         except Exception as exc:
             raise ValueError("Não foi possível processar a demo: " + str(exc)) from exc
         finally:
