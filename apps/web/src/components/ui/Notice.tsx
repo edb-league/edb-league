@@ -1,11 +1,12 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 const styles = {
-  info: { border: "border-accent", icon: "ℹ", label: "Informação" },
-  success: { border: "border-win", icon: "✓", label: "Sucesso" },
-  warning: { border: "border-gold", icon: "!", label: "Atenção" },
-  error: { border: "border-loss", icon: "✕", label: "Erro" },
+  info: { border: "border-accent", icon: "info", label: "Informação" },
+  success: { border: "border-win", icon: "check", label: "Sucesso" },
+  warning: { border: "border-gold", icon: "alert", label: "Atenção" },
+  error: { border: "border-loss", icon: "x", label: "Erro" },
 } as const;
 
 export function Notice({
@@ -23,11 +24,9 @@ export function Notice({
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={clsx("flex gap-3 rounded-lg border-l-4 bg-surface-2 p-4 text-base", s.border, className)}
+      className={clsx("flex gap-3 rounded-lg border bg-surface-2 p-4 text-base", s.border, className)}
     >
-      <span aria-hidden="true" className="mt-0.5 font-bold">
-        {s.icon}
-      </span>
+      <Icon name={s.icon} className="mt-1 text-lg" />
       <div>
         <span className="sr-only">{s.label}: </span>
         {title && <p className="font-bold">{title}</p>}

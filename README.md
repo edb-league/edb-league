@@ -112,10 +112,10 @@ o CSV resultante pode ser enviado pelo painel, ou optar por hospedagem mais fort
 O regulamento v1.0 esta em [docs/REGULAMENTO.md](docs/REGULAMENTO.md).
 
 - **Temporada 0 (experimental):** encerrada em 18/10/2026; as duas BO3 reais permanecem no banco e seus resultados nao sao recalculados.
-- **Temporada 1:** 19/10/2026 a 01/11/2026; ciclos sucessivos de 14 dias, sem limite de BO3.
+- **Temporada 1:** 15/10/2026 (primeira partida da liga) a 18/11/2026; as seguintes sao mensais, do dia 19 ao dia 18, sem limite de BO3.
 - **Ranking Elite:** 6 melhores mapas por Indice Elite, usando KPR e ADR.
 - **Ranking Superacao:** 6 melhores mapas por superacao da meta associada as estrelas congeladas na temporada.
-- **Ranking XP:** 6 mapas (40 por participacao, 20 por vitoria) e ate 100 XP por semana de missao (2 semanas).
+- **Ranking XP:** 6 mapas (40 por participacao, 20 por vitoria) e 100 XP por semana de missao (ate 5 semanas).
 - Para concorrer a qualquer titulo oficial, sao necessarios ao menos 6 mapas disputados.
 - **Tres titulos oficiais:** MVP (Elite), Revelacao (Superacao) e Xinxa (XP).
 - Apos o encerramento, o administrador confere e homologa classificacoes e titulos. O banco grava snapshots historicos.

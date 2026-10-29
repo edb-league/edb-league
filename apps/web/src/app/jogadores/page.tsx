@@ -2,9 +2,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Card";
 import { controlClass } from "@/components/ui/Field";
-import { LevelBadge } from "@/components/ui/LevelBadge";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge, YouBadge } from "@/components/ui/Badge";
+import { getMe } from "@/lib/me";
+import { LevelLegend } from "@/components/ui/LevelBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { api, qs } from "@/lib/api";
+import { api, qs, steamAvatars } from "@/lib/api";
 import { first, num } from "@/lib/format";
 import { seasonContext } from "@/lib/season";
 import type { PlayerListItem, Ranking, RankingRow } from "@/lib/types";
@@ -44,15 +47,18 @@ function sortEntries(entries: Entry[], key: SortKey): Entry[] {
   if (key === "nivel") return sorted.sort(desc((e) => e.player.level));
   if (key === "kd") return sorted.sort(desc((e) => e.row?.kd ?? null));
   if (key === "adr") return sorted.sort(desc((e) => e.row?.adr ?? null));
-  return sorted.sort(desc((e) => e.row?.elite ?? null));
+  // Índice Elite: segue a posição do ranking, então quem já tem os 6 mapas vem antes dos provisórios.
+  return sorted.sort(desc((e) => (e.row ? -e.row.rank : null)));
 }
 
 export default async function PlayersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const { meta, season } = await seasonContext(sp.temporada);
-  const [players, elite] = await Promise.all([
+  const [players, elite, avatars, me] = await Promise.all([
     api<PlayerListItem[]>("/players"),
     api<Ranking>(`/rankings/elite${qs({ season })}`),
+    steamAvatars(),
+    getMe(),
   ]);
 
   const query = (first(sp.q) ?? "").trim();
@@ -81,8 +87,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
     <>
       <PageHeader
         title="Jogadores"
-        subtitle="Foto da Steam, horas de CS e estatísticas de cada jogador."
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
+        subtitle="Nível, posição no ranking e estatísticas de cada jogador da liga."
       />
 
       <form method="get" role="search" aria-label="Buscar jogadores" className="card flex flex-wrap items-end gap-4 p-4">
@@ -110,15 +115,18 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
         </div>
         <Button type="submit" variant="gold">Aplicar</Button>
         {(filtered || sort !== "elite") && (
-          <Link href="/jogadores" className="inline-flex min-h-11 items-center text-base font-bold">Limpar</Link>
+          <Link href="/jogadores" className="link-cta">Limpar</Link>
         )}
       </form>
 
       <section aria-labelledby="lista">
         <h2 id="lista" className="sr-only">Lista de jogadores</h2>
-        <p role="status" className="mb-3 text-base text-muted">
-          {shown.length} de {all.length} {all.length === 1 ? "jogador" : "jogadores"}. Estatísticas e posição da {elite.season.label}.
-        </p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <p role="status" className="text-base text-muted">
+            {shown.length} de {all.length} {all.length === 1 ? "jogador" : "jogadores"}. Estatísticas e posição da {elite.season.label}.
+          </p>
+          <LevelLegend />
+        </div>
         {shown.length === 0 ? (
           <EmptyState>
             {all.length === 0 ? "Cadastre os participantes na área de Administração." : "Nenhum jogador encontrado com esses filtros."}
@@ -126,14 +134,14 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map(({ player: p, row }) => {
-              const top = row !== null && row.rank <= 3;
+              const top = row !== null && !row.provisional && row.rank <= 3;
               return (
                 <li
                   key={p.id}
-                  className={`card group relative flex flex-col gap-3 p-4 hover:bg-surface-2 ${top ? "border-2 border-gold-bg" : ""}`}
+                  className={`card group relative flex flex-col gap-3 p-4 card-press hover:bg-surface-2 ${top ? "border-2 border-gold-bg" : ""} ${p.id === me.player?.id ? "ring-2 ring-accent ring-offset-2 ring-offset-bg" : ""}`}
                 >
                   <div className="flex items-start gap-3">
-                    <LevelBadge level={p.level} size="lg" />
+                    <Avatar name={p.name} src={avatars[p.id]} size={52} level={p.level} decorative className="border-2" />
                     <div className="min-w-0 flex-1">
                       <h3 className="text-2xl leading-tight font-bold break-words">
                         <Link
@@ -142,11 +150,12 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
                         >
                           {p.nickname}
                         </Link>
+                        {p.id === me.player?.id && <YouBadge className="ml-2 align-middle" />}
                       </h3>
                       {p.real_name && <p className="text-base text-muted">{p.real_name}</p>}
                     </div>
                     {row && (
-                      <span className="num rounded-lg border border-line-soft bg-surface-2 px-2 py-1 text-xl leading-none text-gold">
+                      <span className={`num rounded-lg border px-2 py-1 text-xl leading-none ${row.rank === 1 ? "border-gold-bg bg-surface-2 text-gold" : "border-line-soft bg-surface-2 text-muted"}`}>
                         <span className="sr-only">Posição no Elite </span>
                         {row.rank}º
                       </span>
@@ -156,7 +165,7 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
                     <dl className="grid grid-cols-3 gap-2 border-t border-line-soft pt-3">
                       <div>
                         <dt className="text-sm text-muted">Elite</dt>
-                        <dd className="num text-3xl leading-none text-gold">{num(row.elite, 1)}</dd>
+                        <dd className={`num text-3xl leading-none ${row.rank === 1 ? "text-gold" : ""}`}>{num(row.elite, 1)}</dd>
                       </div>
                       <div>
                         <dt className="text-sm text-muted">K/D</dt>
@@ -170,7 +179,12 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
                   ) : (
                     <p className="border-t border-line-soft pt-3 text-base text-muted">Sem partidas na {elite.season.label}.</p>
                   )}
-                  {!p.is_active && <p className="text-sm text-muted">Fora do elenco ativo</p>}
+                  {(row?.provisional || !p.is_active) && (
+                    <p className="flex flex-wrap gap-2">
+                      {row?.provisional && <Badge tone="gold">Provisório · menos de 6 mapas</Badge>}
+                      {!p.is_active && <Badge>Fora do elenco ativo</Badge>}
+                    </p>
+                  )}
                 </li>
               );
             })}

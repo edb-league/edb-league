@@ -125,13 +125,21 @@ SEASON_CSS = """
 """
 
 
+FIRST_SEASON_START=date(2026,10,15)  # dia da primeira partida; espelha db/migrations/20261021_temporada1_desde_15_10.sql
+
+
 def season_dates(season_number):
-    """Período mensal: do dia 19 ao dia 18, desde outubro de 2026."""
+    """Período mensal: do dia 19 ao dia 18, desde outubro de 2026.
+
+    A Temporada 1 é a exceção: começa em 15/10, dia da primeira partida da liga.
+    """
     number=int(season_number)
     if number<1:
         raise ValueError("O calendário mensal começa na Temporada 1.")
     offset=9+number-1
     start=date(2026+offset//12,offset%12+1,19)
+    if number==1:
+        start=FIRST_SEASON_START
     following=offset+1
     end=date(2026+following//12,following%12+1,19)-timedelta(days=1)
     return start,end

@@ -20,7 +20,7 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-PARSER_VERSION = 1
+PARSER_VERSION = 2  # 2: ordenação estável por tick
 TRADE_TICKS = 320
 TICKRATE = 64
 
@@ -100,7 +100,7 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
         mask = df.tick > start
         if "is_warmup_period" in df:
             mask &= ~df.is_warmup_period.fillna(False).astype(bool)
-        return df[mask].sort_values("tick").copy()
+        return df[mask].sort_values("tick", kind="stable").copy()
 
     starts_df = ev["round_start"]
     round_starts = sorted(starts_df[starts_df.tick >= start - 5].tick.tolist()) if len(starts_df) else []
@@ -115,7 +115,7 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
 
     deaths, hurts, blinds = live(ev["player_death"]), live(ev["player_hurt"]), live(ev["player_blind"])
     fires = ev["weapon_fire"]
-    fires = fires[fires.tick > start].sort_values("tick").copy() if len(fires) else _empty()
+    fires = fires[fires.tick > start].sort_values("tick", kind="stable").copy() if len(fires) else _empty()
     for frame in (deaths, hurts):
         frame["rnd"] = frame.tick.apply(round_of)
     for column in ("attacker_steamid", "user_steamid", "assister_steamid"):

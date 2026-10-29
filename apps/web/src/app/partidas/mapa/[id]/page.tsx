@@ -7,6 +7,7 @@ import { apiOrNotFound } from "@/lib/api";
 import { first, num, parseSeason, seasonQuery } from "@/lib/format";
 import type { MatchDetail } from "@/lib/types";
 import { NoData } from "@/components/ui/NoData";
+import { MapTile } from "@/components/ui/MapTile";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,31 +31,35 @@ export default async function MatchDetailPage({
   const detail = await apiOrNotFound<MatchDetail>(`/matches/${encodeURIComponent(id)}`);
   const season = parseSeason(sp.temporada) ?? detail.season ?? undefined;
   const confronto = first(sp.confronto) ?? detail.series_id ?? undefined;
-  const back = `/partidas${seasonQuery(season, { confronto })}${confronto ? "#mapas-do-confronto" : ""}`;
+  const back = `/partidas${seasonQuery(season, { confronto })}${confronto ? `#confronto-${confronto}` : ""}`;
   const m = detail.match;
   const score = m.verified ? `${m.score_left} : ${m.score_right}` : null;
 
   return (
     <>
       <p>
-        <Link href={back} className="inline-flex min-h-11 items-center text-base font-bold">
+        <Link href={back} className="link-cta">
           ← Voltar às partidas
         </Link>
       </p>
 
-      <header className="card p-5 md:p-6">
-        <p className="kicker mb-1">Partida · {m.date_label}</p>
-        <h1 className="text-3xl font-extrabold">
-          {m.map}
-          <span className="sr-only">: </span>
-        </h1>
-        <p className="mt-2 text-xl font-bold">
-          {m.left} <span className="tabular mx-2 text-gold">{score ?? <NoData />}</span> {m.right}
-        </p>
-        <p className="mt-1 text-base text-muted">
-          {m.verified ? "Placar verificado" : "Placar ainda não verificado"} · Fonte: {detail.source}
-          {detail.rounds_total ? ` · ${detail.rounds_total} rounds` : ""}
-        </p>
+      <header className="card overflow-hidden border-t-4 border-t-gold-bg">
+        <MapTile map={m.map} className="px-5 py-5 md:px-6 md:py-6">
+          <p className="inline-block rounded-full bg-surface/80 px-3 py-0.5 text-base text-muted">Partida · {m.date_label}</p>
+          <h1 className="mt-2 text-5xl leading-none">
+            {m.map}
+            <span className="sr-only">: </span>
+          </h1>
+        </MapTile>
+        <div className="p-5 md:px-6">
+          <p className="text-xl font-bold">
+            {m.left} <span className="num mx-2 text-3xl text-gold">{score ?? <NoData />}</span> {m.right}
+          </p>
+          <p className="mt-1 text-base text-muted">
+            {m.verified ? "Placar verificado" : "Placar ainda não verificado"} · Fonte: {detail.source}
+            {detail.rounds_total ? ` · ${detail.rounds_total} rounds` : ""}
+          </p>
+        </div>
       </header>
 
       <section aria-labelledby="placar">

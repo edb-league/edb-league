@@ -95,6 +95,38 @@ def fetch_steam_profile(steamid64, api_key, session=None, timeout=6):
     }
 
 
+def fetch_steam_avatars(steamids, api_key, session=None, timeout=6):
+    """Fotos de vários jogadores numa só consulta (a Steam aceita até 100 por chamada).
+
+    Devolve {steamid64: url_da_foto}; quem não tem foto válida fica de fora.
+    Levanta SteamUnavailable em falhas, sem expor a chave.
+    """
+    get = (session or requests).get
+    ids = [str(s) for s in steamids]
+    found = {}
+    for start in range(0, len(ids), 100):
+        chunk = ids[start:start + 100]
+        try:
+            response = get(SUMMARY_URL, params={"key": api_key, "steamids": ",".join(chunk)}, timeout=timeout)
+            response.raise_for_status()
+            players = (response.json().get("response") or {}).get("players") or []
+        except requests.HTTPError as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            reason = "key" if status in (401, 403) else "limit" if status == 429 else "http"
+            raise SteamUnavailable(reason) from None
+        except requests.Timeout:
+            raise SteamUnavailable("timeout") from None
+        except requests.RequestException:
+            raise SteamUnavailable("network") from None
+        except (ValueError, AttributeError):
+            raise SteamUnavailable("response") from None
+        for player in players:
+            url = safe_avatar_url(player.get("avatarfull"))
+            if url and player.get("steamid"):
+                found[str(player["steamid"])] = url
+    return found
+
+
 ERROR_NOTES = {
     "key": "Chave da Steam recusada pelo servidor da Steam",
     "limit": "A Steam limitou as consultas; tente em alguns minutos",

@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field, field_validator
 
-from . import admin_ops, auth, settings
+from . import admin_ops, auth, identity, settings
 from .service import get_service
 
 router = APIRouter(prefix="/api/admin")
@@ -76,15 +76,16 @@ class ImportCommitBody(BaseModel):
 # Sessão ----------------------------------------------------------------------------
 @router.get("/session")
 def session(request: Request):
-    return {"authenticated": auth.verify_token(request.cookies.get(auth.COOKIE_NAME)),
-            "configured": settings.admin_configured()}
+    return {"authenticated": auth.is_admin(request), "configured": settings.admin_configured(),
+            "steam": settings.steam_login_enabled() and bool(settings.admin_steamid()),
+            "password": settings.password_login_enabled()}
 
 
 @router.post("/login")
 def login(body: LoginBody, request: Request, response: Response):
     auth.check_origin(request)
-    if not settings.admin_configured():
-        raise HTTPException(503, "Administração bloqueada: configure XINXAS_ADMIN_PASSWORD no servidor.")
+    if not settings.password_login_enabled():
+        raise HTTPException(503, "Entrada por senha desativada. Use o login com a Steam.")
     ip = auth.client_ip(request)
     auth.ensure_not_locked(ip)
     if not auth.check_password(body.password):
@@ -99,6 +100,7 @@ def login(body: LoginBody, request: Request, response: Response):
 def logout(request: Request, response: Response):
     auth.check_origin(request)
     auth.clear_cookie(response)
+    identity.clear_session(response)
     return {"ok": True}
 
 

@@ -13,8 +13,13 @@ Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português"
 | GET | `/api/meta` | `Meta` |
 | GET | `/api/home?season=N` | `Home` |
 | GET | `/api/rankings/{elite\|superacao\|xp\|bagres}?season=N` | `Ranking` |
-| GET | `/api/missions?season=N` | `Missions` |
+| GET | `/api/missions?season=N` | `Missions` (com `week` e `players`: situação de cada jogador na missão da semana) |
 | GET | `/api/players?include_inactive=false` | `PlayerListItem[]` |
+| GET | `/api/me` | `Me` (quem está logado; nunca devolve o SteamID; `no-store`) |
+| GET | `/api/auth/steam/login?next=/caminho` | redireciona (303) para a Steam |
+| GET | `/api/auth/steam/callback` | volta da Steam; cria a sessão e redireciona (303) |
+| POST | `/api/auth/logout` | encerra a sessão (checa `Origin`) |
+| GET | `/api/steam/avatars` | `{ [player_id]: url }` (fotos da Steam; `{}` sem `STEAM_API_KEY` ou com a Steam fora do ar) |
 | GET | `/api/players/{id}` | `PlayerDetail` (inativo também abre, como no Streamlit) |
 | GET | `/api/compare?a=ID&b=ID` | `Compare` (400 se iguais) |
 | GET | `/api/hall-of-fame` | `Hall` |

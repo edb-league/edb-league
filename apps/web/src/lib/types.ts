@@ -100,9 +100,34 @@ export type Ranking = {
   notes: string[];
 };
 
+export type MissionWeek = {
+  number: number;
+  total: number;
+  starts_on: string;
+  ends_on: string;
+  days_left: number;
+  /** true quando a temporada já acabou (mostra a última semana). */
+  closed: boolean;
+};
+
+export type MissionPlayer = {
+  player: PlayerRef;
+  level: number | null;
+  stars: number;
+  /** KPR da meta, pelo nível de estrelas. */
+  target: number;
+  /** done: cumprida e conta no XP; unselected: bateu a meta, mas o mapa ficou fora dos 6 do XP; open: jogou e não bateu; none: sem partidas na semana. */
+  status: "done" | "unselected" | "open" | "none";
+  maps_in_week: number;
+  /** Melhor KPR da semana em mapas de 8 rounds ou mais. */
+  best_kpr: number | null;
+};
+
 export type Missions = {
   targets: { stars: number; kpr: number }[];
   xp: Ranking;
+  week: MissionWeek | null;
+  players: MissionPlayer[];
 };
 
 /* ---------- Jogadores ---------- */
@@ -481,7 +506,24 @@ export type DrawResult = {
 
 /* ---------- Administração ---------- */
 
-export type AdminSession = { authenticated: boolean; configured: boolean };
+export type AdminSession = {
+  authenticated: boolean;
+  configured: boolean;
+  /** true quando o login do administrador pela Steam está ligado no servidor. */
+  steam: boolean;
+  /** true quando a entrada por senha está ativa. */
+  password: boolean;
+};
+
+/** Quem está logado (resposta de /api/me). O SteamID nunca é devolvido. */
+export type Me = {
+  login_enabled: boolean;
+  authenticated: boolean;
+  is_admin: boolean;
+  player: PlayerListItem | null;
+  /** Foto da Steam, quando a chave da Steam está configurada. */
+  avatar: string | null;
+};
 
 export type AdminPlayer = PlayerListItem & { steamid: string | null };
 

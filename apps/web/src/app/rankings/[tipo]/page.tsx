@@ -6,7 +6,8 @@ import { SeasonBar } from "@/components/layout/SeasonBar";
 import { Card, SectionTitle } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TableWrap, Td, Th } from "@/components/ui/Table";
-import { api, qs } from "@/lib/api";
+import { api, qs, steamAvatars } from "@/lib/api";
+import { getMe } from "@/lib/me";
 import { num, seasonQuery, signed } from "@/lib/format";
 import { seasonContext } from "@/lib/season";
 import type { Ranking, RankingType } from "@/lib/types";
@@ -36,7 +37,7 @@ export default async function RankingPage({
   if (!valid.includes(tipo)) notFound();
   const type = tipo as RankingType;
   const { meta, season } = await seasonContext((await searchParams).temporada);
-  const ranking = await api<Ranking>(`/rankings/${type}${qs({ season })}`);
+  const [ranking, avatars, me] = await Promise.all([api<Ranking>(`/rankings/${type}${qs({ season })}`), steamAvatars(), getMe()]);
 
   return (
     <>
@@ -44,7 +45,6 @@ export default async function RankingPage({
         title="Rankings da EDB LEAGUE"
         subtitle="Desempenho Elite, superação pessoal, experiência (XP) e o ranking BAGRES, pior ADR primeiro."
         art="rankings"
-        counts={{ players: meta.counts.players, matches: meta.counts.matches, maps: meta.counts.maps }}
       >
         <SeasonBar meta={meta} season={season} path={`/rankings/${type}`} variant="strip" />
       </PageHeader>
@@ -59,7 +59,7 @@ export default async function RankingPage({
                   href={`/rankings/${tab.type}${seasonQuery(season)}`}
                   aria-current={active ? "page" : undefined}
                   className={clsx(
-                    "inline-flex min-h-11 items-center rounded-lg border px-5 text-base font-bold no-underline",
+                    "press lift inline-flex min-h-11 items-center rounded-lg border px-5 text-base font-bold no-underline",
                     active ? "border-gold-bg bg-gold-bg text-on-gold" : "border-line bg-surface text-fg hover:bg-surface-2",
                   )}
                 >
@@ -75,7 +75,7 @@ export default async function RankingPage({
         <SectionTitle id="ranking-titulo" title={ranking.title}>
           {ranking.notes[0]}
         </SectionTitle>
-        <RankingList ranking={ranking} />
+        <RankingList ranking={ranking} avatars={avatars} meId={me.player?.id} />
       </section>
 
       {ranking.notes.length > 1 && (
@@ -107,7 +107,7 @@ export default async function RankingPage({
                 {ranking.progress.map((row) => (
                   <tr key={row.name}>
                     <Td>{row.name}</Td>
-                    <Td numeric>{signed(row.change_pct, 1, "%")}</Td>
+                    <Td numeric className={`num text-xl ${row.change_pct > 0 ? "text-win" : row.change_pct < 0 ? "text-loss" : ""}`}>{signed(row.change_pct, 1, "%")}</Td>
                     <Td numeric>{num(row.games)}</Td>
                   </tr>
                 ))}

@@ -14,7 +14,7 @@ export function Tabs({ tabs, label, defaultValue }: { tabs: TabItem[]; label: st
           <RadixTabs.Trigger
             key={tab.value}
             value={tab.value}
-            className="-mb-px min-h-11 rounded-t-lg border-b-4 border-transparent px-4 py-2 text-base font-bold text-muted hover:bg-surface-2 hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg"
+            className="press -mb-px min-h-11 rounded-t-lg border-b-4 border-transparent px-4 py-2 text-base font-bold text-muted hover:bg-surface-2 hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg"
           >
             {tab.label}
           </RadixTabs.Trigger>

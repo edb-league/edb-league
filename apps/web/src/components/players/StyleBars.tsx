@@ -22,7 +22,7 @@ export function StyleBars({ items }: { items: StyleItem[] }) {
               {item.label}{" "}
               <span className="text-base font-normal text-muted">{item.meaning ? item.basis : `(${item.basis})`}</span>
             </span>
-            <b className="num text-3xl leading-none text-gold">
+            <b className="num text-3xl leading-none">
               {item.score === null ? "–" : num(item.score)}
               {item.score !== null && <span className="sr-only"> de 100</span>}
             </b>

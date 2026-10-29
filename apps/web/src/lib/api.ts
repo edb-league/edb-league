@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 /** URL interna da API; só o servidor Next.js a usa. O navegador fala com /api (proxy). */
-const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
+export const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
 
 export class ApiError extends Error {
   status: number;
@@ -51,5 +51,14 @@ export async function apiOrNotFound<T>(path: string, options: { revalidate?: num
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.status === 400)) notFound();
     throw error;
+  }
+}
+
+/** Fotos da Steam por jogador. Nunca falha: sem chave, sem SteamID ou com a Steam fora do ar volta vazio. */
+export async function steamAvatars(): Promise<Record<string, string>> {
+  try {
+    return await api<Record<string, string>>("/steam/avatars", { revalidate: 600 });
+  } catch {
+    return {};
   }
 }

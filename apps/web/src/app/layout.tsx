@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { NavProgress } from "@/components/layout/NavProgress";
+import { LoginNotice } from "@/components/layout/LoginNotice";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ThemeSelect } from "@/components/layout/ThemeSelect";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { getMe } from "@/lib/me";
 import { NAV_ITEMS } from "@/lib/nav";
 import type { Meta } from "@/lib/types";
 // Fontes carregadas aqui (e não no CSS) para o Next resolver os pacotes, inclusive no Windows.
@@ -44,6 +47,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     meta = null; // a própria página mostra o erro com mais contexto
   }
 
+  const me = await getMe();
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
@@ -56,7 +61,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         >
           Pular para o conteúdo
         </a>
-        <SiteHeader />
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
+        <SiteHeader me={me} />
+        <Suspense fallback={null}>
+          <LoginNotice />
+        </Suspense>
         <div>
           {meta?.demo && (
             <div className="border-b border-line-soft bg-surface-2 px-4 py-2 text-center text-base">
@@ -80,6 +91,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       </Link>
                     </li>
                   ))}
+                  {me.login_enabled && !me.is_admin && (
+                    <li>
+                      <Link href="/admin" className="inline-flex min-h-11 items-center">
+                        Administração
+                      </Link>
+                    </li>
+                  )}
                 </ul>
               </nav>
             </div>

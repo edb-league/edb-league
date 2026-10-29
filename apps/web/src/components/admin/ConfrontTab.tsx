@@ -132,7 +132,7 @@ export function ConfrontTab({ overview, onChanged }: { overview: AdminOverview; 
             <legend className="mb-1.5 text-base font-bold">Formato da partida</legend>
             <div className="flex gap-3">
               {(["bo1", "bo3"] as const).map((f) => (
-                <label key={f} className="flex min-h-11 flex-1 cursor-pointer items-center gap-3 rounded-lg border border-line bg-surface px-4 has-[:checked]:border-accent has-[:checked]:bg-surface-2">
+                <label key={f} className="flex min-h-11 flex-1 cursor-pointer press items-center gap-3 rounded-lg border border-line bg-surface px-4 has-[:checked]:border-accent has-[:checked]:bg-surface-2">
                   <input
                     type="radio"
                     name="formato"
@@ -165,7 +165,7 @@ export function ConfrontTab({ overview, onChanged }: { overview: AdminOverview; 
                 const checked = index >= 0;
                 return (
                   <li key={m.id}>
-                    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                    <label className="flex min-h-11 cursor-pointer press items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
                       <input
                         type="checkbox"
                         className="size-5"
@@ -208,7 +208,7 @@ export function ConfrontTab({ overview, onChanged }: { overview: AdminOverview; 
                   const checked = teamA.includes(pid);
                   return (
                     <li key={pid}>
-                      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+                      <label className="flex min-h-11 cursor-pointer press items-center gap-3 rounded-lg px-3 py-1.5 hover:bg-surface-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
                         <input
                           type="checkbox"
                           className="size-5"

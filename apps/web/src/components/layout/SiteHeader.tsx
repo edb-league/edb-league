@@ -6,6 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { NAV, isActive, isGroup, type NavGroup, type NavLink } from "@/lib/nav";
+import type { Me } from "@/lib/types";
+import { SteamLogin, UserMenu } from "./UserMenu";
 
 function LockIcon() {
   return (
@@ -18,7 +20,7 @@ function LockIcon() {
 
 const itemClass = (active: boolean) =>
   clsx(
-    "flex min-h-11 items-center border-b-[3px] px-3 text-lg no-underline xl:min-h-[4.5rem] xl:px-2.5",
+    "flex min-h-11 items-center border-b-[3px] px-3 text-lg no-underline transition-colors duration-150 xl:min-h-[4.5rem] xl:px-2.5",
     active
       ? "border-gold-bg font-bold text-fg"
       : "border-transparent font-medium text-muted hover:text-fg xl:hover:border-line-soft",
@@ -47,17 +49,30 @@ function Group({
         className={clsx(itemClass(active), "hidden w-full xl:flex xl:gap-1.5")}
       >
         {group.label}
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d={open ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={clsx("transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]", open && "rotate-180")}
+        >
+          <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
       {/* No menu aberto do celular o grupo é só um título acima da sua lista. */}
-      <p className="kicker px-3 pt-3 pb-1 xl:hidden">{group.label}</p>
+      <p className="px-3 pt-3 pb-1 text-base font-bold text-muted xl:hidden">{group.label}</p>
       <ul
         id={id}
         className={clsx(
-          "flex flex-col xl:absolute xl:top-full xl:left-0 xl:z-50 xl:min-w-60 xl:rounded-xl xl:border xl:border-line-soft xl:bg-surface xl:p-1.5 xl:shadow-card",
-          open ? "xl:flex" : "xl:hidden",
+          "flex flex-col xl:absolute xl:top-full xl:left-0 xl:z-50 xl:min-w-60 xl:origin-top-left xl:rounded-xl xl:border xl:border-line-soft xl:bg-surface xl:p-1.5 xl:shadow-card",
+          // Fechado fica invisível (some do teclado e dos leitores de tela) e abre a partir do botão.
+          "xl:transition-[opacity,transform,visibility] xl:duration-150 xl:ease-[cubic-bezier(0.23,1,0.32,1)]",
+          open ? "xl:visible xl:scale-100 xl:opacity-100" : "xl:pointer-events-none xl:invisible xl:-translate-y-1 xl:scale-[0.97] xl:opacity-0",
         )}
       >
         {group.items.map((item) => {
@@ -68,7 +83,7 @@ function Group({
                 href={item.href}
                 aria-current={current ? "page" : undefined}
                 className={clsx(
-                  "flex min-h-11 items-center rounded-lg px-3 text-lg no-underline xl:hover:bg-surface-2",
+                  "flex min-h-11 items-center rounded-lg px-3 text-lg no-underline transition-colors duration-150 xl:hover:bg-surface-2",
                   current ? "font-bold text-fg" : "text-muted hover:text-fg",
                 )}
               >
@@ -98,7 +113,7 @@ function DirectLink({ item, pathname }: { item: NavLink; pathname: string }) {
  * lista suspensa; em telas estreitas tudo vira uma lista aberta pelo botão "Menu" (aria-expanded).
  * Existe um único landmark <nav> principal.
  */
-export function SiteHeader() {
+export function SiteHeader({ me }: { me: Me }) {
   const pathname = usePathname();
   // Os painéis abertos ficam atrelados à rota em que foram abertos: ao navegar, fecham sozinhos.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -140,7 +155,7 @@ export function SiteHeader() {
           </Link>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-base font-bold xl:hidden"
+            className="btn btn-secondary xl:hidden"
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setOpenOn(open ? null : pathname)}
@@ -156,7 +171,7 @@ export function SiteHeader() {
           id={panelId}
           className={clsx(
             "w-full flex-1 flex-col gap-3 pb-4 xl:flex xl:w-auto xl:flex-row xl:flex-nowrap xl:items-center xl:gap-4 xl:pb-0",
-            open ? "flex" : "hidden",
+            open ? "reveal flex" : "hidden",
           )}
         >
           <nav aria-label="Principal" className="xl:min-w-0 xl:flex-1">
@@ -179,14 +194,20 @@ export function SiteHeader() {
             </ul>
           </nav>
 
-          <Link
-            href="/admin"
-            aria-current={adminActive ? "page" : undefined}
-            className="inline-flex min-h-11 w-fit items-center gap-2 rounded-lg bg-gold-bg px-4 text-base font-bold text-on-gold no-underline hover:brightness-110"
-          >
-            <LockIcon />
-            Administrador
-          </Link>
+          {me.authenticated ? (
+            <UserMenu me={me} />
+          ) : me.login_enabled ? (
+            <SteamLogin />
+          ) : (
+            <Link
+              href="/admin"
+              aria-current={adminActive ? "page" : undefined}
+              className="btn btn-gold w-fit"
+            >
+              <LockIcon />
+              Administrador
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -61,7 +61,7 @@ export function SeasonBar({
                     href={`${path}${seasonQuery(s.number, extra)}`}
                     aria-current={active ? "page" : undefined}
                     className={clsx(
-                      "inline-flex min-h-11 items-center rounded-lg border px-4 text-base font-bold no-underline",
+                      "press lift inline-flex min-h-11 items-center rounded-lg border px-4 text-base font-bold no-underline",
                       active
                         ? "border-gold-bg bg-gold-bg text-on-gold"
                         : "border-line bg-surface-2 text-fg hover:bg-surface-3",

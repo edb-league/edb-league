@@ -29,14 +29,14 @@ def prepare_upload(uploaded):
     """Descompacta em blocos, verifica limite, e devolve (TemporaryDirectory, path, sha256)."""
     folder = tempfile.TemporaryDirectory(prefix='xinxas_')
     is_gz = str(uploaded.name).lower().endswith('.gz')
-    if not str(uploaded.name).lower().endswith(('.dem','.dem.gz')):
+    if not str(uploaded.name).lower().endswith(('.dem','.dem.gz','.gz')):
         folder.cleanup()
-        raise ValueError('Formato não suportado: utilize .dem ou .dem.gz')
+        raise ValueError('Formato não suportado: utilize .dem, .dem.gz ou .gz')
     out = Path(folder.name)/'partida.dem'
     uploaded.seek(0)
     sha = hashlib.sha256(); size=0
     try:
-        raw = gzip.GzipFile(fileobj=uploaded) if is_gz else uploaded
+        raw = gzip.GzipFile(fileobj=uploaded, mode='rb') if is_gz else uploaded
         with raw, open(out,'wb') as dest:
             while True:
                 b=raw.read(1024*1024)
@@ -169,6 +169,47 @@ def _header_map(header):
     return 'Não identificado'
 
 
+def parse_demo_stats(dem_path: str, fingerprint: str) -> DemoOutput:
+    """Lê a demo com o ``demo_stats.analyze`` (o mesmo parser do pipeline de linha de comando).
+
+    Devolve o formato do ``parse_demo``, já com vencedor, rating estimado, KAST, aberturas e trades.
+    A partida começa no último ``begin_new_match``, então o round faca fica de fora.
+    """
+    from edb.demo_stats import COUNT_FIELDS, analyze
+    from edb.hltv_stats import rating2
+
+    analysis = analyze(dem_path)
+    t_score = int(analysis['score']['team_t_first'])
+    ct_score = int(analysis['score']['team_ct_first'])
+    winner = 2 if t_score > ct_score else 3 if ct_score > t_score else None
+    warns = []
+    result = []
+    for p in analysis['players']:
+        estimate = rating2({f: p.get(f, 0) for f in COUNT_FIELDS})
+        result.append({
+            'nickname': str(p.get('nick') or '') or 'Steam ' + str(p['steamid'])[-6:],
+            'steamid': str(p['steamid']),
+            'kills': int(p['kills']), 'deaths': int(p['deaths']), 'assists': int(p['assists']),
+            'damage': int(p['damage']), 'rounds': int(p['rounds']), 'headshots': int(p['headshots']),
+            'plants': int(p['plants']), 'defuses': int(p['defuses']),
+            'rating': round(estimate, 2) if estimate is not None else None,
+            'kast': int(p['kast']), 'open_kills': int(p['open_kills']), 'trade_kills': int(p['trade_kills']),
+            'won': None if winner is None else int(p['team']) == winner,
+        })
+    rounds_total = int(analysis['rounds'])
+    _validate_combat_stats(result, rounds_total)
+    if len(result) != 10:
+        warns.append(f'{len(result)} participantes reconhecidos; uma partida 5v5 tem 10. Reveja trocas de jogadores.')
+    if winner is None:
+        warns.append(f'Placar empatado ({t_score}x{ct_score}); marque o vencedor manualmente.')
+    elif max(t_score, ct_score) < 13:
+        warns.append(f'Ninguém chegou a 13 rounds ({t_score}x{ct_score}); confira se a partida acabou antes.')
+    warns.append(f'Placar {t_score}x{ct_score} (time que começou de T x time que começou de CT). '
+                 'Revise a data: a demo não a traz.')
+    return DemoOutput(fingerprint, str(analysis.get('map') or '').title() or 'Não identificado',
+                      rounds_total, result, warns)
+
+
 def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
     from demoparser2 import DemoParser
     parser=DemoParser(dem_path)
@@ -262,14 +303,24 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
         if assister is not None and _s(r.get('assister_steamid')) not in (vid,aid):
             assister['assists']+=1
     if not hurts.empty and 'dmg_health' in hurts.columns:
+        if 'tick' in hurts.columns:
+            hurts=hurts.sort_values('tick',kind='stable')
+        # Dano efetivo: limitado à vida que a vítima ainda tinha (sem somar overkill).
+        life={}
         for _,r in hurts.iterrows():
+            dmg=int(_number(r.get('dmg_health')))
+            key=(_s(r.get('total_rounds_played')),_s(r.get('user_steamid')))
+            remaining=life.get(key,100)
+            health=pd.to_numeric(r.get('health'),errors='coerce') if 'health' in hurts.columns else float('nan')
+            life[key]=int(health) if pd.notna(health) and health>=0 else max(remaining-dmg,0)
+            effective=min(dmg,remaining)
             a=add(r.get('attacker_steamid'),r.get('attacker_name'))
             if a is None or _s(r.get('user_steamid')) == _s(r.get('attacker_steamid')):continue
             ateam=_s(r.get('attacker_team_name'))
             vteam=_s(r.get('user_team_name'))
             if ateam and vteam and ateam==vteam:continue
             # Não contabilizar dano do próprio jogador; confirmar friendly-fire em review.
-            a['damage']+=int(_number(r.get('dmg_health')))
+            a['damage']+=effective
     else:
         warns.append('Dano não encontrado: ADR ficará indisponível.')
     for events,key in [(bombs_planted,'plants'),(bombs_defused,'defuses')]:
@@ -294,6 +345,13 @@ def parse_demo(dem_path: str, fingerprint: str) -> DemoOutput:
     else:
         total=max((p['rounds'] for p in players.values()),default=0)
         warns.append('Sem round_end; placar total não confirmado.')
+    # O spawn do primeiro round oficial acontece antes do último begin_new_match e cai fora do
+    # filtro de aquecimento: quem tem exatamente um round a menos que o total jogou todos
+    # (conferido contra o demo_stats em demos reais, onde ADR e KPR saíam ~4% inflados).
+    if total>1:
+        for p in players.values():
+            if p['rounds']==total-1:
+                p['rounds']=total
     result=[]
     for _,p in players.items():
         if p['kills']+p['deaths']+p['assists']+p['rounds']+p['plants']+p['defuses']==0:

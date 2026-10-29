@@ -1,6 +1,8 @@
 """Montagem dos objetos JSON públicos, reaproveitando as regras do app Streamlit."""
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pandas as pd
 
 from edb.bagres import bagres_board, premio_henio
@@ -13,7 +15,7 @@ from edb.match_cards import match_sort_key, ordered_matches
 from edb.season_system import (
     _confront_first_date, _confront_result, _confront_sides, _parse_date, series_format, series_maps,
 )
-from edb.steam_profile import steam_view
+from edb.steam_profile import normalize_steamid64, steam_view
 from edb.team_draw import draw_balanced_teams, draw_message
 
 from . import settings
@@ -42,7 +44,7 @@ RANK_NOTES = {
         "Superação usa os 6 melhores mapas para cada atleta e exige 6 mapas disputados para premiação.",
     ],
     "xp": [
-        "Concluir uma partida de pelo menos 8 rounds com KPR acima da meta rende 100 XP, uma vez por semana.",
+        "Concluir uma partida de pelo menos 8 rounds com KPR igual ou acima da meta rende 100 XP, uma vez a cada semana da temporada.",
         "Presença: +40 XP por mapa; vitória: +20 XP; até 6 mapas na temporada, além de até 100 XP de missão por semana.",
         "Os únicos títulos competitivos oficiais são MVP Elite, Revelação Superação e Xinxa XP. "
         "Os resultados serão homologados após o encerramento.",
@@ -140,6 +142,49 @@ def season_by_number(snap: Snap, number: int) -> dict:
     return season_info(snap, row)
 
 
+# Fotos da Steam --------------------------------------------------------------------
+def build_avatars(service: LeagueService) -> dict[str, str]:
+    """{player_id: url da foto} para quem tem SteamID cadastrado. Sem chave ou com a Steam fora do ar: {}."""
+    key = settings.steam_key().strip().strip("'\"").strip()
+    if not key:
+        return {}
+    by_steam: dict[str, str] = {}
+    for player in service.snap().players:
+        steamid = normalize_steamid64(player.get("steamid"))
+        if steamid:
+            by_steam[steamid] = str(player["id"])
+    if not by_steam:
+        return {}
+    avatars = service.steam_avatars(sorted(by_steam), key)
+    return {by_steam[steamid]: url for steamid, url in avatars.items()}
+
+
+# Quem está logado ------------------------------------------------------------------
+def player_for_steamid(snap: Snap, steamid: str) -> dict | None:
+    """Jogador cadastrado com esse SteamID64 (aceita os formatos antigos do cadastro)."""
+    for player in snap.players:
+        if normalize_steamid64(player.get("steamid")) == steamid:
+            return player
+    return None
+
+
+def build_me(service: LeagueService, steamid: str | None, admin: bool) -> dict:
+    """Dados de quem fez a requisição. Nunca devolve o SteamID."""
+    base = {"login_enabled": settings.steam_login_enabled()}
+    if steamid is None:
+        return {**base, "authenticated": False, "is_admin": False, "player": None, "avatar": None}
+    player = player_for_steamid(service.snap(), steamid)
+    if player is None and not admin:
+        # O cadastro mudou depois do login: sem vínculo, sem sessão útil.
+        return {**base, "authenticated": False, "is_admin": False, "player": None, "avatar": None}
+    avatar = None
+    key = settings.steam_key().strip().strip("'\"").strip()
+    if key:
+        avatar = service.steam_avatars([steamid], key).get(steamid)
+    return {**base, "authenticated": True, "is_admin": admin,
+            "player": player_item(player) if player else None, "avatar": avatar}
+
+
 # Meta ------------------------------------------------------------------------------
 def build_meta(service: LeagueService) -> dict:
     snap = service.snap()
@@ -209,10 +254,76 @@ def build_ranking(snap: Snap, season: int | None, rtype: str) -> dict:
     }
 
 
+def _mission_week(snap: Snap, number: int) -> dict | None:
+    """Semana de 7 dias da temporada em que estamos (a última, se ela já acabou). Sem datas, sem semana."""
+    info = season_by_number(snap, number)
+    start, end = _parse_date(info["starts_on"]), _parse_date(info["ends_on"])
+    if number < 1 or start is None or end is None:
+        return None
+    total = ((end - start).days) // 7 + 1
+    index = min(max((snap.today - start).days // 7, 0), total - 1)
+    first = start + timedelta(days=7 * index)
+    # A última semana vai até o fim da temporada (pode ter mais de 7 dias, como no cálculo do XP).
+    last = end if index == total - 1 else first + timedelta(days=6)
+    return {
+        "number": index + 1, "total": total, "starts_on": first.isoformat(), "ends_on": last.isoformat(),
+        "days_left": max((last - snap.today).days, 0), "closed": snap.today > end,
+    }
+
+
+def _mission_players(snap: Snap, number: int, week: dict) -> list[dict]:
+    """Situação de cada jogador ativo na missão da semana, contando só os mapas que valem para o XP."""
+    board = snap.boards(number)["xp"]
+    chosen: dict[str, set] = {}
+    stars: dict[str, int] = {}
+    for r in board.to_dict("records"):
+        pid = str(r.get("player_id"))
+        chosen[pid] = {str(m) for m in (r.get("Mapas selecionados") or [])}
+        stars[pid] = _int(r.get("Estrelas"), 3)
+    frame = snap.selected_frame(number)
+    first, last = _parse_date(week["starts_on"]), _parse_date(week["ends_on"])
+    rows = []
+    for player in snap.active_players:
+        pid = str(player["id"])
+        level_stars = stars.get(pid, _int(player.get("stars"), 3))
+        target = TARGET_KPR[max(1, min(5, level_stars))]
+        games = []
+        if not frame.empty:
+            mine = frame[frame["player_id"].astype(str) == pid]
+            for g in mine.to_dict("records"):
+                played = _parse_date(_iso(g.get("played_at")))
+                rounds = _num(g.get("rounds")) or 0
+                if played is None or not first <= played <= last or rounds <= 0:
+                    continue
+                games.append({"match": str(g["match_id"]), "rounds": rounds, "kpr": (_num(g.get("kills")) or 0) / rounds})
+        qualifying = [g for g in games if g["kpr"] >= target and g["rounds"] >= 8]
+        valid = [g for g in games if g["rounds"] >= 8]
+        if any(g["match"] in chosen.get(pid, set()) for g in qualifying):
+            status = "done"
+        elif qualifying:
+            status = "unselected"
+        elif games:
+            status = "open"
+        else:
+            status = "none"
+        rows.append({
+            "player": ref(snap, pid), "level": safe_level(player), "stars": level_stars, "target": target,
+            "status": status, "maps_in_week": len(games),
+            "best_kpr": round(max((g["kpr"] for g in valid), default=0.0), 3) if valid else None,
+        })
+    order = {"done": 0, "unselected": 1, "open": 2, "none": 3}
+    rows.sort(key=lambda r: (order[r["status"]], -(r["best_kpr"] or 0), r["player"]["name"].casefold()))
+    return rows
+
+
 def build_missions(snap: Snap, season: int | None) -> dict:
+    number = snap.resolve_season(season)
+    week = _mission_week(snap, number)
     return {
         "targets": [{"stars": stars, "kpr": kpr} for stars, kpr in sorted(TARGET_KPR.items())],
         "xp": build_ranking(snap, season, "xp"),
+        "week": week,
+        "players": _mission_players(snap, number, week) if week else [],
     }
 
 
@@ -232,7 +343,7 @@ def build_home(snap: Snap, season: int | None) -> dict:
     highlights = []
     elite_rows = eligible(board)
     if not elite_rows.empty:
-        r = elite_rows.sort_values("Elite", ascending=False).iloc[0]
+        r = elite_rows.iloc[0]  # a ordem do ranking já aplica o valor exato e os desempates
         highlights.append({"title": "MVP", "ranking": "elite", "player": person(r),
                            "detail": f"Índice {_comma(float(r['Elite']))} • {int(r['Partidas'])} melhores mapas"})
     else:
@@ -242,7 +353,7 @@ def build_home(snap: Snap, season: int | None) -> dict:
     if not sup_rows.empty:
         r = sup_rows.iloc[0]
         highlights.append({"title": "Revelação", "ranking": "superacao", "player": person(r),
-                           "detail": f"{_comma(float(r['Superação %']), 1, True)}% da meta"})
+                           "detail": f"{_comma(float(r['Superação %']), 1, True)}% em relação à meta"})
     else:
         highlights.append({"title": "Revelação", "ranking": "superacao", "player": None,
                            "detail": "Aguardando elegíveis"})
@@ -257,7 +368,7 @@ def build_home(snap: Snap, season: int | None) -> dict:
 
     top = []
     if not board.empty:
-        for r in board.sort_values("Elite", ascending=False).head(10).to_dict("records"):
+        for r in board.head(10).to_dict("records"):
             top.append({"player_id": str(r["player_id"]), "name": snap.label(str(r["Jogador"])),
                         "elite": _num(r["Elite"])})
     roster = [{"id": str(p["id"]), "name": display_name(p), "level": safe_level(p)}

@@ -18,7 +18,6 @@ function RegisterCard({ onChanged }: { onChanged: () => void }) {
 
   return (
     <Card aria-labelledby="novo-jogador">
-      <p className="kicker">Novo jogador</p>
       <h3 id="novo-jogador" className="text-xl font-bold">Cadastrar jogador</h3>
       <p className="mb-4 text-base text-muted">Adicione um atleta ao elenco da liga.</p>
       <form
@@ -190,7 +189,6 @@ function ConfigCard({ players, onChanged }: { players: AdminPlayer[]; onChanged:
 
   return (
     <Card aria-labelledby="gestao">
-      <p className="kicker">Gestão do elenco</p>
       <h3 id="gestao" className="text-xl font-bold">Configurar jogador</h3>
       <p className="mb-4 text-base text-muted">
         Selecione um jogador cadastrado para mudar o nível ou removê-lo do elenco.
