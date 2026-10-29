@@ -226,3 +226,21 @@ test("medalhas filtra por faixa", async ({ page }) => {
   await expect(page.getByRole("link", { name: /^Ouro/ })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("Bronze", { exact: true })).toHaveCount(0);
 });
+
+test("política de conteúdo ativa e nenhuma página viola a própria política", async ({ page, request }) => {
+  const { playerA, mapId } = await ids(request);
+  const violations: string[] = [];
+  page.on("console", (message) => {
+    if (/content security policy/i.test(message.text())) violations.push(message.text());
+  });
+  const home = await page.goto("/");
+  const csp = home?.headers()["content-security-policy"] ?? "";
+  expect(csp).toContain("frame-ancestors 'none'");
+  expect(csp).toContain("object-src 'none'");
+  expect(csp).not.toContain("*;");
+  for (const route of ["/", "/rankings/elite", "/jogadores", `/jogadores/${playerA}`, `/partidas/mapa/${mapId}`, "/sorteador", "/comparar", "/medalhas", "/hall-da-fama", "/admin"]) {
+    await page.goto(route);
+    await page.waitForLoadState("networkidle");
+  }
+  expect(violations, violations.join("\n")).toEqual([]);
+});

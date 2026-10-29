@@ -1,0 +1,10 @@
+# O repositório guarda LF; o Git converte para o sistema de cada pessoa ao baixar.
+* text=auto
+*.sh text eol=lf
+*.sql text eol=lf
+*.png binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
