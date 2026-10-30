@@ -1,6 +1,6 @@
-"""Regras e dados da EDB LEAGUE, compartilhados pelo app Streamlit e pela API.
+"""Regras e dados da EDB LEAGUE, usados pela API e pelo importador local.
 
-Este pacote não depende de Streamlit nem de FastAPI.
+Este pacote não depende de FastAPI.
 """
 from pathlib import Path
 

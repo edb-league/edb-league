@@ -1,6 +1,6 @@
 """Foto e horas de CS de cada jogador, lidas da Steam a partir do SteamID cadastrado.
 
-A chave da Steam Web API (STEAM_API_KEY) fica só nos Secrets do Streamlit e nunca
+A chave da Steam Web API (STEAM_API_KEY) fica só nas variáveis de ambiente da API e nunca
 é registrada em mensagens de erro. Sem chave, sem SteamID ou com perfil privado o
 site continua funcionando, mostrando a silhueta cinza.
 """

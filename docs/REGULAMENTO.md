@@ -22,8 +22,8 @@
 - O limite pode ser revisto **somente para temporadas futuras**.
 
 ## XP
-- Seis mapas selecionados por pontuacao de participacao/vitoria: 40 XP por mapa + 20 XP por vitoria.
-- Nos empates de pontuacao de mapa, os realizados primeiro sao priorizados.
+- Seis mapas selecionados para render o maximo de XP: 40 XP por mapa + 20 XP por vitoria + 100 XP por semana coberta por uma missao cumprida em um dos seis mapas. Como a missao vale mais que a vitoria, um mapa de missao pode entrar no lugar de uma vitoria comum.
+- Cada semana so precisa de um mapa de missao; nos empates de XP vencem as combinacoes com mais vitorias e, depois, com os mapas realizados primeiro.
 - As missoes concedem 100 XP por semana da temporada (blocos de 7 dias contados a partir do primeiro dia da temporada), sem limite de missoes alem da quantidade de semanas; contam apenas os seis mapas selecionados para XP.
 - A missao exige KPR pelo menos igual a meta das estrelas, em mapa com no minimo oito rounds.
 - O ultimo mapa de uma BO3 que termine apos o encerramento continua na temporada em que a serie comecou, e conta na ultima semana dela, sem gerar bonus de semana extra.
@@ -49,4 +49,4 @@
 - Nao alterar rankings homologados em correcoes posteriores sem revisao administrativa expressa.
 - Temporada 0 permanece encerrada e nao recebe os novos criterios retroativamente.
 
-**Aplicacao tecnica:** season_rankings.py, season_system.py, app.py e tabelas/funcoes de temporada no Supabase.
+**Aplicacao tecnica:** season_rankings.py, season_system.py, a API e tabelas/funcoes de temporada no Supabase.

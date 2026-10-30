@@ -1,16 +1,14 @@
 """Fluxo híbrido BO1/BO3: mapas, classificações e proteção de históricos."""
+
 from pathlib import Path
+
 from datetime import date
 
 import pytest
 
 from edb.confront_registry import prepare_confront_bundle
+
 from edb.season_system import bo3_cards, confirmed_bo3_count, season_match_ids, series_format
-
-ROOT=Path(__file__).resolve().parents[1]
-APP=(ROOT/"app.py").read_text(encoding="utf-8")
-VIEWS=(ROOT/"confront_views.py").read_text(encoding="utf-8")
-
 
 def sample():
     season={"number":1,"starts_on":"2026-10-19","ends_on":"2026-11-01","homologated_at":None}
@@ -24,7 +22,6 @@ def sample():
     team_a=[f"p{i}" for i in range(5)]
     scores={"a":(13,7),"b":(8,13),"c":(13,7)}
     return season,matches,stats,team_a,scores
-
 
 def test_bo1_bundles_one_map_and_bo3_bundles_three_without_extra_weight():
     season,matches,stats,roster,scores=sample()
@@ -41,7 +38,6 @@ def test_bo1_bundles_one_map_and_bo3_bundles_three_without_extra_weight():
     assert three["format"]=="bo3"
     assert [m["match_id"] for m in three["matches"]]==["a","b","c"]
 
-
 @pytest.mark.parametrize("fmt,ids",[
     ("BO1",["a","b"]),("BO3",["a"]),("BO3",["a","b","b"]),
     ("BO5",["a"]),("BO1",[]),
@@ -50,7 +46,6 @@ def test_rejects_wrong_format_cardinality_and_duplicate_maps(fmt,ids):
     season,matches,stats,roster,scores=sample()
     with pytest.raises(ValueError):
         prepare_confront_bundle(season,fmt,ids,matches,stats,roster,scores)
-
 
 def test_rejects_bad_roster_score_missing_data_and_wrong_season():
     season,matches,stats,roster,scores=sample()
@@ -70,7 +65,6 @@ def test_rejects_bad_roster_score_missing_data_and_wrong_season():
         prepare_confront_bundle(
             {**season,"homologated_at":"2026-11-02"},"BO1",["a"],matches,stats,roster,scores
         )
-
 
 def test_two_formats_display_correctly_without_altering_old_bo3():
     season,matches,stats,roster,scores=sample()
@@ -101,19 +95,3 @@ def test_two_formats_display_correctly_without_altering_old_bo3():
     assert 'edb-series-number--win">13</span>' in cards
     assert 'edb-series-number--lose">6</span>' in cards
     assert cards.index('aria-label="BO1"') < cards.index('aria-label="BO3"')
-
-
-def test_ui_requires_explicit_team_roster_verified_scores_and_cloud_rpc():
-    assert "render_confront_admin(" in APP
-    assert "'⚔️ BO1 / BO3'" in APP
-    assert "max_selections=total" in VIEWS
-    assert "max_selections=5" in VIEWS
-    assert 'prepare_confront_bundle(' in VIEWS
-    assert '"rpc/register_edb_confronto"' in VIEWS
-    assert "clear_cache()" in VIEWS
-    assert "st.rerun()" in VIEWS
-    assert "bo3_cards(season_number,all_bo3,all_bo3_maps,all_matches,active_bo3_id)" in APP
-    assert "season_ids=season_match_ids(season_number,all_bo3,all_bo3_maps)" in APP
-    assert "boards['xp']" in APP
-    assert "rank_type in ('elite','superacao','xp')" in APP
-    assert "BO1 e BO3 livres" in APP

@@ -1,4 +1,4 @@
-"""Montagem dos objetos JSON públicos, reaproveitando as regras do app Streamlit."""
+"""Montagem dos objetos JSON públicos, reaproveitando as regras de packages/edb."""
 from __future__ import annotations
 
 from datetime import timedelta

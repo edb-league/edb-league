@@ -1,28 +1,24 @@
 # EDB LEAGUE: estrutura, frontend e API
 
-O app Streamlit continua funcionando. O novo site é um frontend próprio (Next.js) que consome uma API (FastAPI)
-construída sobre o mesmo pacote Python de regras (`packages/edb`), compartilhado com o Streamlit.
+O site é um frontend próprio (Next.js) que consome uma API (FastAPI) construída sobre o pacote Python de regras
+(`packages/edb`). O app Streamlit antigo foi aposentado e está no histórico do git.
 
 ## Estrutura do repositório
 
 ```
 apps/
-  streamlit/    app Streamlit (app.py, telas, estilos, assets/, tests/)
   api/          API FastAPI (edb_api/), Dockerfile, CONTRACT.md, tests/
   web/          frontend Next.js, testes Playwright e axe
 packages/
   edb/          regras e dados: core, season_rankings, season_system, storage, demo_importer, team_draw...
 db/             supabase_schema.sql e migrations/
-docs/           ARQUITETURA, PUBLICAR, REGULAMENTO
-scripts/        inspect_demo.py
-.streamlit/     configuração e secrets do Streamlit
-app.py          entrada de compatibilidade para a hospedagem do Streamlit
-requirements.txt  dependências do app Streamlit
+docs/           ARQUITETURA, IMPORTADOR_DEMOS, REGULAMENTO
+scripts/        edb_import.py (importador local), inspect_demo.py
+requirements.txt  dependências para rodar as regras e o importador no computador
 pytest.ini      testes de todo o repositório
 ```
 
-Dependências entre as partes: `apps/streamlit` e `apps/api` importam `edb`; `edb` não importa nenhum dos dois.
-`.streamlit/`, `requirements.txt` e `app.py` ficam na raiz porque a hospedagem do Streamlit procura por eles ali.
+Dependências entre as partes: `apps/api` importa `edb`; `edb` não importa a API.
 
 ```
 Navegador ──► Next.js (apps/web)  ── /api/* (rewrite, mesma origem) ──►  FastAPI (apps/api)  ──►  Supabase
@@ -114,9 +110,6 @@ EDB_DEMO=1 XINXAS_ADMIN_PASSWORD=demo-senha-123 uvicorn --app-dir apps/api edb_a
 
 # 2. Site
 cd apps/web && cp .env.example .env.local && npm install && npm run dev
-
-# 3. App Streamlit (opcional), a partir da raiz
-streamlit run apps/streamlit/app.py
 ```
 
 Abra http://localhost:3000. Com `EDB_DEMO=1` aparece um aviso fixo de dados fictícios.
@@ -126,13 +119,12 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
 
 1. **API (Render ou Fly):** passos e variáveis em `apps/api/README.md`. Defina `EDB_ALLOWED_ORIGINS` com o endereço do site e `EDB_COOKIE_SECURE=1`.
 2. **Site (Vercel):** projeto com Root Directory `apps/web`. Variáveis: `API_URL` (endereço público da API) e `NEXT_PUBLIC_SITE_URL`.
-3. **Virada:** mantenha o Streamlit no ar durante alguns dias, compare números lado a lado, depois aponte o domínio para o Vercel.
 
 ## Limites conhecidos
 
 - **Supabase real não foi testado.** Confronto BO1/BO3 e homologação usam as funções `register_edb_confronto`, `homologate_edb_season`
   e `ensure_edb_calendar`, que só existem no banco ao vivo e não estão no `supabase_schema.sql` do repositório. Os testes usam um
-  simulador. Faça o primeiro teste com um confronto de verdade e confira no Streamlit.
+  simulador. Faça o primeiro teste com um confronto de verdade e confira os números no site.
 - **Upload de `.dem` pelo Vercel.** Demos são grandes e o upload passa pelo rewrite `/api`. Não verifiquei o limite de corpo desse
   caminho no Vercel. Se falhar com arquivos reais, use o placar em CSV ou coloque site e API em subdomínios do mesmo domínio e
   envie direto à API.

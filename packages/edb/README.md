@@ -1,8 +1,7 @@
 # edb
 
 Regras e dados da EDB LEAGUE: ranking Elite, Superação, XP e BAGRES, temporadas e BO3, sorteio de times,
-medalhas, leitura de demos e acesso ao banco (SQLite local ou Supabase). É usado pelo app Streamlit
-(`apps/streamlit`) e pela API (`apps/api`).
+medalhas, leitura de demos e acesso ao banco (SQLite local ou Supabase). É usado pela API (`apps/api`) e pelo importador local (`scripts/edb_import.py`).
 
 Não importa Streamlit nem FastAPI. Os módulos `fixture_cards` e `match_cards` ainda misturam HTML com dados,
 porque a API reaproveita as funções de dados deles.

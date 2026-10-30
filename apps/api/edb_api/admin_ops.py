@@ -11,7 +11,6 @@ from pathlib import Path
 import pandas as pd
 
 from edb import SAMPLE_SCOREBOARD
-from edb.bo3_admin import STATS_FIELDS  # noqa: F401  (mantido para referência dos campos)
 from edb import demo_pipeline as dp
 from edb.confront_registry import prepare_confront_bundle
 from edb.core import enrich

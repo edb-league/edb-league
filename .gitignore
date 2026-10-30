@@ -1,4 +1,3 @@
-.streamlit/secrets.toml
 *.db
 *.db-journal
 *.db-shm

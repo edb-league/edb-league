@@ -79,7 +79,7 @@ export default async function RulesPage() {
             </div>
             <div className="min-w-0 flex-1 basis-64">
               <h2 id="sobre" className="text-3xl">Inaugurada na gestão do Presidente Dudu</h2>
-              <p className="num mt-1 text-2xl text-gold">19 de outubro de 2026</p>
+              <p className="num mt-1 text-2xl text-gold">15 de outubro de 2026</p>
             </div>
           </Card>
 
@@ -225,7 +225,7 @@ export default async function RulesPage() {
                     </div>
                   ))}
                 </dl>
-                <p className="mt-3 text-base text-muted">Contam até 6 mapas na temporada, além de até 100 XP de missão por semana.</p>
+                <p className="mt-3 text-base text-muted">Contam 6 mapas na temporada, escolhidos para render o máximo de XP: o site considera a missão de cada semana ao escolher. Os 100 XP da missão só vêm de um desses 6 mapas.</p>
               </div>
             </div>
             <div className="mt-6 grid gap-6 md:grid-cols-2">

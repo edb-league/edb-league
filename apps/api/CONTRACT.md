@@ -20,7 +20,7 @@ Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português"
 | GET | `/api/auth/steam/callback` | volta da Steam; cria a sessão e redireciona (303) |
 | POST | `/api/auth/logout` | encerra a sessão (checa `Origin`) |
 | GET | `/api/steam/avatars` | `{ [player_id]: url }` (fotos da Steam; `{}` sem `STEAM_API_KEY` ou com a Steam fora do ar) |
-| GET | `/api/players/{id}` | `PlayerDetail` (inativo também abre, como no Streamlit) |
+| GET | `/api/players/{id}` | `PlayerDetail` (inativo também abre) |
 | GET | `/api/compare?a=ID&b=ID` | `Compare` (400 se iguais) |
 | GET | `/api/hall-of-fame` | `Hall` |
 | GET | `/api/medals` | `MedalCatalogue` |
@@ -43,7 +43,7 @@ Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português"
 | PATCH | `/api/admin/players/{id}` | `{ nickname?, steamid?, skill_level? }` → `AdminPlayer` |
 | POST | `/api/admin/players/{id}/archive` | `AdminPlayer` |
 | POST | `/api/admin/players/{id}/reactivate` | `AdminPlayer` |
-| POST | `/api/admin/seasons/{n}/homologate` | `{ ok: true }` (só nuvem; mesma lógica do app.py) |
+| POST | `/api/admin/seasons/{n}/homologate` | `{ ok: true }` (só nuvem) |
 | GET | `/api/admin/confront/candidates?season=N` | `ConfrontCandidates` |
 | POST | `/api/admin/confront` | `ConfrontRequest` → `{ ok: true }` (só nuvem; RPC `register_edb_confronto`) |
 | POST | `/api/admin/import/preview` | multipart: `method` = `demo` \| `csv` \| `sample`, `file` → `ImportPreview` |
@@ -51,7 +51,7 @@ Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português"
 | GET | `/api/admin/export/{players\|matches\|stats}.csv` | CSV UTF-8 com BOM |
 
 ### Segurança do admin
-- Senha vem de `XINXAS_ADMIN_PASSWORD` (mesmo segredo do Streamlit). Bloqueado se vazia ou igual a
+- Senha vem de `XINXAS_ADMIN_PASSWORD` (segredo da API). Bloqueado se vazia ou igual a
   `SUBSTITUA-POR-UMA-SENHA-FORTE`.
 - Comparação com `hmac.compare_digest`. Limite de 5 tentativas por IP em 15 min (memória do processo).
 - Cookie `edb_admin`: token `expiry.assinatura` (HMAC-SHA256 com `EDB_SESSION_SECRET`, ou derivado da
