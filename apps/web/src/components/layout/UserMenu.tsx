@@ -108,6 +108,11 @@ export function UserMenu({ me }: { me: Me }) {
             </Link>
           </li>
         )}
+        <li>
+          <Link href="/privacidade" className={item}>
+            Privacidade
+          </Link>
+        </li>
         {me.is_admin && (
           <li>
             <Link href="/admin" className={item}>

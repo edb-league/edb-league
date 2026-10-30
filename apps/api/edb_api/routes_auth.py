@@ -11,8 +11,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
-from . import auth, identity, settings, steam_openid, views
+from . import auth, identity, privacy, settings, steam_openid, views
 from .service import get_service
 from .serializers import CleanJSONResponse
 
@@ -86,6 +87,32 @@ def me(request: Request):
     service = get_service()
     payload = views.build_me(service, steamid, auth.steam_admin(request))
     return CleanJSONResponse(payload)
+
+
+class PrivacyBody(BaseModel):
+    hide_avatar: bool
+    hide_persona: bool
+    hide_hours: bool
+
+
+def _my_player_id(request: Request) -> str | None:
+    steamid = identity.session_steamid(request)
+    player = views.player_for_steamid(get_service().snap(), steamid) if steamid else None
+    return str(player["id"]) if player else None
+
+
+@router.get("/api/me/privacy")
+def my_privacy(request: Request):
+    return CleanJSONResponse(privacy.build_mine(get_service(), _my_player_id(request)))
+
+
+@router.post("/api/me/privacy")
+def save_my_privacy(body: PrivacyBody, request: Request):
+    auth.check_origin(request)
+    player_id = _my_player_id(request)
+    if player_id is None:
+        raise HTTPException(401, "Entre com a Steam, na conta de um jogador cadastrado, para mudar a privacidade.")
+    return CleanJSONResponse(privacy.save_mine(get_service(), player_id, body.model_dump()))
 
 
 @router.post("/api/auth/logout")

@@ -22,7 +22,7 @@ from edb.demo_importer import prepare_upload
 from edb.demo_stats import COUNT_FIELDS, PARSER_VERSION
 from edb.hltv_stats import rating2
 
-from . import settings
+from . import notify, settings
 from .service import LeagueService
 from .views import Conflict
 
@@ -408,4 +408,5 @@ def commit(service: LeagueService, body: dict) -> dict:
                 if "exatamente cinco" in text or "mesmo elenco" in text else "")
         raise RuntimeError("Não foi possível gravar a série; nada ficou salvo." + hint) from exc
     service.invalidate()
+    notify.series_saved(plan, int(ev.season["number"]))
     return {"ok": True, "match_ids": match_ids, "label": series.label, "parser_version": PARSER_VERSION}

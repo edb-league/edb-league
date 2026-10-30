@@ -43,6 +43,8 @@ próprio `apps/web/src/lib/types.ts`.
 | `STEAM_API_KEY` | opcional | Avatar e horas de jogo na página do jogador e fotos nas listas. |
 | `EDB_SESSION_SECRET` | para o login com a Steam | Mínimo de 16 caracteres, aleatório e só seu. Sem ele o login com a Steam fica desligado. |
 | `EDB_ADMIN_STEAMID` | para o admin pela Steam | SteamID64 da única conta que acessa a Administração pela Steam. |
+| `EDB_DISCORD_WEBHOOK_URL` | opcional | Webhook do Discord (`https://discord.com/api/webhooks/...`). Com ele, a API avisa no canal quando uma série ou partida é registrada e quando uma temporada é homologada. Só apelidos, placar e links públicos; nunca marca ninguém. |
+| `EDB_MVP_VOTE_DAYS` | opcional | Dias que a votação de MVP de cada mapa fica aberta (padrão 7). |
 | `EDB_PUBLIC_URL` | produção | Endereço público do site (ex.: `https://edb-league.vercel.app`), usado como retorno do login da Steam. Sem ele vale a primeira origem de `EDB_ALLOWED_ORIGINS`. |
 | `EDB_DEMO` | desenvolvimento | `1` usa dados sintéticos em memória. |
 | `EDB_TODAY` | testes | Data fixa `AAAA-MM-DD` para simular o calendário. |

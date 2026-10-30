@@ -69,6 +69,14 @@ export type SeasonArchiveItem = {
 
 export type SeasonArchive = { seasons: SeasonArchiveItem[] };
 
+/** Escolhas de privacidade da pessoa logada sobre a conta Steam. available é false sem login, sem cadastro ou sem a tabela no banco. */
+export type MyPrivacy = {
+  available: boolean;
+  hide_avatar: boolean;
+  hide_persona: boolean;
+  hide_hours: boolean;
+};
+
 /** Votação de MVP de um mapa. Depende de quem está logado; nunca expõe quem votou em quem. */
 export type MatchMvp = {
   /** "unavailable": banco offline ou recurso ainda não ativado. */

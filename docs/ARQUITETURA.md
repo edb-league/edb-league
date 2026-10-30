@@ -124,6 +124,11 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
 
 Quem jogou o mapa e entrou com a Steam vota em outro jogador do mesmo mapa (um voto, que pode ser trocado). A votação fica aberta por 7 dias depois do mapa (`EDB_MVP_VOTE_DAYS` muda isso) ou até todos votarem; só então o resultado aparece, sem mostrar quem votou em quem. É um reconhecimento: não entra em ranking, XP ou título. Exige a tabela `match_mvp_votes` (`db/migrations/20261030_votacao_mvp.sql`); sem ela, ou com o banco local, o bloco simplesmente não aparece e o resto do site segue normal.
 
+## Privacidade e avisos
+
+- **Escolhas do jogador** (`/privacidade`): quem entrou com a Steam pode esconder a foto, o nome na Steam e as horas de CS do próprio perfil. O padrão é mostrar, como antes, e o SteamID nunca aparece para ninguém. As escolhas ficam na tabela `player_privacy` (`db/migrations/20261030_privacidade_jogador.sql`); sem ela, a página mostra que as opções ainda não estão disponíveis. As fotos usam cache de até 10 minutos no site.
+- **Avisos no Discord** (opcional): com `EDB_DISCORD_WEBHOOK_URL`, a API posta quando uma série ou partida é registrada e quando uma temporada é homologada. O envio roda em segundo plano, nunca marca ninguém (`allowed_mentions` vazio) e uma falha só vai para o log, sem impedir o registro.
+
 ## Linha do tempo dos rounds
 
 O parser (versão 4) registra, para cada round, quem venceu, o lado, o motivo (eliminação, bomba, desarme ou tempo), se a bomba foi plantada e o placar acumulado. A importação grava isso na tabela `match_rounds` (`db/migrations/20261030_linha_do_tempo_rounds.sql`) depois do confronto, em termos do time A (esquerda) e B (direita) da série, e a página da partida mostra uma coluna por round. É um extra: se a tabela não existir, a série é gravada do mesmo jeito (com um aviso no log) e a página não mostra o bloco. O motivo vem dos eventos da demo (bomba plantada/desarmada); quando eles não bastam, o texto do jogo desempata e, sem ele, o round fica sem motivo em vez de um palpite. Mapas importados antes da versão 4 não têm linha do tempo.

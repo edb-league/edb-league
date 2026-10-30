@@ -14,6 +14,7 @@ const STATIC_ROUTES = [
   "/jogadores",
   "/hall-da-fama",
   "/temporadas",
+  "/privacidade",
   "/medalhas",
   "/admin",
 ];

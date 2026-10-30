@@ -18,7 +18,7 @@ from edb.demo_importer import parse_demo_stats, prepare_upload
 from edb.season_rankings import has_technical_tie, season_boards
 from edb.season_system import season_match_ids
 
-from . import settings, views
+from . import notify, settings, views
 from .series_import import already_imported
 from .service import LeagueService, Snap
 from .views import Conflict, NotFound, _int, _none, _num, player_item, season_info
@@ -132,6 +132,9 @@ def homologate(service: LeagueService, number: int) -> dict:
     except ValueError as exc:
         raise ValueError("Homologação não realizada: " + str(exc)) from exc
     service.invalidate()
+    fresh = service.snap()
+    label = {"elite": "MVP", "superacao": "Revelação", "xp": "Xinxa"}
+    notify.season_homologated(int(number), {label[t["rank_type"]]: fresh.name_of(t["player_id"]) for t in titles})
     return {"ok": True}
 
 
@@ -377,6 +380,7 @@ def commit_import(service: LeagueService, body: dict) -> dict:
     store.save_match({"id": fingerprint, "played_at": str(played), "map_name": body["map_name"],
                       "source": body["source"], "rounds_total": total, "notes": notes}, lines)
     service.invalidate()
+    notify.match_saved(fingerprint, str(body["map_name"]), total)
     return {"ok": True, "match_id": fingerprint}
 
 

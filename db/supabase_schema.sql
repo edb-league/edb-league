@@ -39,3 +39,10 @@ create table if not exists public.match_rounds (
   match_id text primary key, rounds jsonb not null, created_at timestamptz not null default now()
 );
 alter table public.match_rounds enable row level security;
+
+-- Privacidade do jogador (ver db/migrations/20261030_privacidade_jogador.sql).
+create table if not exists public.player_privacy (
+  player_id text primary key, hide_avatar boolean not null default false, hide_persona boolean not null default false,
+  hide_hours boolean not null default false, updated_at timestamptz not null default now()
+);
+alter table public.player_privacy enable row level security;

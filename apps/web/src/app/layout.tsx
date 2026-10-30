@@ -97,6 +97,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       </Link>
                     </li>
                   ))}
+                  <li>
+                    <Link href="/privacidade" className="inline-flex min-h-11 items-center">
+                      Privacidade
+                    </Link>
+                  </li>
                   {me.login_enabled && !me.is_admin && (
                     <li>
                       <Link href="/admin" className="inline-flex min-h-11 items-center">

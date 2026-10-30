@@ -18,7 +18,7 @@ from edb.season_system import (
 from edb.steam_profile import normalize_steamid64, steam_view
 from edb.team_draw import draw_balanced_teams, draw_message
 
-from . import settings
+from . import privacy, settings
 from .service import LeagueService, Snap, display_name, safe_level
 
 RANK_TYPES = ("elite", "superacao", "xp", "bagres")
@@ -156,7 +156,9 @@ def build_avatars(service: LeagueService) -> dict[str, str]:
     if not by_steam:
         return {}
     avatars = service.steam_avatars(sorted(by_steam), key)
-    return {by_steam[steamid]: url for steamid, url in avatars.items()}
+    choices = privacy.read_all(service)
+    return {by_steam[steamid]: url for steamid, url in avatars.items()
+            if not privacy.hidden(choices, by_steam[steamid], "hide_avatar")}
 
 
 # Quem está logado ------------------------------------------------------------------
@@ -531,7 +533,8 @@ def build_player_detail(service: LeagueService, snap: Snap, player_id: str, filt
     records = snap.records
     summary = player_summary(str(player["id"]), records)
     best = summary["best"]
-    steam = steam_view(player.get("steamid"), settings.steam_key(), service.steam_fetch)
+    steam = privacy.apply_to_steam(steam_view(player.get("steamid"), settings.steam_key(), service.steam_fetch),
+                                   privacy.read_all(service), str(player["id"]))
     return {
         "player": player_item(player), "steam": steam,
         "summary": {
