@@ -8,6 +8,7 @@ import { first, num, parseSeason, seasonQuery } from "@/lib/format";
 import type { MatchDetail } from "@/lib/types";
 import { NoData } from "@/components/ui/NoData";
 import { MapTile } from "@/components/ui/MapTile";
+import { MvpVote } from "@/components/matches/MvpVote";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -63,6 +64,8 @@ export default async function MatchDetailPage({
           </p>
         </div>
       </header>
+
+      <MvpVote matchId={detail.match.id} />
 
       <section aria-labelledby="placar">
         <SectionTitle id="placar" title="Placar da partida" />

@@ -120,6 +120,10 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
 1. **API (Render ou Fly):** passos e variáveis em `apps/api/README.md`. Defina `EDB_ALLOWED_ORIGINS` com o endereço do site e `EDB_COOKIE_SECURE=1`.
 2. **Site (Vercel):** projeto com Root Directory `apps/web`. Variáveis: `API_URL` (endereço público da API) e `NEXT_PUBLIC_SITE_URL`.
 
+## Votação de MVP da partida
+
+Quem jogou o mapa e entrou com a Steam vota em outro jogador do mesmo mapa (um voto, que pode ser trocado). A votação fica aberta por 7 dias depois do mapa (`EDB_MVP_VOTE_DAYS` muda isso) ou até todos votarem; só então o resultado aparece, sem mostrar quem votou em quem. É um reconhecimento: não entra em ranking, XP ou título. Exige a tabela `match_mvp_votes` (`db/migrations/20261030_votacao_mvp.sql`); sem ela, ou com o banco local, o bloco simplesmente não aparece e o resto do site segue normal.
+
 ## Limites conhecidos
 
 - **Supabase real não foi testado.** Confronto BO1/BO3 e homologação usam as funções `register_edb_confronto`, `homologate_edb_season`

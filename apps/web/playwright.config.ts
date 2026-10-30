@@ -40,6 +40,8 @@ export default defineConfig({
         EDB_PUBLIC_URL: WEB,
         EDB_SESSION_SECRET: SESSION_SECRET,
         EDB_ADMIN_STEAMID: ADMIN_STEAMID,
+        // As partidas da demonstração são antigas: mantém a votação de MVP aberta para os testes.
+        EDB_MVP_VOTE_DAYS: "36500",
       },
     },
     {

@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     from .routes_admin import router as admin_router
     from .routes_auth import router as auth_router
     from .routes_public import router as public_router
+    from .routes_votes import router as votes_router
 
     app = FastAPI(title="EDB LEAGUE API", docs_url="/api/docs", openapi_url="/api/openapi.json",
                   default_response_class=CleanJSONResponse)
@@ -43,7 +44,7 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         if "cache-control" not in response.headers:
             path = request.url.path
-            private = path.startswith(("/api/admin", "/api/auth", "/api/me"))
+            private = path.startswith(("/api/admin", "/api/auth", "/api/me", "/api/votes"))
             if request.method == "GET" and path.startswith("/api/") and not private:
                 response.headers["Cache-Control"] = PUBLIC_CACHE
             else:
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(public_router)
     app.include_router(admin_router)
     app.include_router(auth_router)
+    app.include_router(votes_router)
     return app
 
 

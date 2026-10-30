@@ -69,6 +69,28 @@ export type SeasonArchiveItem = {
 
 export type SeasonArchive = { seasons: SeasonArchiveItem[] };
 
+/** Votação de MVP de um mapa. Depende de quem está logado; nunca expõe quem votou em quem. */
+export type MatchMvp = {
+  /** "unavailable": banco offline ou recurso ainda não ativado. */
+  status: "open" | "closed" | "unavailable";
+  closes_on: string;
+  /** Jogadores do mapa (quem pode votar). */
+  electorate: number;
+  votes_cast: number;
+  /** Quem a pessoa logada pode escolher (sem ela mesma). */
+  candidates: PlayerRef[];
+  viewer: {
+    logged_in: boolean;
+    player_id: string | null;
+    can_vote: boolean;
+    my_vote: string | null;
+    /** Motivo de não poder votar, para mostrar na tela. */
+    reason: string | null;
+  };
+  /** Só depois que a votação fecha; os empatados em primeiro têm mvp true. */
+  results: { player: PlayerRef; votes: number; mvp: boolean }[] | null;
+};
+
 /* ---------- Rankings ---------- */
 
 export type RankingType = "elite" | "superacao" | "xp" | "bagres";

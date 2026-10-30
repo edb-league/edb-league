@@ -32,3 +32,36 @@ export async function loginAsAdmin(page: Page) {
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page.getByRole("tab", { name: "Elenco" })).toBeVisible();
 }
+
+function nonce(): string {
+  const stamp = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  return `${stamp}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Faz de conta que a pessoa entrou na Steam com esta conta. O início do login é pedido sem seguir o redirecionamento
+ * (o cookie de estado vai para o navegador, que compartilha o armazenamento com page.request); depois o navegador
+ * abre o endereço de retorno com a resposta que a Steam daria.
+ */
+export async function signInWithSteam(page: Page, steamid: string, next: string) {
+  const start = await page.request.get(`/api/auth/steam/login?next=${encodeURIComponent(next)}`, { maxRedirects: 0 });
+  expect(start.status()).toBe(303);
+  const toSteam = new URL(start.headers()["location"]);
+  expect(`${toSteam.origin}${toSteam.pathname}`).toBe("https://steamcommunity.com/openid/login");
+  const returnTo = toSteam.searchParams.get("openid.return_to")!;
+  const identity = `https://steamcommunity.com/openid/id/${steamid}`;
+  const answer = new URLSearchParams({
+    "openid.ns": "http://specs.openid.net/auth/2.0",
+    "openid.mode": "id_res",
+    "openid.op_endpoint": "https://steamcommunity.com/openid/login",
+    "openid.claimed_id": identity,
+    "openid.identity": identity,
+    "openid.return_to": returnTo,
+    "openid.response_nonce": nonce(),
+    "openid.assoc_handle": "1234",
+    "openid.signed": "signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle",
+    "openid.sig": "assinatura-de-teste",
+    state: new URL(returnTo).searchParams.get("state")!,
+  });
+  await page.goto(`${returnTo.split("?")[0]}?${answer}`);
+}

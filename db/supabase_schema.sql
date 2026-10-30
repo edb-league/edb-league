@@ -25,3 +25,11 @@ alter table public.players enable row level security;
 alter table public.matches enable row level security;
 alter table public.player_stats enable row level security;
 -- Não criar policies para anon/authenticated: sem acesso direto do navegador.
+
+-- Votação de MVP da partida (ver db/migrations/20261030_votacao_mvp.sql).
+create table if not exists public.match_mvp_votes (
+  match_id text not null, voter_id text not null, candidate_id text not null,
+  created_at timestamptz not null default now(),
+  primary key (match_id, voter_id), check (voter_id <> candidate_id)
+);
+alter table public.match_mvp_votes enable row level security;
