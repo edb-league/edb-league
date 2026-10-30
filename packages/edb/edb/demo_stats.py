@@ -20,9 +20,10 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-PARSER_VERSION = 2  # 2: ordenação estável por tick
+PARSER_VERSION = 3  # 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
 TRADE_TICKS = 320
 TICKRATE = 64
+MIN_ABSENT_ROUNDS = 4   # rounds seguidos sem nenhum evento do jogador para considerá-lo fora da partida
 
 SNIPERS = {"awp", "ssg08", "scar20", "g3sg1"}
 RIFLES = {"ak47", "m4a1", "m4a1_silencer", "galilar", "famas", "aug", "sg556"}
@@ -82,6 +83,50 @@ def _is_id(value) -> bool:
     return str(value).isdigit()
 
 
+def _effective_starts(starts: list[int], end_ticks: list[int], first_tick: int) -> tuple[list[int], int, int]:
+    """Um round_start para cada round_end: o último antes do fim. Devolve (inícios, descartados, sem início).
+
+    Um reinício dentro do round deixa um round_start sem round_end; contado como round, deslocaria todos os seguintes.
+    """
+    pool = sorted(starts)
+    kept: list[int] = []
+    dropped = missing = 0
+    previous = first_tick
+    for end in end_ticks:
+        inside = [t for t in pool if previous <= t < end]
+        if inside:
+            kept.append(inside[-1])
+            dropped += len(inside) - 1
+        else:
+            kept.append(previous)
+            missing += 1
+        previous = end + 1
+    return kept, dropped, missing
+
+
+def _absences(rounds_seen: set[int], n_rounds: int, minimum: int = MIN_ABSENT_ROUNDS) -> list[tuple[int, int]]:
+    """Faixas de rounds seguidos sem nenhum evento do jogador (tiro, dano, morte...): saiu ou ainda não tinha entrado."""
+    ranges: list[tuple[int, int]] = []
+    begin = None
+    for rno in range(1, n_rounds + 2):
+        absent = rno <= n_rounds and rno not in rounds_seen
+        if absent and begin is None:
+            begin = rno
+        elif not absent and begin is not None:
+            if rno - begin >= minimum:
+                ranges.append((begin, rno - 1))
+            begin = None
+    return ranges
+
+
+def _finished(score: dict[int, int], n_rounds: int) -> bool:
+    """A partida foi até o fim? Até 24 rounds o vencedor tem exatamente 13; depois disso, prorrogação decidida."""
+    top, other = max(score.values()), min(score.values())
+    if n_rounds <= 24:
+        return top == 13 and other < 13
+    return top >= 16 and top != other
+
+
 def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE) -> dict:
     """Lê a demo e devolve o resumo da partida e as contagens de cada jogador."""
     from demoparser2 import DemoParser
@@ -93,6 +138,10 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
 
     begins = ev["begin_new_match"]
     start = int(begins.tick.max()) if len(begins) else 0
+    notes: list[str] = []
+    if len(begins) > 1:
+        notes.append(f"A partida reiniciou {len(begins) - 1} vez(es); só a última foi lida. "
+                     "Confira se rounds anteriores não ficaram de fora.")
 
     def live(df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.empty:
@@ -103,11 +152,16 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
         return df[mask].sort_values("tick", kind="stable").copy()
 
     starts_df = ev["round_start"]
-    round_starts = sorted(starts_df[starts_df.tick >= start - 5].tick.tolist()) if len(starts_df) else []
+    raw_starts = sorted(starts_df[starts_df.tick >= start - 5].tick.tolist()) if len(starts_df) else []
     ends = live(ev["round_end"])
     n_rounds = len(ends)
-    if n_rounds == 0 or not round_starts:
+    if n_rounds == 0 or not raw_starts:
         raise ValueError("Demo sem rounds válidos depois do início da partida.")
+    round_starts, dropped_starts, missing_starts = _effective_starts(raw_starts, ends.tick.astype(int).tolist(), start - 5)
+    if dropped_starts:
+        notes.append(f"{dropped_starts} reinício(s) de round ignorado(s) (round_start sem round_end).")
+    if missing_starts:
+        notes.append(f"{missing_starts} round(s) sem round_start; o início foi estimado pelo fim do round anterior.")
     freeze = sorted(ev["round_freeze_end"].tick.tolist()) if len(ev["round_freeze_end"]) else []
 
     def round_of(tick: int) -> int:
@@ -135,23 +189,54 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
 
     # Times: o rótulo é o lado que o time tinha no round 1 (2 = T, 3 = CT).
     team_r1: dict[str, int] = {}
+    nicks: dict[str, str] = {}
     try:
         snap = parser.parse_ticks(["team_num", "name"], ticks=[round_starts[0] + 200])
         for row in snap.itertuples():
             if _is_id(row.steamid) and int(row.team_num) in (2, 3):
                 team_r1[str(row.steamid)] = int(row.team_num)
+                nicks[str(row.steamid)] = str(getattr(row, "name", "") or row.steamid)
     except Exception:  # noqa: BLE001 - o parser lança erros de vários tipos
         pass
     for row in deaths.itertuples():  # substitutos que entraram depois
         for sid, team in ((row.attacker_steamid, row.attacker_team_num), (row.user_steamid, row.user_team_num)):
             if _is_id(sid) and sid not in team_r1 and int(team) in (2, 3):
                 team_r1[sid] = int(team) if row.rnd <= 12 else 5 - int(team)
-    nicks: dict[str, str] = {}
     for row in deaths.itertuples():
         for sid, name in ((row.attacker_steamid, row.attacker_name), (row.user_steamid, row.user_name)):
             if _is_id(sid):
                 nicks[sid] = name
     teams = {2: [s for s, t in team_r1.items() if t == 2], 3: [s for s, t in team_r1.items() if t == 3]}
+
+    # Quem não aparece em nenhum evento por vários rounds seguidos saiu da partida (ou entrou no meio dela).
+    seen_rounds: dict[str, set[int]] = defaultdict(set)
+    if len(fires):
+        fires["rnd"] = fires.tick.apply(round_of)
+    for frame, columns in ((deaths, ("attacker_steamid", "user_steamid")), (hurts, ("att", "vic")),
+                           (fires, ("user_steamid",))):
+        if frame.empty or "rnd" not in frame:
+            continue
+        for column in columns:
+            for sid, rno in zip(frame[column].astype(str), frame.rnd):
+                seen_rounds[sid].add(int(rno))
+    away: dict[str, list[tuple[int, int]]] = {
+        sid: ranges for sid in team_r1 if (ranges := _absences(seen_rounds[sid], n_rounds))
+    }
+
+    def present(sid: str, rno: int) -> bool:
+        return not any(a <= rno <= b for a, b in away.get(sid, ()))
+
+    for sid, ranges in away.items():
+        who = nicks.get(sid, sid)
+        for a, b in ranges:
+            if a == 1:
+                notes.append(f"{who} só aparece a partir do round {b + 1}: entrou no meio da partida.")
+            elif b == n_rounds:
+                notes.append(f"{who} some depois do round {a - 1}: saiu da partida.")
+            else:
+                notes.append(f"{who} ficou sem nenhum evento nos rounds {a} a {b}: provável queda de conexão.")
+    if away:
+        notes.append("Esses jogadores ficam só com os rounds em que estavam na partida (ADR, KAST e KPR usam esse total).")
 
     # Lado de cada time em cada round. Regra padrão (troca após o round 12), corrigida pelo que a demo mostra.
     side_of: dict[int, dict[int, int]] = {}
@@ -165,11 +250,14 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
                 sid, side = getattr(row, id_col), getattr(row, team_col)
                 if sid in team_r1 and int(side) in (2, 3):
                     seen[row.rnd].setdefault(team_r1[sid], int(side))
+    off_pattern: list[int] = []
     for rno in range(1, n_rounds + 1):
         mapping = {}
         for label in (2, 3):
             if label in seen[rno]:
                 mapping[label] = seen[rno][label]
+                if rno <= 24 and mapping[label] != (label if rno <= 12 else 5 - label):
+                    off_pattern.append(rno)
             elif 5 - label in seen[rno]:
                 mapping[label] = 5 - seen[rno][5 - label]
             elif rno - 1 in side_of and rno > 24:
@@ -177,6 +265,10 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
             else:
                 mapping[label] = label if rno <= 12 else 5 - label
         side_of[rno] = mapping
+
+    if off_pattern:
+        notes.append(f"Os lados dos times fogem da troca padrão no round {min(off_pattern)} "
+                     f"({len(set(off_pattern))} round(s)); confira o placar.")
 
     won_label: dict[int, int] = {}
     ends_tick: dict[int, int] = {}
@@ -235,11 +327,13 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
     deaths_by_round = {rno: g.to_dict("records") for rno, g in deaths.groupby("rnd")}
     for rno in range(1, n_rounds + 1):
         events = deaths_by_round.get(rno, [])
-        alive = {2: set(teams[2]), 3: set(teams[3])}
+        alive = {2: {s for s in teams[2] if present(s, rno)}, 3: {s for s in teams[3] if present(s, rno)}}
         first_done, kills_round = False, Counter()
         assisted, died, traded, death_tick, clutch_done = set(), set(), set(), {}, set()
         won = won_label[rno]
         for sid in team_r1:
+            if not present(sid, rno):
+                continue
             st = stats[sid]
             st["rounds_" + sfx(sid, rno)] += 1
             if team_r1[sid] == won:
@@ -320,6 +414,8 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
                     break
         fe, end = freeze_tick(rno), ends_tick[rno]
         for sid in team_r1:
+            if not present(sid, rno):
+                continue
             st, side = stats[sid], sfx(sid, rno)
             if sid in kills_round or sid in assisted or sid not in died or sid in traded:
                 st["kast_rounds_" + side] += 1
@@ -356,16 +452,20 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
         row["time_alive_seconds"] = round(row["time_alive_seconds"], 1)
         row["flash_seconds"] = round(row["flash_seconds"], 2)
         row.update(
-            steamid=sid, nick=nicks.get(sid, sid), team=team_r1[sid], rounds=n_rounds,
+            steamid=sid, nick=nicks.get(sid, sid), team=team_r1[sid], rounds=row["rounds_t"] + row["rounds_ct"],
             kills=row["kills_t"] + row["kills_ct"], deaths=row["deaths_t"] + row["deaths_ct"],
             assists=row["assists_t"] + row["assists_ct"], damage=row["damage_t"] + row["damage_ct"],
             kast_rounds=row["kast_rounds_t"] + row["kast_rounds_ct"],
             open_kills=row["opening_kills_t"] + row["opening_kills_ct"],
             weapon_kills=dict(weapons[sid]), clutches=clutches[sid] if sid in clutches else {f"1v{n}": [0, 0] for n in range(1, 6)},
         )
-        row["kast"] = int(100 * row["kast_rounds"] / n_rounds)
+        row["kast"] = int(100 * row["kast_rounds"] / row["rounds"]) if row["rounds"] else 0
         players.append(row)
+    if not _finished(score, n_rounds):
+        notes.append(f"Placar {score[2]}x{score[3]} em {n_rounds} rounds não fecha uma partida "
+                     "(13 rounds, ou 16 ou mais com prorrogação); confira se a demo está completa.")
     return {
+        "warnings": notes,
         "parser_version": PARSER_VERSION,
         "map": str(header.get("map_name", "")).removeprefix("de_"),
         "server": header.get("server_name"),

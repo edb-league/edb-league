@@ -37,14 +37,17 @@ def prepare_upload(uploaded):
     sha = hashlib.sha256(); size=0
     try:
         raw = gzip.GzipFile(fileobj=uploaded, mode='rb') if is_gz else uploaded
-        with raw, open(out,'wb') as dest:
-            while True:
-                b=raw.read(1024*1024)
-                if not b: break
-                size+=len(b)
-                if size>MAX_UNCOMPRESSED:
-                    raise ValueError('Demo descompactada excede 1 GB')
-                sha.update(b); dest.write(b)
+        try:
+            with open(out,'wb') as dest:
+                while True:
+                    b=raw.read(1024*1024)
+                    if not b: break
+                    size+=len(b)
+                    if size>MAX_UNCOMPRESSED:
+                        raise ValueError('Demo descompactada excede 1 GB')
+                    sha.update(b); dest.write(b)
+        finally:
+            if is_gz: raw.close()   # o upload em si é fechado por quem o recebeu
         if size<1024:
             raise ValueError('Arquivo muito pequeno para conter uma demo válida')
         return folder, str(out), sha.hexdigest()
@@ -202,6 +205,8 @@ def parse_demo_stats(dem_path: str, fingerprint: str) -> DemoOutput:
         warns.append(f'{len(result)} participantes reconhecidos; uma partida 5v5 tem 10. Reveja trocas de jogadores.')
     if winner is None:
         warns.append(f'Placar empatado ({t_score}x{ct_score}); marque o vencedor manualmente.')
+    if 'warnings' in analysis:
+        warns.extend(str(w) for w in analysis['warnings'])
     elif max(t_score, ct_score) < 13:
         warns.append(f'Ninguém chegou a 13 rounds ({t_score}x{ct_score}); confira se a partida acabou antes.')
     warns.append(f'Placar {t_score}x{ct_score} (time que começou de T x time que começou de CT). '
