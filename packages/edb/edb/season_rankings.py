@@ -30,25 +30,58 @@ def _score_elite(kills, rounds, damage):
     return 100.0 * (0.6 * kpr / 0.75 + 0.4 * adr / 75.0)
 
 
+def _mission_columns(g, stars, season_number):
+    """Semana da temporada (blocos de 7 dias desde o início; a última se estende até o fim) e se o mapa cumpre a missão."""
+    out = g.copy()
+    start, end = season_dates(season_number)
+    days = (pd.to_datetime(out["played_at"]) - pd.Timestamp(start)).dt.days
+    length = (end - start).days + 1
+    out["season_week"] = (days // 7).clip(lower=0, upper=(length - 1) // 7)
+    out["mission_ok"] = ((out["kills"] / out["rounds"] >= TARGET_KPR[int(stars)]) & (out["rounds"] >= 8))
+    return out
+
+
 def _xp_mensal(g, stars, season_number):
-    """Uma missão por semana de sete dias desde o início da temporada (4 ou 5 semanas).
+    """40 por mapa, 20 por vitória e 100 por semana em que algum dos mapas escolhidos cumpre a missão.
 
     Só os seis mapas escolhidos no ranking de XP entram no cálculo.
     """
     xp = 40 * len(g) + 20 * int((g["won"] == True).sum())
     if g.empty:
         return int(xp)
-    start, end = season_dates(season_number)
-    chosen = g.copy()
-    chosen["kpr"] = chosen["kills"] / chosen["rounds"]
-    days = (pd.to_datetime(chosen["played_at"]) - pd.Timestamp(start)).dt.days
-    length = (end - start).days + 1
-    chosen["season_week"] = (days // 7).clip(lower=0, upper=(length-1)//7)
-    for _, weekly in chosen.groupby("season_week"):
-        if ((weekly["kpr"] >= TARGET_KPR[int(stars)])
-                & (weekly["rounds"] >= 8)).any():
-            xp += 100
-    return int(xp)
+    chosen = _mission_columns(g, stars, season_number)
+    return int(xp + 100 * chosen.loc[chosen["mission_ok"], "season_week"].nunique())
+
+
+def _best_xp(g, stars, season_number):
+    """Os seis mapas que rendem mais XP, contando a missão semanal (100 XP por semana coberta).
+
+    Coberta uma semana, só importa o melhor mapa de missão dela (mais XP de vitória, depois o mais antigo). Como no
+    máximo cinco semanas valem 100 cada, testa-se todo subconjunto de semanas a cobrir e completa-se com os melhores
+    mapas restantes: o resultado é exato. Empate de XP: mais vitórias, depois os mapas mais antigos.
+    """
+    t = _mission_columns(g, stars, season_number)
+    t["__pick_score"] = 40 + 20 * (t["won"] == True).astype(int)
+    t = t.sort_values(["__pick_score", "played_at", "match_id"], ascending=[False, True, True], kind="mergesort")
+    t = t.reset_index(drop=True)
+    if len(t) <= MAX_MAPS:
+        return t.copy()
+    anchor = {}   # semana -> índice do melhor mapa que cumpre a missão
+    for index, row in t[t["mission_ok"]].iterrows():
+        anchor.setdefault(int(row["season_week"]), index)
+    weeks = sorted(anchor)[:MAX_MAPS]
+    best, best_key = None, None
+    for mask in range(1 << len(weeks)):
+        picked = [anchor[w] for i, w in enumerate(weeks) if mask >> i & 1]
+        rest = [i for i in t.index if i not in picked][: MAX_MAPS - len(picked)]
+        chosen = picked + rest
+        covered = set(t.loc[chosen][t.loc[chosen, "mission_ok"]]["season_week"])
+        xp = int(t.loc[chosen, "__pick_score"].sum()) + 100 * len(covered)
+        wins = int((t.loc[chosen, "won"] == True).sum())
+        key = (xp, wins, -sum(chosen))   # índices menores = mapas mais bem ordenados (vitória e data)
+        if best_key is None or key > best_key:
+            best, best_key = chosen, key
+    return t.loc[sorted(best)].copy()
 
 
 def _aggregate(g, stars, season_number):
@@ -73,7 +106,9 @@ def _aggregate(g, stars, season_number):
     }
 
 
-def _best(g, rank_type, stars):
+def _best(g, rank_type, stars, season_number=None):
+    if rank_type == "xp":
+        return _best_xp(g, stars, season_number)
     t = g.copy()
     t["__map_kpr"] = t["kills"] / t["rounds"]
     if rank_type == "elite":
@@ -125,7 +160,7 @@ def season_boards(frame, season_number, frozen_stars=None):
         first = g.iloc[0]
         stars = max(1, min(5, int(first["stars"])))
         eligible = len(g) >= MIN_MAPS
-        groups = {key: _best(g, key, stars) for key in RANK_TYPES}
+        groups = {key: _best(g, key, stars, season_number) for key in RANK_TYPES}
         values = {key: _aggregate(sub, stars, season_number) for key, sub in groups.items()}
         for key in RANK_TYPES:
             current = values[key]
