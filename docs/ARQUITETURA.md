@@ -130,7 +130,7 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
   envie direto à API.
 - **Modo SQLite local** não tem tabelas de BO3 e temporadas; a API usa o calendário padrão e dados de confronto vazios.
 - **Limite de tentativas de login** vale por instância da API. Com uma instância, como no plano gratuito, é exato.
-- **Render gratuito hiberna.** A primeira visita depois de um tempo parado demora alguns segundos.
+- **Render gratuito hiberna.** Sem requisições por ~15 min, a primeira visita espera a API subir. O workflow `keepalive.yml` chama `/api/health` a cada 10 min (pelo site) para evitar isso, e o site tenta de novo até 2 vezes quando a API responde 502/503/504. Se o repositório ficar 60 dias sem atividade, o GitHub pausa o agendamento.
 - A imagem Docker da API não foi construída aqui (sem Docker no ambiente). O `apps/api/Dockerfile` está pronto para o primeiro build.
 
 ### Importação automática
