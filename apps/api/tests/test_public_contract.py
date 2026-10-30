@@ -35,6 +35,15 @@ def test_meta(client):
     assert season["completed_series"] == 5
 
 
+def test_seasons_archive(client):
+    data = get(client, "/api/seasons")
+    check(data, "SeasonArchive")
+    numbers = [item["season"]["number"] for item in data["seasons"]]
+    assert numbers and numbers == sorted(numbers, reverse=True)
+    assert all(len(item["highlights"]) == 3 for item in data["seasons"])
+    assert all(item["season"]["status"] != "upcoming" for item in data["seasons"])
+
+
 def test_home(client):
     data = get(client, "/api/home")
     check(data, "Home")

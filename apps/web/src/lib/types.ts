@@ -57,7 +57,17 @@ export type Home = {
   top_elite: { player_id: string; name: string; elite: number }[];
   /** Jogadores ativos, para o sorteador. */
   roster: DrawPlayer[];
+};
+
+/** Arquivo de temporadas: uma entrada por temporada iniciada, da mais nova para a mais antiga. */
+export type SeasonArchiveItem = {
+  season: SeasonInfo;
+  counts: { players: number; matches: number; kills: number; xp_distributed: number };
+  /** Títulos da temporada; só são oficiais quando season.homologated é true. */
+  highlights: Highlight[];
 };
+
+export type SeasonArchive = { seasons: SeasonArchiveItem[] };
 
 /* ---------- Rankings ---------- */
 

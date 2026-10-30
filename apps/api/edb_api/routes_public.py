@@ -29,6 +29,11 @@ def home(season: str | None = None):
     return views.build_home(get_service().snap(), season)
 
 
+@router.get("/seasons")
+def seasons():
+    return views.build_seasons(get_service().snap())
+
+
 @router.get("/rankings/{rtype}")
 def ranking(rtype: str, season: str | None = None):
     return views.build_ranking(get_service().snap(), season, rtype)

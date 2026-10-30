@@ -385,6 +385,19 @@ def build_home(snap: Snap, season: int | None) -> dict:
     }
 
 
+# Arquivo de temporadas ---------------------------------------------------------------
+def build_seasons(snap: Snap) -> dict:
+    """Todas as temporadas já iniciadas, da mais nova para a mais antiga, com números e destaques de cada uma."""
+    items = []
+    for row in sorted(snap.seasons, key=lambda s: int(s["number"]), reverse=True):
+        info = season_info(snap, row)
+        if info["status"] == "upcoming":
+            continue
+        home = build_home(snap, info["number"])
+        items.append({"season": info, "counts": home["counts"], "highlights": home["highlights"]})
+    return {"seasons": items}
+
+
 # Jogadores -------------------------------------------------------------------------
 def build_players(snap: Snap, include_inactive: bool) -> list[dict]:
     source = snap.players if include_inactive else snap.active_players

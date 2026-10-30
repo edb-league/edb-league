@@ -238,9 +238,24 @@ test("política de conteúdo ativa e nenhuma página viola a própria política"
   expect(csp).toContain("frame-ancestors 'none'");
   expect(csp).toContain("object-src 'none'");
   expect(csp).not.toContain("*;");
-  for (const route of ["/", "/rankings/elite", "/jogadores", `/jogadores/${playerA}`, `/partidas/mapa/${mapId}`, "/sorteador", "/comparar", "/medalhas", "/hall-da-fama", "/admin"]) {
+  for (const route of ["/", "/rankings/elite", "/jogadores", `/jogadores/${playerA}`, `/partidas/mapa/${mapId}`, "/sorteador", "/comparar", "/medalhas", "/hall-da-fama", "/temporadas", "/admin"]) {
     await page.goto(route);
     await page.waitForLoadState("networkidle");
   }
   expect(violations, violations.join("\n")).toEqual([]);
+});
+
+test("temporadas: arquivo lista cada ciclo com números, títulos e atalhos", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Principal" });
+  await nav.getByRole("button", { name: "Conquistas" }).click();
+  await nav.getByRole("link", { name: "Temporadas" }).click();
+  await expect(page).toHaveURL(/\/temporadas$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Temporadas" })).toBeVisible();
+  const first = page.getByRole("region").filter({ has: page.getByRole("link", { name: "Ver rankings" }) }).first();
+  await expect(first.getByText("Mapas", { exact: true })).toBeVisible();
+  await expect(first.getByRole("list", { name: /Campeões oficiais|Líderes até agora/ })).toBeVisible();
+  await first.getByRole("link", { name: "Ver rankings" }).click();
+  await expect(page).toHaveURL(/\/rankings\/elite\?temporada=\d+/);
 });
