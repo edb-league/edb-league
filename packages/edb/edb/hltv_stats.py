@@ -289,15 +289,28 @@ def _percentile(value: float, others: list[float]) -> float:
     return 100 * (below + 0.5 * equal) / len(others)
 
 
+MIN_SCORE_ROUNDS = 100  # cerca de 4 a 5 mapas; abaixo disso a amostra é pequena demais para comparar
+
+
 def percentile_scores(profiles: dict[str, dict]) -> dict[str, dict[str, int | None]]:
-    """Nota 0 a 100 por seção: posição do jogador entre quem tem demo na liga."""
-    flat = {pid: {m["key"]: m["value"] for ms in p["sections"].values() for m in ms} for pid, p in profiles.items()}
+    """Nota 0 a 100 por seção: posição do jogador entre quem tem demo na liga.
+
+    Só entra na comparação (e só recebe nota) quem tem ao menos ``MIN_SCORE_ROUNDS`` rounds. Num perfil
+    filtrado por lado a amostra é naturalmente metade, então o mínimo também cai pela metade.
+    """
+    def enough(profile: dict) -> bool:
+        needed = MIN_SCORE_ROUNDS if profile.get("side", "all") == "all" else MIN_SCORE_ROUNDS // 2
+        return profile.get("rounds", needed) >= needed
+
+    eligible = {pid for pid, p in profiles.items() if enough(p)}
+    flat = {pid: {m["key"]: m["value"] for ms in p["sections"].values() for m in ms}
+            for pid, p in profiles.items() if pid in eligible}
     scores: dict[str, dict[str, int | None]] = {pid: {} for pid in profiles}
     for section, parts in SCORE_PARTS.items():
         for pid in profiles:
             values = []
             for key, sign in parts:
-                mine = flat[pid].get(key)
+                mine = flat[pid].get(key) if pid in eligible else None
                 pool = [f[key] for f in flat.values() if f.get(key) is not None]
                 if mine is None or len(pool) < 3:
                     continue

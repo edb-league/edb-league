@@ -215,3 +215,19 @@ def test_single_demo_preview_suggests_date_from_file_name_and_detects_known_sha(
     saved = next(m for m in get_service().store.matches() if m["id"] == data["fingerprint"])
     assert saved["notes"] == f"sha256:{data['fingerprint']}"
     assert send("md1_inferno_25_10.dem").json()["duplicate"] is True
+
+
+def test_single_demo_commit_requires_winners_and_losers(admin):
+    players = [{"nickname": f"Q{i}", "steamid": str(76561198000009600 + i), "kills": 10, "deaths": 12, "assists": 2,
+                "damage": 1500, "rounds": 22, "headshots": 4, "plants": 0, "defuses": 0, "rating": 1.0,
+                "kast": 70, "open_kills": 1, "trade_kills": 1, "won": None} for i in range(10)]
+
+    def body(winners):
+        return {"fingerprint": "d" * 64, "source": "demo", "played_at": "2026-10-25", "map_name": "Inferno",
+                "rounds_total": 22, "note": "", "players": players, "winners": winners}
+
+    for winners in ([], [p["nickname"] for p in players]):
+        response = admin.post("/api/admin/import/commit", json=body(winners), headers=ORIGIN)
+        assert response.status_code == 400 and "Marque quem venceu" in response.json()["detail"]
+    ok = admin.post("/api/admin/import/commit", json=body([p["nickname"] for p in players[:5]]), headers=ORIGIN)
+    assert ok.status_code == 200, ok.text

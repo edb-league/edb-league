@@ -367,6 +367,10 @@ def commit_import(service: LeagueService, body: dict) -> dict:
         })
     if already_imported(store.matches(), fingerprint):
         raise Conflict("Esta demo já está salva em outra partida. Importação duplicada bloqueada.")
+    results = {line["won"] for line in lines}
+    if results != {True, False}:
+        # Vitória desconhecida contaria como derrota no XP e sumiria da taxa de vitória: melhor exigir o resultado.
+        raise ValueError("Marque quem venceu a partida: é preciso haver vencedores e perdedores.")
     notes = str(body.get("note") or "").strip()
     if re.fullmatch(r"[0-9a-f]{64}", fingerprint):   # o hash fica nas notas, onde o importador local também procura
         notes = f"{notes}; sha256:{fingerprint}" if notes else f"sha256:{fingerprint}"

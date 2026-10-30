@@ -56,10 +56,26 @@ def test_lados_somam_o_total():
 def test_notas_relativas_exigem_pelo_menos_tres_jogadores():
     duo = build_league({"a": [row()], "b": [row(kills_t=1, kills_ct=1)]})
     assert all(s["value"] is None for s in duo["a"]["scores"])
-    quarteto = build_league({k: [row(kills_t=n, kills_ct=n)] for k, n in zip("abcd", (2, 4, 8, 12))})
+    quarteto = build_league({k: [row(kills_t=n, kills_ct=n, rounds_t=50, rounds_ct=50)]
+                             for k, n in zip("abcd", (2, 4, 8, 12))})
     firepower = {pid: next(s["value"] for s in p["scores"] if s["key"] == "firepower") for pid, p in quarteto.items()}
     assert firepower["d"] > firepower["c"] > firepower["b"] > firepower["a"]
     assert all(len(p["similar"]) == 3 for p in quarteto.values())
+
+
+def test_notas_exigem_100_rounds_e_amostra_pequena_nao_distorce_os_outros():
+    cheios = {k: [row(kills_t=n, kills_ct=n, rounds_t=50, rounds_ct=50)] for k, n in zip("abc", (20, 40, 60))}
+    sem_novato = build_league(cheios)
+    # Um jogador com 1 mapa (20 rounds) e números absurdos: não recebe nota e não muda a dos outros.
+    novato = {"n": [row(kills_t=19, kills_ct=19)]}
+    com_novato = build_league({**cheios, **novato})
+    assert all(s["value"] is None for s in com_novato["n"]["scores"])
+    assert [s["value"] for s in com_novato["b"]["scores"]] == [s["value"] for s in sem_novato["b"]["scores"]]
+    assert all(s["player_id"] != "n" for p in com_novato.values() for s in p["similar"])
+    # Perfil por lado conta metade do mínimo (50 rounds do lado).
+    por_lado = build_league({k: [row(kills_t=n, kills_ct=n, rounds_t=50, rounds_ct=50)]
+                             for k, n in zip("abc", (20, 40, 60))}, side="t")
+    assert por_lado["a"]["scores"][0]["value"] is not None
 
 
 def test_percentil_com_empate():

@@ -228,6 +228,42 @@ export default async function RulesPage() {
                 <p className="mt-3 text-base text-muted">Contam 6 mapas na temporada, escolhidos para render o máximo de XP: o site considera a missão de cada semana ao escolher. Os 100 XP da missão só vêm de um desses 6 mapas.</p>
               </div>
             </div>
+            <div id="exemplos-xp" className="mt-6 scroll-mt-24">
+              <h3 className="mb-2 font-display text-2xl font-bold uppercase">Exemplos de XP</h3>
+              <p className="max-w-prose text-base text-muted">
+                Jogador de 3 estrelas (meta de 0,72 KPR), com mapas de 20 rounds: 15 kills já cumprem a missão. Uma vitória rende 40 + 20 = 60 XP; uma derrota,
+                40 XP.
+              </p>
+              <ol className="mt-3 grid gap-3 md:grid-cols-3">
+                {[
+                  {
+                    title: "Seis mapas, uma missão",
+                    body: "Quatro vitórias e duas derrotas, com uma missão cumprida na semana 2.",
+                    sum: "6 × 40 + 4 × 20 + 100 = 420 XP",
+                  },
+                  {
+                    title: "A missão vale mais que a vitória",
+                    body: "Sete mapas: seis vitórias sem missão e uma derrota com 20 kills na semana 2. Só com vitórias seriam 6 × 60 = 360 XP. O site tira uma vitória e põe a derrota da missão.",
+                    sum: "5 × 60 + 40 + 100 = 440 XP",
+                  },
+                  {
+                    title: "Duas missões na mesma semana",
+                    body: "Duas partidas de missão na semana 1 rendem 100 XP uma única vez. A outra vaga vai para a melhor vitória comum.",
+                    sum: "6 × 60 + 100 = 460 XP",
+                  },
+                ].map((ex) => (
+                  <li key={ex.title} className="card flex flex-col gap-2 px-4 py-3">
+                    <p className="text-lg font-bold">{ex.title}</p>
+                    <p className="text-base text-muted">{ex.body}</p>
+                    <p className="num mt-auto text-xl">{ex.sum}</p>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-3 max-w-prose text-base text-muted">
+                Empate de XP entre duas combinações: vence a que tem mais vitórias e, depois, a dos mapas jogados primeiro. As semanas são blocos de 7 dias
+                contados do primeiro dia da temporada.
+              </p>
+            </div>
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <div id="niveis" className="scroll-mt-24">
                 <h3 className="mb-2 font-display text-2xl font-bold uppercase">Níveis e estrelas</h3>

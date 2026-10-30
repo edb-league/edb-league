@@ -365,8 +365,9 @@ export function AdvancedStatsView({
                     <StyleBars items={scores} />
                   ) : (
                     <p className="text-base text-muted">
-                      As notas comparam o jogador com os outros da liga. Elas aparecem quando pelo menos 3 jogadores têm partidas
-                      com demo{filtered ? " dentro destes filtros" : ""}.
+                      As notas comparam o jogador com os outros da liga. Elas aparecem quando o jogador tem pelo menos 100
+                      rounds com demo (cerca de 4 a 5 mapas) e há pelo menos 3 jogadores nessa condição
+                      {filtered ? " dentro destes filtros" : ""}.
                     </p>
                   )}
                 </Card>

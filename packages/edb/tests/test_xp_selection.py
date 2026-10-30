@@ -66,3 +66,20 @@ def test_board_uses_the_optimal_selection_and_keeps_tie_break_on_wins():
     row = season_boards(frame, 1)["xp"].iloc[0]
     assert row["XP"] == 5 * 60 + 40 + 100 and row["Vitórias"] == 5
     assert len(row["Mapas selecionados"]) == 6
+
+
+# Exemplos numéricos do Regulamento (3 estrelas: meta de 0,72 KPR; 20 rounds por mapa, então 15 kills = missão).
+def test_regulation_example_one_mission_and_four_wins():
+    spec = [(0, 10, True), (1, 12, False), (8, 15, True), (9, 9, False), (15, 11, True), (16, 10, True)]
+    assert _xp_mensal(_best_xp(maps(spec), 3, 1), 3, 1) == 6 * 40 + 4 * 20 + 100 == 420
+
+
+def test_regulation_example_mission_beats_a_win():
+    # Seis vitórias sem missão renderiam 6 × 60 = 360; trocar uma pela derrota com missão rende 5 × 60 + 40 + 100 = 440.
+    spec = [(0, 9, True)] * 5 + [(1, 9, True), (8, 20, False)]
+    assert _xp_mensal(_best_xp(maps(spec), 3, 1), 3, 1) == 440
+
+
+def test_regulation_example_two_missions_same_week_count_once():
+    spec = [(0, 20, True), (1, 20, True)] + [(8, 9, True)] * 5
+    assert _xp_mensal(_best_xp(maps(spec), 3, 1), 3, 1) == 6 * 60 + 100 == 460
