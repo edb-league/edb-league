@@ -4,12 +4,15 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 from datetime import date
+from pathlib import Path
 
 import pandas as pd
 
 from edb import SAMPLE_SCOREBOARD
 from edb.bo3_admin import STATS_FIELDS  # noqa: F401  (mantido para referência dos campos)
+from edb import demo_pipeline as dp
 from edb.confront_registry import prepare_confront_bundle
 from edb.core import enrich
 from edb.demo_importer import parse_demo_stats, prepare_upload
@@ -17,6 +20,7 @@ from edb.season_rankings import has_technical_tie, season_boards
 from edb.season_system import season_match_ids
 
 from . import settings, views
+from .series_import import already_imported
 from .service import LeagueService, Snap
 from .views import Conflict, NotFound, _int, _none, _num, player_item, season_info
 
@@ -251,7 +255,21 @@ def _is_invalid_demo(source: str, players: list[dict]) -> bool:
             and sum(int(p.get("deaths") or 0) for p in players) == 0)
 
 
+def _name_hints(upload, map_name: str) -> tuple[str | None, list[str]]:
+    """Data (e aviso de mapa) tirados do nome do arquivo (md1_inferno_20_10.dem). Fora do padrão, só um aviso."""
+    try:
+        meta = dp.parse_filename(Path(upload.filename or ""), settings.today())
+    except ValueError:
+        return None, ["O nome do arquivo não segue o padrão (ex.: md1_inferno_20_10.dem); informe a data da partida."]
+    warnings = []
+    if map_name and map_name.casefold() != meta.map:
+        warnings.append(f"O nome do arquivo diz {meta.map}, mas a demo é de {map_name}.")
+    return meta.played_on.isoformat(), warnings
+
+
 def preview_import(service: LeagueService, method: str, upload) -> dict:
+    played_at = None
+    in_database = None
     if method == "sample":
         df = _read_csv_text(SAMPLE_SCOREBOARD.read_text(encoding="utf-8"))
         fingerprint, map_name, rounds = "scope_1648990866439220", "Inferno", 17
@@ -290,14 +308,20 @@ def preview_import(service: LeagueService, method: str, upload) -> dict:
                 folder.cleanup()
         fingerprint, map_name, rounds = result.fingerprint, result.map_name, result.rounds_total
         records, warnings, source = result.players, list(result.warnings), "Demo da xplay / demoparser2"
+        played_at, hints = _name_hints(upload, map_name)
+        warnings += hints
+        in_database = already_imported(service.store.matches(), fingerprint)
+        if in_database:
+            warnings.append(f"Esta demo já está no banco (partida {in_database}).")
     else:
         raise ValueError("Origem de dados desconhecida. Use demo, csv ou sample.")
     players = [normalize_player(r) for r in records]
     return {
         "fingerprint": fingerprint, "map": map_name, "rounds_total": int(rounds), "source": source,
         "warnings": warnings, "players": players,
-        "duplicate": bool(service.store.match_exists(fingerprint)),
+        "duplicate": bool(in_database or service.store.match_exists(fingerprint)),
         "invalid_stats": _is_invalid_demo(source, players),
+        "played_at": played_at,
     }
 
 
@@ -342,8 +366,13 @@ def commit_import(service: LeagueService, body: dict) -> dict:
             "rating": p["rating"], "kast": p["kast"], "open_kills": p["open_kills"],
             "trade_kills": p["trade_kills"], "observed_nickname": nick,
         })
+    if already_imported(store.matches(), fingerprint):
+        raise Conflict("Esta demo já está salva em outra partida. Importação duplicada bloqueada.")
+    notes = str(body.get("note") or "").strip()
+    if re.fullmatch(r"[0-9a-f]{64}", fingerprint):   # o hash fica nas notas, onde o importador local também procura
+        notes = f"{notes}; sha256:{fingerprint}" if notes else f"sha256:{fingerprint}"
     store.save_match({"id": fingerprint, "played_at": str(played), "map_name": body["map_name"],
-                      "source": body["source"], "rounds_total": total, "notes": body.get("note") or ""}, lines)
+                      "source": body["source"], "rounds_total": total, "notes": notes}, lines)
     service.invalidate()
     return {"ok": True, "match_id": fingerprint}
 

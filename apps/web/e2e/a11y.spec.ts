@@ -53,8 +53,8 @@ for (const scheme of ["light", "dark"] as const) {
 
     test("administração autenticada, todas as abas", async ({ page }) => {
       await loginAsAdmin(page);
-      for (const tab of ["Elenco", "Importar", "Confrontos", "Temporadas", "Exportar"]) {
-        await page.getByRole("tab", { name: tab }).click();
+      for (const tab of ["Elenco", "Importar", "Importar série", "Confrontos", "Temporadas", "Exportar"]) {
+        await page.getByRole("tab", { name: tab, exact: true }).click();
         await expectNoViolations(page, `/admin aba ${tab} (${scheme})`);
       }
     });

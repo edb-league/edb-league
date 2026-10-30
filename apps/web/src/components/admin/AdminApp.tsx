@@ -9,6 +9,7 @@ import type { AdminOverview, AdminSession } from "@/lib/types";
 import { ConfrontTab } from "./ConfrontTab";
 import { ExportTab } from "./ExportTab";
 import { ImportTab } from "./ImportTab";
+import { SeriesImportTab } from "./SeriesImportTab";
 import { LoginForm } from "./LoginForm";
 import { RosterTab } from "./RosterTab";
 import { SeasonsTab } from "./SeasonsTab";
@@ -114,6 +115,7 @@ export function AdminApp() {
         tabs={[
           { value: "elenco", label: "Elenco", content: <RosterTab players={overview.players} onChanged={refresh} /> },
           { value: "importar", label: "Importar", content: <ImportTab onChanged={refresh} /> },
+          { value: "serie", label: "Importar série", content: <SeriesImportTab onChanged={refresh} /> },
           { value: "confrontos", label: "Confrontos", content: <ConfrontTab overview={overview} onChanged={refresh} /> },
           { value: "temporadas", label: "Temporadas", content: <SeasonsTab overview={overview} onChanged={refresh} /> },
           { value: "exportar", label: "Exportar", content: <ExportTab /> },

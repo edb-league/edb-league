@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field, field_validator
 
-from . import admin_ops, auth, identity, settings
+from . import admin_ops, auth, identity, series_import, settings
 from .service import get_service
 
 router = APIRouter(prefix="/api/admin")
@@ -71,6 +71,20 @@ class ImportCommitBody(BaseModel):
     note: str = ""
     players: list[ImportPlayerBody]
     winners: list[str] = []
+
+
+class SeriesChoice(BaseModel):
+    kind: str
+    player_id: str | None = None
+    nickname: str | None = Field(default=None, max_length=60)
+
+
+class SeriesCommitBody(BaseModel):
+    payload: str
+    team_a: str = Field(default="PT", max_length=30)
+    team_b: str = Field(default="PL", max_length=30)
+    swap: bool = False
+    choices: dict[str, SeriesChoice] = {}
 
 
 # Sessão ----------------------------------------------------------------------------
@@ -155,6 +169,18 @@ def import_preview(method: str = Form(...), file: UploadFile | None = File(defau
 @router.post("/import/commit", dependencies=protected)
 def import_commit(body: ImportCommitBody):
     return admin_ops.commit_import(get_service(), body.model_dump())
+
+
+@router.post("/import/series/preview", dependencies=protected)
+def series_preview(files: list[UploadFile] = File(default=[]), team_a: str = Form(default="PT"),
+                   team_b: str = Form(default="PL"), swap: bool = Form(default=False)):
+    names = (team_a.strip()[:30] or "PT", team_b.strip()[:30] or "PL")
+    return series_import.preview(get_service(), files, names, swap)
+
+
+@router.post("/import/series/commit", dependencies=protected)
+def series_commit(body: SeriesCommitBody):
+    return series_import.commit(get_service(), body.model_dump())
 
 
 @router.get("/export/{kind}.csv", dependencies=protected)

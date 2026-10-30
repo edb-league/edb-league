@@ -91,6 +91,7 @@ export function ImportTab({ onChanged }: { onChanged: () => void }) {
               setWinners(data.players.filter((p) => p.won === true).map((p) => p.nickname));
               setMapName(data.map);
               setRounds(String(data.rounds_total));
+              if (data.played_at) setPlayedAt(data.played_at);
             }
           }}
         >

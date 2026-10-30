@@ -566,6 +566,8 @@ export type ImportPreview = {
   duplicate: boolean;
   /** true se a demo tem 0 kills e 0 mortes (leitura inválida). */
   invalid_stats: boolean;
+  /** Data tirada do nome do arquivo (md1_mapa_dd_mm), ou null se o nome fora do padrão não a traz. */
+  played_at: string | null;
 };
 
 export type ImportCommit = {
@@ -578,6 +580,77 @@ export type ImportCommit = {
   players: ImportPlayer[];
   /** Nicknames do time vencedor; vazio = não informado. */
   winners: string[];
+};
+
+export type SeriesPlayer = {
+  steamid: string;
+  nick: string;
+  /** A = primeiro time (PT por padrão), B = segundo. */
+  team: "A" | "B";
+  player_id: string | null;
+  player: string | null;
+  kills: number;
+  deaths: number;
+  assists: number;
+  adr: number;
+  kast: number;
+  headshots: number;
+  rating: number | null;
+};
+
+export type SeriesMap = {
+  file: string;
+  map: string;
+  order: number;
+  rounds: number;
+  score_a: number;
+  score_b: number;
+  warnings: string[];
+  players: SeriesPlayer[];
+};
+
+export type SeriesPending = {
+  steamid: string;
+  nick: string;
+  suggestion: { id: string; nickname: string } | null;
+};
+
+export type SeriesItem = {
+  key: string;
+  label: string;
+  format: "bo1" | "bo3";
+  played_on: string;
+  season: number | null;
+  basis: string;
+  problems: string[];
+  notes: string[];
+  changes: string[];
+  maps: SeriesMap[];
+  unresolved: SeriesPending[];
+  can_commit: boolean;
+  /** Devolvido sem alteração na gravação. */
+  payload: string;
+};
+
+export type SeriesPreview = {
+  team_a: string;
+  team_b: string;
+  notes: string[];
+  series: SeriesItem[];
+  players: { id: string; nickname: string; has_steamid: boolean }[];
+};
+
+export type SeriesChoice = {
+  kind: "link" | "alias" | "new";
+  player_id?: string;
+  nickname?: string;
+};
+
+export type SeriesCommitResult = {
+  ok: boolean;
+  match_ids: string[];
+  label: string;
+  parser_version: number;
 };
 
 export type ConfrontCandidates = {

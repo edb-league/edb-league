@@ -433,7 +433,7 @@ def flow(monkeypatch, players, gravar=True, sim=True):
     monkeypatch.setattr(script, "collect", lambda folder, store, only: (bo3_runs(), []))
     store = FlowStore(players)
     args = Namespace(pasta=str(Path(__file__).parent), gravar=gravar, sim=sim, trocar_times=False,
-                     time_a="PT", time_b="PL", so=None,
+                     time_a="PT", time_b="PL", so=None, painel=False,
                      ancora_pt=dp.DEFAULT_ANCHORS["PT"], ancora_pl=dp.DEFAULT_ANCHORS["PL"])
     script.run_once(args, store)
     return store
@@ -472,7 +472,7 @@ def test_fluxo_nao_grava_partida_que_ja_existe(monkeypatch, capsys):
     store = FlowStore(players)
     store.matches = lambda: [{"id": "edb-t1-bo3-01-anubis", "played_at": "2026-10-20", "map_name": "Anubis"}]
     store.stats = lambda: [{"match_id": "edb-t1-bo3-01-anubis", "player_id": f"p{i}"} for i in range(1, 11)]
-    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None,
+    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None, painel=False,
                      ancora_pt=["n1"], ancora_pl=["n6"])
     script.run_once(args, store)
     assert writes(store) == []
@@ -544,7 +544,7 @@ def test_fluxo_completa_detalhes_de_partida_ja_cadastrada(monkeypatch, capsys):
     store.matches = lambda: matches
     store.stats = lambda: stats
     store.match_details = lambda: []
-    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None,
+    args = Namespace(pasta=".", gravar=True, sim=True, trocar_times=False, time_a="PT", time_b="PL", so=None, painel=False,
                      ancora_pt=["n1"], ancora_pl=["n6"])
     script.run_once(args, store)
     tables = [(m, t) for m, t, _ in writes(store)]
@@ -571,3 +571,15 @@ def test_plano_com_substituicao_envia_a_lista_de_cada_mapa():
     assert lists[1] == sorted(["p1", "p2", "p3", "p4", "p99"])
     assert plan["bundle"]["team_a_player_ids"] == lists[0] and len(plan["bundle"]["team_a_player_ids"]) == 5
     assert len(plan["player_stats"]) == 30 and any(r["player_id"] == "p99" for r in plan["player_stats"])
+
+
+def test_painel_gera_um_json_por_demo_sem_gravar_nada(tmp_path, capsys):
+    import json
+    script = load_script()
+    runs = bo3_runs()
+    script.export_for_panel(runs, tmp_path)
+    files = sorted((tmp_path / "para_o_painel").glob("*.edb.json"))
+    assert len(files) == len(runs)
+    data = json.loads(files[0].read_text(encoding="utf-8"))
+    assert data["kind"] == "edb-analise" and data["sha"] == runs[0].sha and data["file"] == runs[0].file.path.name
+    assert data["analysis"]["players"] and "para_o_painel" in capsys.readouterr().out
