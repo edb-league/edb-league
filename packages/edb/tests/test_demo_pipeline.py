@@ -52,11 +52,23 @@ def player(steam, nick, **extra):
     return row
 
 
+def timeline(t_score, ct_score):
+    """Quem começou de T vence os primeiros t_score rounds; o outro time, o resto (só importa o formato)."""
+    running, rounds = [0, 0], []
+    for n in range(1, t_score + ct_score + 1):
+        winner = "t_first" if n <= t_score else "ct_first"
+        running[0 if winner == "t_first" else 1] += 1
+        rounds.append({"round": n, "winner": winner, "side": "t" if n <= 12 else "ct", "reason": "eliminacao",
+                       "planted": n == 2, "score": list(running)})
+    return rounds
+
+
 def analysis(map_name, t_ids, ct_ids, t_score, ct_score):
     players = [player(s, f"n{s}") for s in t_ids + ct_ids]
     return {"parser_version": 1, "map": map_name, "server": "XPLAY.GG", "rounds": t_score + ct_score,
             "overtime": False, "score": {"team_t_first": t_score, "team_ct_first": ct_score},
-            "rosters": {"team_t_first": t_ids, "team_ct_first": ct_ids}, "players": players}
+            "rosters": {"team_t_first": t_ids, "team_ct_first": ct_ids}, "players": players,
+            "timeline": timeline(t_score, ct_score)}
 
 
 A = [str(i) for i in range(1, 6)]
@@ -351,6 +363,28 @@ def test_plano_tem_as_linhas_certas():
                ((x["team_a_score"], x["team_b_score"]) for x in bundle["matches"]))
 
 
+def test_plano_leva_a_linha_do_tempo_no_formato_time_a_e_b():
+    plan = make_plan()
+    assert [r["match_id"] for r in plan["rounds"]] == [m["id"] for m in plan["matches"]]
+    # O time A é quem começou de T no mapa 1 (ids 6-10): perde 7x13 ali e vence 13x7 no mapa 2 (começa de CT).
+    # A pontuação acumulada é sempre [A, B], não [T, CT].
+    first = [r["winner"] for r in plan["rounds"][0]["rounds"]]
+    assert len(first) == 20 and first.count("a") == 7 and first.count("b") == 13
+    assert plan["rounds"][0]["rounds"][-1]["score"] == [7, 13]
+    second = plan["rounds"][1]["rounds"]
+    assert [r["winner"] for r in second].count("a") == 13 and second[-1]["score"] == [13, 7]
+    assert all(set(r) == {"round", "winner", "side", "reason", "planted", "score"} for r in plan["rounds"][0]["rounds"])
+
+
+def test_sem_linha_do_tempo_na_analise_o_plano_segue_sem_rounds():
+    s = dp.group_series(bo3_runs())[0]
+    for r in s.demos:
+        r.analysis.pop("timeline")
+    ids = {str(i): f"p{i}" for i in range(1, 11)}
+    plan = dp.build_plan(s, {"number": 1}, dp.next_match_ids(s, {"number": 1}, [], set()), ids, "PT", "PL")
+    assert plan["rounds"] == []
+
+
 class FakeStore:
     def __init__(self, fail_on=None):
         self.calls, self.fail_on = [], fail_on
@@ -367,7 +401,17 @@ def test_gravacao_na_ordem_certa():
     dp.write_plan(store, make_plan(), {"p10": "123"})
     assert [(m, t) for m, t, _ in store.calls] == [
         ("PATCH", "players"), ("POST", "matches"), ("POST", "player_stats"),
-        ("POST", "player_match_detail"), ("POST", "player_scope_stats"), ("POST", "rpc/register_edb_confronto")]
+        ("POST", "player_match_detail"), ("POST", "player_scope_stats"), ("POST", "rpc/register_edb_confronto"),
+        ("POST", "match_rounds")]
+
+
+def test_linha_do_tempo_e_gravada_depois_do_confronto_e_nao_derruba_a_serie():
+    store = FakeStore()
+    dp.write_plan(store, make_plan())
+    assert store.calls[-1][:2] == ("POST", "match_rounds")
+    broken = FakeStore(fail_on="match_rounds")      # tabela ainda não criada no banco
+    assert dp.write_plan(broken, make_plan()) == []
+    assert not [c for c in broken.calls if c[0] == "DELETE"]
 
 
 def test_falha_desfaz_tudo_em_ordem_inversa():
@@ -455,7 +499,7 @@ def test_fluxo_grava_serie_completa_e_vincula_nick_igual(monkeypatch, capsys):
     players[9]["nickname"] = "n10"        # mesmo nick da demo, sem SteamID: vínculo automático com --sim
     store = flow(monkeypatch, players)
     tables = [t for m, t, _ in store.calls if m in ("POST", "PATCH")]
-    assert tables[0] == "players" and tables[-1] == "rpc/register_edb_confronto"
+    assert tables[0] == "players" and tables[-2:] == ["rpc/register_edb_confronto", "match_rounds"]
     assert "Vinculado automaticamente" in capsys.readouterr().out
 
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import logging
 import re
 import tempfile
 from dataclasses import dataclass, field
@@ -23,6 +24,8 @@ from pathlib import Path
 
 from edb.demo_stats import COUNT_FIELDS, PARSER_VERSION
 from edb.hltv_stats import rating2
+
+log = logging.getLogger("edb.demo")
 
 MAX_UNCOMPRESSED = 1024 * 1024 * 1024  # 1 GB
 KNOWN_MAPS = {
@@ -413,14 +416,32 @@ def match_row(match_id: str, run: DemoRun, played_on: date) -> dict:
     }
 
 
+def rounds_row(match_id: str, run: DemoRun, a_set: set[str]) -> dict | None:
+    """Linha do tempo do mapa em termos do time A/B da série (A é quem está em a_set), ou None sem os dados."""
+    timeline = run.analysis.get("timeline")
+    if not timeline:
+        return None
+    t_first_is_a = bool(run.sides[0] & a_set)
+    rounds = []
+    for r in timeline:
+        a_won = (r["winner"] == "t_first") == t_first_is_a
+        score_t, score_ct = r["score"]
+        rounds.append({"round": r["round"], "winner": "a" if a_won else "b", "side": r["side"], "reason": r.get("reason"),
+                       "planted": bool(r.get("planted")),
+                       "score": [score_t, score_ct] if t_first_is_a else [score_ct, score_t]})
+    return {"match_id": match_id, "rounds": rounds}
+
+
 def build_plan(series: Series, season: dict, match_ids: list[str], ids: dict[str, str],
                team_a_name: str, team_b_name: str, swap: bool = False,
                anchors: dict[str, set[str]] | None = None) -> dict:
     """Tudo o que será gravado, pronto para a prévia e para o Store."""
     a_sets, scores, _ = assign_teams(series, swap, anchors)
-    plan = {"matches": [], "player_stats": [], "details": [], "scope": [], "bundle": None}
-    for run, mid in zip(series.demos, match_ids):
+    plan = {"matches": [], "player_stats": [], "details": [], "scope": [], "rounds": [], "bundle": None}
+    for run, mid, a_set in zip(series.demos, match_ids, a_sets):
         plan["matches"].append(match_row(mid, run, series.played_on))
+        if (row := rounds_row(mid, run, a_set)) is not None:
+            plan["rounds"].append(row)
         for p in run.analysis["players"]:
             pid = ids[str(p["steamid"])]
             plan["player_stats"].append(stats_row(mid, pid, p))
@@ -598,7 +619,7 @@ def write_plan(store, plan: dict, bind: dict[str, str] | None = None) -> dict:
                                      ("player_scope_stats", "scope", "match_id,player_id")):
             store._api("POST", table, params={"on_conflict": conflict}, payload=plan[key])
             done.append(table)
-        return store._api("POST", "rpc/register_edb_confronto", payload={"p_bundle": plan["bundle"]})
+        result = store._api("POST", "rpc/register_edb_confronto", payload={"p_bundle": plan["bundle"]})
     except Exception:
         ids = "in.(" + ",".join(created) + ")"
         for table in reversed(done):
@@ -607,3 +628,10 @@ def write_plan(store, plan: dict, bind: dict[str, str] | None = None) -> dict:
             except Exception:  # noqa: BLE001 - desfazer é melhor esforço; o erro original segue
                 pass
         raise
+    # A linha do tempo é um extra: sem a tabela match_rounds (migration 20261030_linha_do_tempo) a série vale do mesmo jeito.
+    if plan.get("rounds"):
+        try:
+            store._api("POST", "match_rounds", params={"on_conflict": "match_id"}, payload=plan["rounds"])
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Linha do tempo dos rounds não gravada (%s); o resto da série foi salvo.", exc)
+    return result

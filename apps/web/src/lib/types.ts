@@ -477,11 +477,31 @@ export type TeamTable = {
   rows: ScoreRow[];
 };
 
+export type RoundReason = "eliminacao" | "bomba" | "desarme" | "tempo";
+
+/** Um round do mapa, do ponto de vista dos times da esquerda (PT) e da direita (PL) do cartão da partida. */
+export type RoundEntry = {
+  round: number;
+  winner: "left" | "right";
+  /** Lado que o time vencedor jogava. */
+  side: "t" | "ct";
+  /** Null quando a demo não permite saber (por exemplo, CT venceu sem bomba e o jogo não informou o motivo). */
+  reason: RoundReason | null;
+  planted: boolean;
+  /** Placar acumulado depois do round. */
+  score_left: number;
+  score_right: number;
+};
+
+export type RoundTimeline = { rounds: RoundEntry[] };
+
 export type MatchDetail = {
   match: MapCard;
   season: number | null;
   series_id: string | null;
   series_format: "bo1" | "bo3" | null;
+  /** Rounds do mapa; null quando a partida não veio de uma demo analisada (ou o recurso ainda não foi ativado). */
+  timeline: RoundTimeline | null;
   teams: TeamTable[];
   general: {
     player: string;

@@ -161,6 +161,37 @@ def test_match_detail(client):
     assert data["coverage"]["players"] == 10
 
 
+def test_match_detail_timeline_is_consistent_with_the_score(client):
+    listing = get(client, "/api/matches")
+    series = next(s for s in listing["bo3"] if s["id"] == "ser-t1-01")
+    card = series["maps"][0]
+    data = get(client, f"/api/matches/{card['id']}")
+    rounds = data["timeline"]["rounds"]
+    assert [r["round"] for r in rounds] == list(range(1, len(rounds) + 1))
+    assert (rounds[-1]["score_left"], rounds[-1]["score_right"]) == (card["score_left"], card["score_right"])
+    for before, after in zip(rounds, rounds[1:]):   # o placar só sobe, de um em um, para quem venceu o round
+        gained = "score_left" if after["winner"] == "left" else "score_right"
+        other = "score_right" if gained == "score_left" else "score_left"
+        assert after[gained] == before[gained] + 1 and after[other] == before[other]
+
+
+def test_match_detail_timeline_is_null_without_rounds_or_table(client, monkeypatch):
+    legacy_id = get(client, "/api/matches")["legacy"][0]["id"]
+    assert get(client, f"/api/matches/{legacy_id}")["timeline"] is None
+    from edb_api.service import get_service
+    store = get_service().store
+    original = store._api
+
+    def no_table(method, table, **kw):
+        if table == "match_rounds":
+            raise RuntimeError("relation does not exist")
+        return original(method, table, **kw)
+
+    monkeypatch.setattr(store, "_api", no_table)
+    series = next(s for s in get(client, "/api/matches")["bo3"] if s["id"] == "ser-t1-01")
+    assert get(client, f"/api/matches/{series['maps'][0]['id']}")["timeline"] is None
+
+
 def test_match_detail_legacy_and_without_scope(client):
     listing = get(client, "/api/matches")
     legacy_id = listing["legacy"][0]["id"]

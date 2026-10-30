@@ -259,3 +259,17 @@ test("temporadas: arquivo lista cada ciclo com números, títulos e atalhos", as
   await first.getByRole("link", { name: "Ver rankings" }).click();
   await expect(page).toHaveURL(/\/rankings\/elite\?temporada=\d+/);
 });
+
+test("partida: linha do tempo dos rounds bate com o placar e tem alternativa em texto", async ({ page, request }) => {
+  const { mapId } = await ids(request);
+  await page.goto(`/partidas/mapa/${mapId}`);
+  const section = page.getByRole("region", { name: "Linha do tempo dos rounds" });
+  await expect(section.getByText("eliminação do time inimigo").first()).toBeVisible();   // legenda
+  const items = section.getByRole("list", { name: "Resultado de cada round" }).getByRole("listitem");
+  const total = await items.count();
+  expect(total).toBeGreaterThanOrEqual(13);
+  const finalText = await section.getByText(/Placar final:/).innerText();
+  const [, a, b] = /(\d+)\s*×\s*(\d+)/.exec(finalText)!;
+  expect(Number(a) + Number(b)).toBe(total);
+  await expect(items.last()).toContainText(`Placar ${a} a ${b}`);
+});

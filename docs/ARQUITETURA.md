@@ -124,6 +124,10 @@ Verificações: `npm run typecheck`, `npm run lint`, `npm run check:contrast`, `
 
 Quem jogou o mapa e entrou com a Steam vota em outro jogador do mesmo mapa (um voto, que pode ser trocado). A votação fica aberta por 7 dias depois do mapa (`EDB_MVP_VOTE_DAYS` muda isso) ou até todos votarem; só então o resultado aparece, sem mostrar quem votou em quem. É um reconhecimento: não entra em ranking, XP ou título. Exige a tabela `match_mvp_votes` (`db/migrations/20261030_votacao_mvp.sql`); sem ela, ou com o banco local, o bloco simplesmente não aparece e o resto do site segue normal.
 
+## Linha do tempo dos rounds
+
+O parser (versão 4) registra, para cada round, quem venceu, o lado, o motivo (eliminação, bomba, desarme ou tempo), se a bomba foi plantada e o placar acumulado. A importação grava isso na tabela `match_rounds` (`db/migrations/20261030_linha_do_tempo_rounds.sql`) depois do confronto, em termos do time A (esquerda) e B (direita) da série, e a página da partida mostra uma coluna por round. É um extra: se a tabela não existir, a série é gravada do mesmo jeito (com um aviso no log) e a página não mostra o bloco. O motivo vem dos eventos da demo (bomba plantada/desarmada); quando eles não bastam, o texto do jogo desempata e, sem ele, o round fica sem motivo em vez de um palpite. Mapas importados antes da versão 4 não têm linha do tempo.
+
 ## Limites conhecidos
 
 - **Supabase real não foi testado.** Confronto BO1/BO3 e homologação usam as funções `register_edb_confronto`, `homologate_edb_season`

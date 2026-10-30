@@ -15,9 +15,10 @@ NICK = {sid: f"A{i}" for i, sid in enumerate(A)} | {sid: f"B{i}" for i, sid in e
 class Demo:
     """Monta os eventos de uma partida em que o time A vence todos os rounds."""
 
-    def __init__(self, rounds=13, extra_start=None, leaver=None, begins=(100,), triple_round=None):
+    def __init__(self, rounds=13, extra_start=None, leaver=None, begins=(100,), triple_round=None, plants=(), defuses=(),
+                 reason=None):
         self.rounds, self.extra_start, self.leaver, self.begins = rounds, extra_start, leaver, begins
-        self.triple_round = triple_round
+        self.triple_round, self.plants, self.defuses, self.reason = triple_round, plants, defuses, reason
         self.events = self._build()
 
     def _build(self):
@@ -27,7 +28,8 @@ class Demo:
             a_team, b_team = (2, 3) if r <= 12 else (3, 2)
             starts.append(base)
             freezes.append(base + 100)
-            ends.append({"tick": base + 800, "winner": "T" if a_team == 2 else "CT"})
+            ends.append({"tick": base + 800, "winner": "T" if a_team == 2 else "CT"}
+                        | ({"reason": self.reason} if self.reason else {}))
             for sid in A + B:
                 if self.leaver and sid == self.leaver[0] and r >= self.leaver[1]:
                     continue
@@ -50,7 +52,13 @@ class Demo:
         blind = [{"tick": 1250, "attacker_steamid": A[0], "user_steamid": B[0], "attacker_team_num": 2,
                   "user_team_num": 3, "blind_duration": 1.0, "is_warmup_period": False}]
         frame = pd.DataFrame
+        # Plant é do time T do round (A até o 12, B depois); desarme é do CT.
+        plants = frame({"tick": [1000 * r + 500 for r in self.plants], "is_warmup_period": False,
+                        "user_steamid": [A[0] if r <= 12 else B[0] for r in self.plants]})
+        defuses = frame({"tick": [1000 * r + 700 for r in self.defuses], "is_warmup_period": False,
+                         "user_steamid": [B[0] if r <= 12 else A[0] for r in self.defuses]})
         return {
+            "bomb_planted": plants, "bomb_defused": defuses,
             "begin_new_match": frame({"tick": list(self.begins)}),
             "round_start": frame({"tick": starts}),
             "round_freeze_end": frame({"tick": freezes}),
@@ -139,3 +147,30 @@ def test_finished_rule(score, rounds, expected):
 def test_absences_only_count_long_gaps():
     assert demo_stats._absences({1, 2, 7, 8}, 8) == [(3, 6)] and demo_stats._absences({1, 2, 6, 7}, 7) == []
     assert demo_stats._absences({1, 2}, 8) == [(3, 8)] and demo_stats._absences({5, 6, 7, 8, 9}, 9) == [(1, 4)]
+
+
+def test_timeline_has_one_entry_per_round_with_running_score_and_sides(monkeypatch):
+    result = run(monkeypatch, rounds=14)
+    timeline = result["timeline"]
+    assert [r["round"] for r in timeline] == list(range(1, 15))
+    assert timeline[0]["score"] == [1, 0] and timeline[-1]["score"] == [14, 0]
+    assert all(r["winner"] == "t_first" for r in timeline)
+    # O time A começa de T e troca de lado depois do round 12.
+    assert {r["side"] for r in timeline[:12]} == {"t"} and {r["side"] for r in timeline[12:]} == {"ct"}
+
+
+def test_timeline_reasons_come_from_bomb_events(monkeypatch):
+    # Rounds 1-12 são vitórias de T; 13-14 de CT. Plant no 2; plant e desarme no 13.
+    timeline = run(monkeypatch, rounds=14, plants=(2, 13), defuses=(13,))["timeline"]
+    by_round = {r["round"]: r for r in timeline}
+    assert by_round[1]["reason"] == "eliminacao" and by_round[1]["planted"] is False
+    assert by_round[2]["reason"] == "bomba" and by_round[2]["planted"] is True
+    assert by_round[13]["reason"] == "desarme" and by_round[13]["planted"] is True
+    assert by_round[14]["reason"] is None   # CT sem bomba e sem motivo informado: não chuta entre eliminação e tempo
+
+
+def test_timeline_uses_the_game_reason_only_to_break_ties(monkeypatch):
+    assert run(monkeypatch, rounds=14, reason="ct_win")["timeline"][13]["reason"] == "eliminacao"
+    assert run(monkeypatch, rounds=14, reason="target_saved")["timeline"][13]["reason"] == "tempo"
+    # T com a bomba plantada, mas o jogo diz que foi eliminação: vale a eliminação.
+    assert run(monkeypatch, rounds=14, plants=(2,), reason="t_win")["timeline"][1]["reason"] == "eliminacao"

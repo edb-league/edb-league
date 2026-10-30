@@ -158,6 +158,30 @@ def _detail_for(rng, stat: dict) -> dict:
     return row
 
 
+def _demo_rounds(match_id: str, a: int, b: int) -> dict:
+    """Linha do tempo sintética de um mapa (time A começa de T): só para a demonstração; usa um sorteio próprio
+    para não mexer nos demais dados sintéticos."""
+    rng = random.Random(f"rounds-{match_id}")
+    winners = ["a"] * a + ["b"] * b
+    rng.shuffle(winners)
+    final = "a" if a > b else "b"
+    if winners[-1] != final:   # o último round é de quem vence o mapa
+        winners.append(winners.pop(winners.index(final)))
+    score, rounds = [0, 0], []
+    for number, winner in enumerate(winners, 1):
+        score[0 if winner == "a" else 1] += 1
+        a_is_t = number <= 12 or number > 24 and number % 2 == 1
+        side = "t" if (winner == "a") == a_is_t else "ct"
+        planted = rng.random() < 0.55
+        if side == "t":
+            reason = "bomba" if planted and rng.random() < 0.6 else "eliminacao"
+        else:
+            reason = "desarme" if planted else rng.choice(["eliminacao", "tempo"])
+        rounds.append({"round": number, "winner": winner, "side": side, "reason": reason,
+                       "planted": planted, "score": list(score)})
+    return {"match_id": match_id, "rounds": rounds}
+
+
 def build_demo_data() -> dict:
     rng = random.Random(20261019)
     players = _make_players()
@@ -280,6 +304,8 @@ def build_demo_data() -> dict:
         "bo3_maps": series_maps, "bo3_players": series_players,
         "season_player_stars": frozen, "season_final_rankings": final_rankings,
         "season_titles": titles, "player_aliases": [],
+        "match_rounds": [_demo_rounds(m["id"], int(m["team_a_score"]), int(m["team_b_score"]))
+                         for m in matches if m.get("team_a_score") is not None and m["team_a_score"] != m["team_b_score"]],
     }
 
 

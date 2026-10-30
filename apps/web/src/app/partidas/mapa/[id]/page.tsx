@@ -9,6 +9,7 @@ import type { MatchDetail } from "@/lib/types";
 import { NoData } from "@/components/ui/NoData";
 import { MapTile } from "@/components/ui/MapTile";
 import { MvpVote } from "@/components/matches/MvpVote";
+import { RoundTimeline } from "@/components/matches/RoundTimeline";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -66,6 +67,8 @@ export default async function MatchDetailPage({
       </header>
 
       <MvpVote matchId={detail.match.id} />
+
+      {detail.timeline && <RoundTimeline timeline={detail.timeline} match={m} />}
 
       <section aria-labelledby="placar">
         <SectionTitle id="placar" title="Placar da partida" />

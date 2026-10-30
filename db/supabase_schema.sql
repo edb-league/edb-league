@@ -33,3 +33,9 @@ create table if not exists public.match_mvp_votes (
   primary key (match_id, voter_id), check (voter_id <> candidate_id)
 );
 alter table public.match_mvp_votes enable row level security;
+
+-- Linha do tempo dos rounds (ver db/migrations/20261030_linha_do_tempo_rounds.sql).
+create table if not exists public.match_rounds (
+  match_id text primary key, rounds jsonb not null, created_at timestamptz not null default now()
+);
+alter table public.match_rounds enable row level security;

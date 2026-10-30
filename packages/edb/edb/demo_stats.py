@@ -20,7 +20,7 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-PARSER_VERSION = 3  # 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
+PARSER_VERSION = 4  # 4: linha do tempo dos rounds; 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
 TRADE_TICKS = 320
 TICKRATE = 64
 MIN_ABSENT_ROUNDS = 4   # rounds seguidos sem nenhum evento do jogador para considerá-lo fora da partida
@@ -117,6 +117,27 @@ def _absences(rounds_seen: set[int], n_rounds: int, minimum: int = MIN_ABSENT_RO
                 ranges.append((begin, rno - 1))
             begin = None
     return ranges
+
+
+# Motivos de fim de round que o demoparser2 informa (texto ou código do jogo). O resto fica sem motivo.
+_ELIMINATION = {"t_win", "ct_win", "8", "9"}
+_TIME = {"target_saved", "12"}
+
+
+def _round_reason(winner_side: int, planted: bool, defused: bool, raw) -> str | None:
+    """Motivo do round, a partir dos eventos da demo; o texto do jogo só desempata quando os eventos não bastam.
+
+    desarme: CT desarmou a bomba. bomba: T venceu com a bomba plantada (explosão ou eliminação depois do plant).
+    eliminacao: o outro time foi eliminado. tempo: CT venceu porque o tempo acabou sem bomba plantada.
+    """
+    text = str(raw).strip().lower() if raw is not None and not pd.isna(raw) else ""
+    if defused:
+        return "desarme"
+    if winner_side == 2:
+        return "bomba" if planted and text not in _ELIMINATION else "eliminacao"
+    if text in _TIME:
+        return "tempo"
+    return "eliminacao" if text in _ELIMINATION else None
 
 
 def _finished(score: dict[int, int], n_rounds: int) -> bool:
@@ -464,6 +485,18 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
     if not _finished(score, n_rounds):
         notes.append(f"Placar {score[2]}x{score[3]} em {n_rounds} rounds não fecha uma partida "
                      "(13 rounds, ou 16 ou mais com prorrogação); confira se a demo está completa.")
+    defused = {round_of(int(t)) for t in live(ev["bomb_defused"]).tick}
+    running = {2: 0, 3: 0}
+    timeline = []
+    for rno, row in enumerate(ends.itertuples(), start=1):
+        label = won_label[rno]
+        running[label] += 1
+        side = side_of[rno][label]
+        timeline.append({
+            "round": rno, "winner": "t_first" if label == 2 else "ct_first", "side": "t" if side == 2 else "ct",
+            "reason": _round_reason(side, rno in plant_tick, rno in defused, getattr(row, "reason", None)),
+            "planted": rno in plant_tick, "score": [running[2], running[3]],
+        })
     return {
         "warnings": notes,
         "parser_version": PARSER_VERSION,
@@ -474,4 +507,5 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
         "score": {"team_t_first": score[2], "team_ct_first": score[3]},
         "rosters": {"team_t_first": teams[2], "team_ct_first": teams[3]},
         "players": players,
+        "timeline": timeline,
     }

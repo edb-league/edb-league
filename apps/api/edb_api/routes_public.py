@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from . import views
 from .service import get_service
+from .timeline import read_timeline
 
 router = APIRouter(prefix="/api")
 
@@ -87,7 +88,10 @@ def matches(season: str | None = None):
 
 @router.get("/matches/{match_id}")
 def match_detail(match_id: str):
-    return views.build_match_detail(get_service().snap(), match_id)
+    service = get_service()
+    detail = views.build_match_detail(service.snap(), match_id)
+    detail["timeline"] = read_timeline(service, match_id)
+    return detail
 
 
 @router.post("/draw")
