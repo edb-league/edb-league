@@ -13,7 +13,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   try {
     const d = await apiOrNotFound<MatchDetail>(`/matches/${encodeURIComponent(id)}`);
-    return { title: `${d.match.map} · ${d.match.date_label}` };
+    const m = d.match;
+    const score = m.score_left !== null && m.score_right !== null ? `${m.left} ${m.score_left} × ${m.score_right} ${m.right}` : `${m.left} × ${m.right}`;
+    return { title: `${m.map} · ${m.date_label}`, description: `${score} em ${m.map}, ${m.date_label}. Estatísticas completas na EDB LEAGUE.` };
   } catch {
     return { title: "Partida" };
   }

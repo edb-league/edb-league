@@ -85,7 +85,7 @@ docker run --rm -p 8000:8000 -e EDB_DEMO=1 -e XINXAS_ADMIN_PASSWORD=demo-senha-1
 4. Em Environment, defina `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `XINXAS_ADMIN_PASSWORD`,
    `EDB_SESSION_SECRET`, `EDB_ALLOWED_ORIGINS` (domínio do frontend), `EDB_COOKIE_SECURE=1`,
    `EDB_TRUST_PROXY=1` e, se quiser, `STEAM_API_KEY`.
-5. No plano gratuito o serviço hiberna; a primeira requisição depois disso demora alguns segundos.
+5. No plano gratuito o serviço hiberna; a primeira requisição depois disso demora. O workflow `.github/workflows/keepalive.yml` faz um ping a cada 10 min (use a variável de repositório `SITE_URL` se o domínio do site mudar).
 
 ### Fly.io
 

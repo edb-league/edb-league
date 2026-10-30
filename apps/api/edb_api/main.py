@@ -17,7 +17,16 @@ log = logging.getLogger("edb.api")
 PUBLIC_CACHE = "public, s-maxage=30, stale-while-revalidate=60"
 
 
+def _warn_about_steam_login() -> None:
+    """Se a pessoa começou a configurar o login com a Steam, avisa nos logs o que ainda falta."""
+    if not (settings.env("EDB_SESSION_SECRET") or settings.env("EDB_ADMIN_STEAMID") or settings.env("EDB_PUBLIC_URL")):
+        return
+    for problem in settings.steam_login_problems():
+        log.warning("Login com a Steam: %s", problem)
+
+
 def create_app() -> FastAPI:
+    _warn_about_steam_login()
     from .routes_admin import router as admin_router
     from .routes_auth import router as auth_router
     from .routes_public import router as public_router

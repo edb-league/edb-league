@@ -21,13 +21,29 @@ export function qs(params: Record<string, string | number | boolean | undefined>
   return text ? `?${text}` : "";
 }
 
+/** Respostas de "API ainda acordando" (Render gratuito) e de gateway: vale tentar de novo. */
+const WAKING = new Set([502, 503, 504]);
+const RETRIES = 2;
+const RETRY_DELAY_MS = 2500;
+
+/** GET com poucas novas tentativas quando a API está subindo; falha de rede também conta. */
+async function fetchWithRetry(url: string, revalidate: number): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const response = await fetch(url, { next: { revalidate } });
+      if (!WAKING.has(response.status) || attempt >= RETRIES) return response;
+    } catch (error) {
+      if (attempt >= RETRIES) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  }
+}
+
 /** Consulta a API no servidor, com cache curto (os dados da liga mudam poucas vezes por dia). */
 export async function api<T>(path: string, options: { revalidate?: number } = {}): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/api${path}`, {
-      next: { revalidate: options.revalidate ?? 30 },
-    });
+    response = await fetchWithRetry(`${API_URL}/api${path}`, options.revalidate ?? 30);
   } catch {
     throw new ApiError(503, "Não foi possível conectar à API da liga. Tente novamente em instantes.");
   }

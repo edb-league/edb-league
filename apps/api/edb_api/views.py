@@ -1,4 +1,4 @@
-"""Montagem dos objetos JSON públicos, reaproveitando as regras do app Streamlit."""
+"""Montagem dos objetos JSON públicos, reaproveitando as regras de packages/edb."""
 from __future__ import annotations
 
 from datetime import timedelta
@@ -412,6 +412,17 @@ def _avg(values):
     return sum(values) / len(values) if values else None
 
 
+def _weighted_adr(items: list[dict]):
+    """Dano total ÷ rounds totais (a mesma conta do KPR e dos rankings), não a média dos ADRs de cada partida.
+
+    Partidas sem dano registrado ficam de fora da conta; se nenhuma tiver, cai para a média dos ADRs informados.
+    """
+    with_damage = [r for r in items if r.get("damage") is not None and r["rounds"] > 0]
+    if with_damage:
+        return sum(r["damage"] for r in with_damage) / sum(r["rounds"] for r in with_damage)
+    return _avg([r["adr"] for r in items])
+
+
 def _per_map(records: list[dict]) -> list[dict]:
     groups: dict[str, list[dict]] = {}
     for r in records:
@@ -425,7 +436,7 @@ def _per_map(records: list[dict]) -> list[dict]:
             "map": name, "games": len(items), "wins": wins,
             "win_rate": _num(100 * wins / decided) if decided else None,
             "kpr": _num(sum(r["kills"] for r in items) / rounds) if rounds else None,
-            "adr": _num(_avg([r["adr"] for r in items])),
+            "adr": _num(_weighted_adr(items)),
             "rating": _num(_avg([r["rating"] for r in items])),
         })
     return sorted(rows, key=lambda r: (-r["games"], r["map"]))

@@ -145,7 +145,9 @@ def check_demo(file: DemoFile, analysis: dict) -> tuple[list[str], list[str]]:
         errors.append(f"{name}: placar {t_first}x{ct_first} não soma os {analysis['rounds']} rounds.")
     if t_first == ct_first:
         errors.append(f"{name}: placar empatado ({t_first}x{ct_first}).")
-    if max(t_first, ct_first) < 13:
+    if "warnings" in analysis:
+        warnings.extend(f"{name}: {w}" for w in analysis["warnings"])
+    elif max(t_first, ct_first) < 13:
         warnings.append(f"{name}: ninguém chegou a 13 rounds ({t_first}x{ct_first}); confira se a partida acabou antes.")
     return errors, warnings
 

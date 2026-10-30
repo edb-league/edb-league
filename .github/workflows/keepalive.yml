@@ -1,0 +1,27 @@
+name: Manter a API acordada
+# O Render gratuito hiberna depois de ~15 min sem requisições e a primeira visita seguinte espera a API subir.
+# Este ping passa pelo próprio site (rewrite /api -> Render), então não precisa da URL do Render.
+# Só roda a partir da branch padrão. O GitHub pausa agendamentos em repositórios sem atividade por 60 dias.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chamar /api/health
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://edb-league.vercel.app' }}
+        run: |
+          # Até 3 tentativas: a primeira pode pegar a API ainda acordando.
+          for i in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 60 "$SITE_URL/api/health?t=$(date +%s)"; then
+              echo; exit 0
+            fi
+            sleep 10
+          done
+          echo "API não respondeu após 3 tentativas" >&2
+          exit 1

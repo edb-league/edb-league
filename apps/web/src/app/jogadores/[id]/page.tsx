@@ -21,7 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   try {
     const d = await apiOrNotFound<PlayerDetail>(`/players/${encodeURIComponent(id)}`);
-    return { title: d.player.name };
+    return {
+      title: d.player.name,
+      description: `${d.player.nickname}: ${d.summary.games} mapas, KPR ${num(d.summary.kpr, 2)} e ADR ${num(d.summary.adr, 1)} na EDB LEAGUE.`,
+    };
   } catch {
     return { title: "Jogador" };
   }

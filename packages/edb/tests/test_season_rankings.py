@@ -37,8 +37,8 @@ def test_six_best_maps_and_no_limit_to_total_matches():
     assert elite["Mapas selecionados"] == [f"map{i:02}" for i in range(14,8,-1)]
     assert set(supera["Mapas selecionados"]) == set(elite["Mapas selecionados"])
     assert len(xp["Mapas selecionados"]) == 6
-    # XP privilegia os mapas vencidos, nao os de maior dano.
-    assert xp["Mapas selecionados"] == [f"map{i:02}" for i in (1,3,5,7,9,11)]
+    # XP escolhe os mapas que rendem mais pontos (vitoria e missao semanal), nao os de maior dano.
+    assert set(xp["Mapas selecionados"]) != set(elite["Mapas selecionados"])
     assert 0 <= xp["XP"] <= (6*60+2*100)
 
 

@@ -46,7 +46,7 @@ def password_login_enabled() -> bool:
 
 def steam_login_enabled() -> bool:
     """Login com a Steam exige um segredo de sessão próprio; sem ele, ficaria preso à senha do admin."""
-    return len(env("EDB_SESSION_SECRET")) >= 16
+    return len(env("EDB_SESSION_SECRET").strip()) >= 16
 
 
 def admin_steamid() -> str:
@@ -58,6 +58,23 @@ def admin_steamid() -> str:
 
 def admin_configured() -> bool:
     return password_login_enabled() or (steam_login_enabled() and bool(admin_steamid()))
+
+
+def steam_login_problems() -> list[str]:
+    """Motivos pelos quais o login com a Steam está desligado ou incompleto (sem expor nenhum valor)."""
+    problems = []
+    secret = env("EDB_SESSION_SECRET").strip()
+    if not steam_login_enabled():
+        problems.append(
+            f"EDB_SESSION_SECRET precisa ter pelo menos 16 caracteres (hoje tem {len(secret)}); "
+            "sem isso o login com a Steam fica desligado."
+        )
+    raw_admin = env("EDB_ADMIN_STEAMID").strip()
+    if raw_admin and not admin_steamid():
+        problems.append("EDB_ADMIN_STEAMID não é um SteamID64 válido (17 dígitos, começando por 7656119).")
+    if not raw_admin:
+        problems.append("EDB_ADMIN_STEAMID não está definido: ninguém acessa a Administração pela Steam.")
+    return problems
 
 
 def public_url() -> str:
@@ -72,7 +89,7 @@ def public_url() -> str:
 def session_secret() -> bytes:
     import hashlib
 
-    secret = env("EDB_SESSION_SECRET")
+    secret = env("EDB_SESSION_SECRET").strip()
     if secret:
         return secret.encode("utf-8")
     return hashlib.sha256(("edb-session:" + admin_password()).encode("utf-8")).digest()

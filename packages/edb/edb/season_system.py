@@ -154,7 +154,7 @@ def _parse_date(value):
 
 
 def current_season_number(seasons, on_date: date):
-    """O calendário ativa a temporada 1 em 19/10/2026 sem tarefa externa."""
+    """O calendário ativa a temporada 1 em 15/10/2026 sem tarefa externa."""
     ordered=sorted(seasons,key=lambda x:int(x["number"]),reverse=True)
     for season in ordered:
         start=_parse_date(season.get("starts_on"))

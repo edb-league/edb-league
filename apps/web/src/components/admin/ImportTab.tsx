@@ -91,6 +91,7 @@ export function ImportTab({ onChanged }: { onChanged: () => void }) {
               setWinners(data.players.filter((p) => p.won === true).map((p) => p.nickname));
               setMapName(data.map);
               setRounds(String(data.rounds_total));
+              if (data.played_at) setPlayedAt(data.played_at);
             }
           }}
         >
@@ -278,14 +279,20 @@ export function ImportTab({ onChanged }: { onChanged: () => void }) {
               </tbody>
             </TableWrap>
             <p className="-mt-3 text-sm text-muted">
-              Marque quem venceu a partida. Deixe todos desmarcados se o resultado não for informado.
+              Marque quem venceu a partida. É obrigatório: sem o resultado, a vitória não entra no XP nem na taxa de vitória.
             </p>
 
             <TextField id="imp-nota" label="Observação (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
 
             <Feedback error={save.error} ok={null} />
             <div>
-              <Button type="submit" disabled={blocked || save.busy || players.length === 0 || !mapName.trim()}>
+              <Button
+                type="submit"
+                disabled={
+                  blocked || save.busy || players.length === 0 || !mapName.trim() ||
+                  !winners.some((w) => nicknames.includes(w)) || nicknames.every((n) => winners.includes(n))
+                }
+              >
                 {save.busy ? "Gravando..." : "Gravar partida"}
               </Button>
             </div>

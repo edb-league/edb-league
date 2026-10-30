@@ -8,6 +8,7 @@ Exemplos (PowerShell, na raiz do repositório):
     python scripts/edb_import.py --gravar             # pergunta antes de gravar cada série
     python scripts/edb_import.py --gravar --sim       # grava as séries sem pendência, sem perguntar
     python scripts/edb_import.py --vigiar --gravar --sim   # fica de olho na pasta
+    python scripts/edb_import.py --painel             # lê as demos e gera os arquivos .edb.json para enviar pelo painel
 
 Credenciais: variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY, ou um arquivo .env
 na raiz do repositório (já ignorado pelo git). Nunca coloque a chave em outro lugar.
@@ -15,6 +16,7 @@ na raiz do repositório (já ignorado pelo git). Nunca coloque a chave em outro 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -201,6 +203,19 @@ def collect(folder: Path, store, only: list[str] | None) -> tuple[list[dp.DemoRu
     return runs, notes
 
 
+def export_for_panel(runs: list[dp.DemoRun], folder: Path) -> None:
+    """Grava a análise de cada demo em <pasta>/para_o_painel/<nome>.edb.json (poucos KB; a demo tem ~230 MB)."""
+    out = folder / "para_o_painel"
+    out.mkdir(exist_ok=True)
+    for run in runs:
+        target = out / (dp._stem(run.file.path.name) + ".edb.json")
+        target.write_text(json.dumps({"kind": "edb-analise", "file": run.file.path.name, "sha": run.sha,
+                                      "analysis": run.analysis}), encoding="utf-8")
+        print(f"  Gerado: {target}")
+    print()
+    print(f"{len(runs)} arquivo(s) em {out}. No painel, aba Importar > Série, envie os arquivos da mesma série juntos.")
+
+
 def run_once(args, store) -> int:
     folder = Path(args.pasta)
     if not folder.is_dir():
@@ -211,6 +226,9 @@ def run_once(args, store) -> int:
         print(f"- {n}")
     if not runs:
         print("Nada novo para importar.")
+        return 0
+    if args.painel:
+        export_for_panel(runs, folder)
         return 0
     directory = seasons = existing = taken = None
     if store is not None:
@@ -339,6 +357,8 @@ def main() -> int:
     parser.add_argument("--pasta", default=os.environ.get("EDB_DEMOS_DIR", DEFAULT_FOLDER))
     parser.add_argument("--gravar", action="store_true", help="envia ao Supabase (sem isso, só prévia)")
     parser.add_argument("--sim", action="store_true", help="não pergunta; grava só séries sem pendência")
+    parser.add_argument("--painel", action="store_true",
+                        help="só lê as demos e gera os arquivos .edb.json para enviar pelo painel (não grava no banco)")
     parser.add_argument("--vigiar", action="store_true", help="repete a leitura da pasta a cada --intervalo segundos")
     parser.add_argument("--intervalo", type=int, default=60)
     parser.add_argument("--trocar-times", action="store_true", help="inverte PT e PL depois de aplicar as âncoras")

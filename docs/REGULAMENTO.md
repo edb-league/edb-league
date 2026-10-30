@@ -22,11 +22,22 @@
 - O limite pode ser revisto **somente para temporadas futuras**.
 
 ## XP
-- Seis mapas selecionados por pontuacao de participacao/vitoria: 40 XP por mapa + 20 XP por vitoria.
-- Nos empates de pontuacao de mapa, os realizados primeiro sao priorizados.
+- Seis mapas selecionados para render o maximo de XP: 40 XP por mapa + 20 XP por vitoria + 100 XP por semana coberta por uma missao cumprida em um dos seis mapas. Como a missao vale mais que a vitoria, um mapa de missao pode entrar no lugar de uma vitoria comum.
+- Cada semana so precisa de um mapa de missao; nos empates de XP vencem as combinacoes com mais vitorias e, depois, com os mapas realizados primeiro.
 - As missoes concedem 100 XP por semana da temporada (blocos de 7 dias contados a partir do primeiro dia da temporada), sem limite de missoes alem da quantidade de semanas; contam apenas os seis mapas selecionados para XP.
 - A missao exige KPR pelo menos igual a meta das estrelas, em mapa com no minimo oito rounds.
 - O ultimo mapa de uma BO3 que termine apos o encerramento continua na temporada em que a serie comecou, e conta na ultima semana dela, sem gerar bonus de semana extra.
+- Uma vitoria vale 40 + 20 = 60 XP; uma derrota, 40 XP.
+
+**Exemplos** (3 estrelas, meta de 0,72 KPR; mapas de 20 rounds, entao 15 kills cumprem a missao):
+- *Seis mapas, uma missao:* 4 vitorias, 2 derrotas e uma missao na semana 2 = 6 x 40 + 4 x 20 + 100 = **420 XP**.
+- *A missao vale mais que a vitoria:* sete mapas, seis vitorias sem missao e uma derrota com 20 kills na semana 2. So com vitorias seriam 6 x 60 = 360 XP; o site tira uma vitoria e inclui a derrota da missao: 5 x 60 + 40 + 100 = **440 XP**.
+- *Duas missoes na mesma semana:* contam 100 XP uma unica vez; a outra vaga vai para a melhor vitoria comum: 6 x 60 + 100 = **460 XP**.
+
+## Estatisticas do perfil
+- As notas de 0 a 100 do perfil comparam o jogador com os demais e exigem **no minimo 100 rounds** com demo (cerca de 4 a 5 mapas) tanto para receber nota quanto para entrar na comparacao. Em perfis filtrados por lado, o minimo e de 50 rounds do lado. Antes disso, o perfil mostra "—".
+- O ADR por mapa e sempre ponderado: dano total dividido pelos rounds totais, a mesma conta do KPR e dos rankings (nao a media dos ADRs de cada partida).
+- Ao gravar uma partida avulsa, e obrigatorio informar quem venceu. Partida sem vencedor definido nao entra no XP nem na taxa de vitoria.
 
 ## Estrelas e historico
 - O nivel de 1 a 5 estrelas e congelado para cada jogador durante a temporada.
@@ -49,4 +60,4 @@
 - Nao alterar rankings homologados em correcoes posteriores sem revisao administrativa expressa.
 - Temporada 0 permanece encerrada e nao recebe os novos criterios retroativamente.
 
-**Aplicacao tecnica:** season_rankings.py, season_system.py, app.py e tabelas/funcoes de temporada no Supabase.
+**Aplicacao tecnica:** season_rankings.py, season_system.py, a API e tabelas/funcoes de temporada no Supabase.

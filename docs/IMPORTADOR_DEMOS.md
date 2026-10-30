@@ -96,3 +96,31 @@ distância. Se achar (por exemplo, partida cadastrada pelos prints do SCOPE), n�
 
 `rating` gravado é o Rating 2.0 estimado (fórmula pública da HLTV). Mira, 1ª bala, tempo até matar e ADR oficial
 do SCOPE ficam vazios nas partidas importadas de demo.
+
+## Pelo painel (Administração > Importar série)
+
+Faz o mesmo que o importador local, com prévia antes de gravar. O caminho recomendado é analisar no computador, porque
+a demo pesa ~230 MB e a leitura leva minutos (o servidor gratuito pode não aguentar):
+
+1. `python scripts/edb_import.py --painel` lê as demos novas e gera, em `para_o_painel/`, um `.edb.json` por demo (poucos KB).
+2. No painel, aba **Importar série**, envie os `.edb.json` da mesma série juntos (também aceita as demos `.dem`/`.dem.gz`).
+3. Confira o placar de cada mapa, o time A/B, as substituições e os avisos. Contas sem cadastro aparecem numa lista:
+   escolha **criar jogador novo**, **vincular a um jogador sem SteamID** ou **é outra conta de um jogador cadastrado**.
+4. **Gravar série** cria as partidas (`edb-t1-bo3-NN-mapa`), as estatísticas, os detalhes da demo e o confronto.
+   Se algo falhar, nada fica salvo (jogadores novos e contas vinculadas também são desfeitos).
+
+A data vem do nome do arquivo (`md3_inferno_20_10_1.dem`). A duplicata é detectada pelo SHA-256 da demo, que fica nas
+notas da partida: vale para o painel e para o importador local. Se a série (ou parte dela) já está no banco, o painel
+recusa; para completar uma partida antiga com os dados da demo, use `scripts/edb_import.py --gravar`.
+Na importação de **uma partida só** (aba Importar > Arquivo de demo), o painel também sugere a data pelo nome do arquivo,
+avisa se o mapa do nome não é o da demo e bloqueia uma demo já importada por qualquer um dos dois caminhos.
+
+## Conferências da leitura (parser v3)
+
+Cada demo volta com uma lista de avisos, mostrada na prévia:
+
+- **Reinício de round** (`round_start` sem `round_end`): o início abortado é ignorado e os rounds seguintes mantêm a numeração.
+- **Partida reiniciada** (`begin_new_match` mais de uma vez): só a última é lida, com aviso.
+- **Jogador que saiu ou entrou no meio**: quem passa 4 rounds seguidos sem nenhum evento (tiro, dano, morte) fica só com
+  os rounds em que estava na partida; ADR, KAST e KPR usam esse total, e ele não conta como vivo nos clutches.
+- **Placar que não fecha uma partida** (nem 13 rounds, nem 16+ com prorrogação) e **lados fora da troca padrão** viram aviso.
