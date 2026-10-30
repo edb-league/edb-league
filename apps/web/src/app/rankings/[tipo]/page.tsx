@@ -22,7 +22,10 @@ const TABS: { type: RankingType; label: string }[] = [
 export async function generateMetadata({ params }: { params: Promise<{ tipo: string }> }) {
   const { tipo } = await params;
   const tab = TABS.find((t) => t.type === tipo);
-  return { title: tab ? `Ranking ${tab.label}` : "Rankings" };
+  return {
+    title: tab ? `Ranking ${tab.label}` : "Rankings",
+    description: tab ? `Ranking ${tab.label} da temporada na EDB LEAGUE: os melhores jogadores da liga.` : undefined,
+  };
 }
 
 export default async function RankingPage({

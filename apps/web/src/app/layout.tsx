@@ -22,12 +22,18 @@ import "./globals.css";
 // Os dados mudam durante o dia; as consultas à API têm cache curto próprio.
 export const dynamic = "force-dynamic";
 
+// Endereço base dos links de pré-visualização: o configurado, senão o domínio de produção que a Vercel informa.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
   title: { default: "EDB LEAGUE", template: "%s · EDB LEAGUE" },
   description: "Rankings, partidas, jogadores e medalhas da liga EDB de Counter-Strike 2.",
   icons: { icon: "/crest.webp" },
   openGraph: { siteName: "EDB LEAGUE", locale: "pt_BR", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
