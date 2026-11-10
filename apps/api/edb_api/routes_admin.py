@@ -18,13 +18,13 @@ class LoginBody(BaseModel):
 class PlayerCreate(BaseModel):
     nickname: str = Field(min_length=1, max_length=60)
     steamid: str | None = None
-    skill_level: int = Field(default=5, ge=1, le=10)
+    skill_level: int = Field(default=5, ge=1, le=15)
 
 
 class PlayerPatch(BaseModel):
     nickname: str | None = Field(default=None, min_length=1, max_length=60)
     steamid: str | None = None
-    skill_level: int | None = Field(default=None, ge=1, le=10)
+    skill_level: int | None = Field(default=None, ge=1, le=15)
 
 
 class ConfrontBody(BaseModel):

@@ -20,13 +20,13 @@ def player_name(player):
 
 
 def player_level(player):
-    """Nível de habilidade 1–10 usado exclusivamente para equilibrar os times."""
+    """Nível de habilidade 1–15 usado exclusivamente para equilibrar os times."""
     value = player.get("skill_level")
     if value is None:
         value = player.get("stars", 5)  # SQLite antigo antes da migração
     level = int(value)
-    if not 1 <= level <= 10:
-        raise ValueError("O nível deve estar entre 1 e 10.")
+    if not 1 <= level <= 15:
+        raise ValueError("O nível deve estar entre 1 e 15.")
     return level
 
 

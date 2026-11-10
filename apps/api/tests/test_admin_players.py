@@ -52,7 +52,7 @@ def test_player_crud_with_temporary_sqlite(local_admin):
 
 def test_player_validation_and_missing_ids(admin):
     assert post(admin, "/api/admin/players", json={"nickname": "  ", "skill_level": 5}).status_code in (400, 422)
-    assert post(admin, "/api/admin/players", json={"nickname": "X", "skill_level": 11}).status_code == 422
+    assert post(admin, "/api/admin/players", json={"nickname": "X", "skill_level": 16}).status_code == 422
     assert post(admin, "/api/admin/players", json={"skill_level": 5}).status_code == 422
     assert patch(admin, "/api/admin/players/nao-existe", json={"skill_level": 5}).status_code == 404
     assert post(admin, "/api/admin/players/nao-existe/archive").status_code == 404

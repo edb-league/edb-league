@@ -17,8 +17,9 @@ export const metadata = { title: "Jogadores" };
 const LEVEL_BANDS = {
   "1-3": [1, 3],
   "4-6": [4, 6],
-  "7-8": [7, 8],
-  "9-10": [9, 10],
+  "7-9": [7, 9],
+  "10-12": [10, 12],
+  "13-15": [13, 15],
 } as const;
 type Band = keyof typeof LEVEL_BANDS;
 
