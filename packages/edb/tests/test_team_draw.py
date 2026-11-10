@@ -75,8 +75,8 @@ def test_rejects_non_ten_duplicate_and_invalid_stars():
         draw_balanced_teams(players[:9])
     with pytest.raises(ValueError,match="duas vezes"):
         draw_balanced_teams(players[:9]+[players[0]])
-    with pytest.raises(ValueError,match="entre 1 e 10"):
-        draw_balanced_teams([{**players[0],"skill_level":11},*players[1:]])
+    with pytest.raises(ValueError,match="entre 1 e 15"):
+        draw_balanced_teams([{**players[0],"skill_level":16},*players[1:]])
 
 def test_cards_are_safe_and_group_copy_matches_balanced_sum():
     roster=sample()

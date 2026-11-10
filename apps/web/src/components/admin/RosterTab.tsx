@@ -8,7 +8,7 @@ import { sendJson } from "@/lib/client";
 import type { AdminPlayer } from "@/lib/types";
 import { Feedback, useAction } from "./useAction";
 
-const LEVELS = Array.from({ length: 10 }, (_, i) => i + 1);
+const LEVELS = Array.from({ length: 15 }, (_, i) => i + 1);
 
 function RegisterCard({ onChanged }: { onChanged: () => void }) {
   const [nickname, setNickname] = useState("");
@@ -43,7 +43,7 @@ function RegisterCard({ onChanged }: { onChanged: () => void }) {
       >
         <TextField id="novo-nick" label="Nickname" required value={nickname} onChange={(e) => setNickname(e.target.value)} />
         <TextField id="novo-steam" label="SteamID (opcional)" value={steamid} onChange={(e) => setSteamid(e.target.value)} hint="Aceita SteamID64, STEAM_0:Y:Z ou [U:1:N]." />
-        <SelectField id="novo-nivel" label="Nível (1 a 10)" value={level} onChange={(e) => setLevel(e.target.value)}>
+        <SelectField id="novo-nivel" label="Nível (1 a 15)" value={level} onChange={(e) => setLevel(e.target.value)}>
           {LEVELS.map((n) => (
             <option key={n} value={n}>
               {n}
@@ -94,7 +94,7 @@ function PlayerForm({
           if (done) onChanged();
         }}
       >
-        <SelectField id="cfg-nivel" label="Nível (1 a 10)" value={level} onChange={(e) => setLevel(e.target.value)}>
+        <SelectField id="cfg-nivel" label="Nível (1 a 15)" value={level} onChange={(e) => setLevel(e.target.value)}>
           {LEVELS.map((n) => (
             <option key={n} value={n}>
               {n}

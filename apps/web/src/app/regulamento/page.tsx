@@ -33,8 +33,9 @@ const RANKINGS: { type: RankingType; name: string; min: string }[] = [
 const LEVEL_BANDS = [
   { label: "1 a 3", level: 3 },
   { label: "4 a 6", level: 6 },
-  { label: "7 a 8", level: 8 },
-  { label: "9 e 10", level: 10 },
+  { label: "7 a 9", level: 9 },
+  { label: "10 a 12", level: 12 },
+  { label: "13 a 15", level: 15 },
 ] as const;
 
 const STATUS = [
@@ -268,13 +269,13 @@ export default async function RulesPage() {
               <div id="niveis" className="scroll-mt-24">
                 <h3 className="mb-2 font-display text-2xl font-bold uppercase">Níveis e estrelas</h3>
                 <p className="text-base text-muted">
-                  Cada jogador tem um nível de 1 a 10 no cadastro. O nível equilibra os times no Sorteador; as estrelas, de 1 a 5,
+                  Cada jogador tem um nível de 1 a 15 no cadastro. O nível equilibra os times no Sorteador; as estrelas, de 1 a 5,
                   definem a meta semanal de KPR. A cor do selo só agrupa as faixas, o número sempre aparece escrito.
                 </p>
                 <ul className="mt-3 grid grid-cols-2 gap-2">
                   {LEVEL_BANDS.map((b) => (
                     <li key={b.label} className="flex items-center gap-2 rounded-xl border border-line-soft bg-surface-2 p-2">
-                      <span className={`num inline-flex h-9 min-w-14 items-center justify-center rounded-lg px-2 text-2xl leading-none ${b.level <= 3 ? LEVEL_TIERS[0] : b.level <= 6 ? LEVEL_TIERS[1] : b.level <= 8 ? LEVEL_TIERS[2] : LEVEL_TIERS[3]}`}>
+                      <span className={`num inline-flex h-9 min-w-14 items-center justify-center rounded-lg px-2 text-2xl leading-none ${b.level <= 3 ? LEVEL_TIERS[0] : b.level <= 6 ? LEVEL_TIERS[1] : b.level <= 9 ? LEVEL_TIERS[2] : b.level <= 12 ? LEVEL_TIERS[3] : LEVEL_TIERS[4]}`}>
                         {b.label.replace(" a ", "–").replace(" e ", "–")}
                       </span>
                       <span className="text-base">Níveis {b.label}</span>

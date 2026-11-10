@@ -34,7 +34,7 @@
   --loss-bg: light-dark(#fde3d4, #4a2414);
   --focus: light-dark(#1a47d6, #ffd166);
 
-  /* Faixas de nível (1-3, 4-6, 7-8, 9-10). O número do nível sempre aparece em texto. */
+  /* Faixas de nível (1-3, 4-6, 7-9, 10-12, 13-15). O número do nível sempre aparece em texto. */
   --lv1-bg: light-dark(#46617c, #a3bad0);
   --lv1-fg: light-dark(#ffffff, #08182b);
   --lv2-bg: light-dark(#09539a, #7cc0f2);
@@ -43,6 +43,8 @@
   --lv3-fg: light-dark(#ffffff, #10233a);
   --lv4-bg: light-dark(#4a3000, #ffd166);
   --lv4-fg: light-dark(#ffe9a8, #241500);
+  --lv5-bg: light-dark(#7a1f2b, #ff9d8a);
+  --lv5-fg: light-dark(#ffffff, #2a0a0e);
 
   /* Mapas: cada mapa tem um tom de azul e de ouro próprio (só decoração, o nome vem sempre em texto). */
   --map-from: light-dark(#cfe0f1, #12294a);

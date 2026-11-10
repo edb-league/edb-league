@@ -16,7 +16,7 @@ const TEAM_SIZE = 10;
 
 export type RosterPlayer = { id: string; name: string; nickname: string; real_name: string | null; level: number; avatar?: string };
 
-const BANDS = { "1-3": [1, 3], "4-6": [4, 6], "7-8": [7, 8], "9-10": [9, 10] } as const;
+const BANDS = { "1-3": [1, 3], "4-6": [4, 6], "7-9": [7, 9], "10-12": [10, 12], "13-15": [13, 15] } as const;
 
 function TeamCard({ label, players, total, roster }: { label: "PT" | "PL"; players: DrawResult["team_a"]; total: number; roster: Map<string, RosterPlayer> }) {
   const sorted = [...players].sort((x, y) => y.level - x.level);

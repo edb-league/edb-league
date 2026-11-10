@@ -1,7 +1,7 @@
 import clsx from "clsx";
 
 /**
- * Selo de nível (1 a 10). A faixa muda a forma e a cor (aço, azul, ouro, ouro com anel),
+ * Selo de nível (1 a 15). A faixa muda a forma e a cor (aço, azul, bronze, ouro com anel, vermelho com anel),
  * mas o número sempre aparece em texto.
  */
 export const LEVEL_TIERS = [
@@ -9,15 +9,17 @@ export const LEVEL_TIERS = [
   "bg-[var(--lv2-bg)] text-[var(--lv2-fg)]",
   "bg-[var(--lv3-bg)] text-[var(--lv3-fg)]",
   "bg-[var(--lv4-bg)] text-[var(--lv4-fg)] ring-2 ring-[var(--lv4-bg)] ring-offset-2 ring-offset-[var(--surface)]",
+  "bg-[var(--lv5-bg)] text-[var(--lv5-fg)] ring-2 ring-[var(--lv5-bg)] ring-offset-2 ring-offset-[var(--surface)]",
 ] as const;
 
-export const TIER_NAMES = ["Níveis 1 a 3", "Níveis 4 a 6", "Níveis 7 e 8", "Níveis 9 e 10"] as const;
+export const TIER_NAMES = ["Níveis 1 a 3", "Níveis 4 a 6", "Níveis 7 a 9", "Níveis 10 a 12", "Níveis 13 a 15"] as const;
 
 export function tierOf(level: number): number {
   if (level <= 3) return 0;
   if (level <= 6) return 1;
-  if (level <= 8) return 2;
-  return 3;
+  if (level <= 9) return 2;
+  if (level <= 12) return 3;
+  return 4;
 }
 
 export function LevelBadge({ level, size = "md", className }: { level: number | null; size?: "xs" | "sm" | "md" | "lg"; className?: string }) {
@@ -46,10 +48,10 @@ export function LevelBadge({ level, size = "md", className }: { level: number | 
 export function LevelLegend({ className }: { className?: string }) {
   return (
     <ul className={clsx("flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted", className)} aria-label="Faixas de nível">
-      {[1, 4, 7, 9].map((level, tier) => (
+      {[1, 4, 7, 10, 13].map((level, tier) => (
         <li key={level} className="inline-flex items-center gap-2">
-          <span aria-hidden="true" className={clsx("num inline-flex size-6 items-center justify-center rounded-md text-base leading-none", tier === 3 ? "rounded-lg" : "", LEVEL_TIERS[tier])}>
-            {level === 9 ? "9+" : level}
+          <span aria-hidden="true" className={clsx("num inline-flex size-6 items-center justify-center rounded-md text-base leading-none", tier >= 3 ? "rounded-lg" : "", LEVEL_TIERS[tier])}>
+            {level}
           </span>
           {TIER_NAMES[tier]}
         </li>

@@ -49,7 +49,7 @@ class Store:
             CREATE TABLE IF NOT EXISTS players (
                 id TEXT PRIMARY KEY, nickname TEXT NOT NULL,
                 steamid TEXT UNIQUE, stars INTEGER NOT NULL DEFAULT 3,
-                skill_level INTEGER NOT NULL DEFAULT 5 CHECK(skill_level BETWEEN 1 AND 10),
+                skill_level INTEGER NOT NULL DEFAULT 5 CHECK(skill_level BETWEEN 1 AND 15),
                 is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -132,7 +132,7 @@ class Store:
         if not 1 <= stars <= 5: raise ValueError('Estrelas fora do intervalo 1–5')
         if skill_level is not None:
             skill_level=int(skill_level)
-            if not 1 <= skill_level <= 10:
+            if not 1 <= skill_level <= 15:
                 raise ValueError('Nível fora do intervalo 1–10')
         current = self.players()
         explicit_edit = player_id is not None

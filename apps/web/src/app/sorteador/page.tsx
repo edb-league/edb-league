@@ -26,7 +26,7 @@ export default async function DrawPage() {
         <ol className="mt-3 max-w-prose list-decimal space-y-1.5 pl-6 text-lg text-muted">
           <li>Escolha exatamente 10 jogadores presentes.</li>
           <li>
-            O sorteio escolhe, ao acaso, uma das divisões 5 × 5 com a menor diferença possível na soma dos níveis (1 a 10).
+            O sorteio escolhe, ao acaso, uma das divisões 5 × 5 com a menor diferença possível na soma dos níveis (1 a 15).
           </li>
           <li>Os níveis vêm do cadastro da liga.</li>
           <li>Nada é gravado: o resultado não altera classificações nem registra partidas.</li>
