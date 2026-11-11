@@ -19,7 +19,7 @@ export const NAV: NavEntry[] = [
   L("/partidas", "Partidas"),
   L("/jogadores", "Jogadores"),
   { label: "Conquistas", items: [L("/medalhas", "Medalhas"), L("/missoes-xp", "Missões e XP"), L("/hall-da-fama", "Hall da Fama")] },
-  { label: "Ferramentas", items: [L("/sorteador", "Sorteador de times"), L("/comparar", "Comparar jogadores")] },
+  { label: "Ferramentas", items: [L("/sorteador", "Sorteador de times"), L("/draft", "Draft"), L("/comparar", "Comparar jogadores")] },
   L("/regulamento", "Regulamento"),
 ];
 

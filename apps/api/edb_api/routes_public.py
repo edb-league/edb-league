@@ -1,10 +1,10 @@
 """Rotas públicas, somente leitura."""
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
-from . import views
+from . import draft_ops, views
 from .service import get_service
 
 router = APIRouter(prefix="/api")
@@ -88,3 +88,10 @@ def match_detail(match_id: str):
 @router.post("/draw")
 def draw(body: DrawBody):
     return views.build_draw(get_service().snap(), body.player_ids)
+
+
+@router.get("/draft")
+def draft(response: Response):
+    """Andamento do draft de campeonato. Sem cache: a página consulta de poucos em poucos segundos."""
+    response.headers["Cache-Control"] = "no-store"
+    return draft_ops.view(get_service())
