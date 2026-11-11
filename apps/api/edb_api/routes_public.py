@@ -1,10 +1,10 @@
 """Rotas públicas, somente leitura."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, Request, Response
+from pydantic import BaseModel, Field
 
-from . import draft_ops, views
+from . import auth, draft_ops, views
 from .service import get_service
 
 router = APIRouter(prefix="/api")
@@ -12,6 +12,23 @@ router = APIRouter(prefix="/api")
 
 class DrawBody(BaseModel):
     player_ids: list[str]
+
+
+class DraftTeam(BaseModel):
+    name: str = Field(max_length=30)
+    captain_id: str
+
+
+class DraftCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    team_size: int = Field(default=5, ge=2, le=10)
+    snake: bool = True
+    teams: list[DraftTeam] = Field(min_length=2, max_length=8)
+    pool_ids: list[str]
+
+
+class DraftPick(BaseModel):
+    player_id: str
 
 
 @router.get("/health")
@@ -95,3 +112,27 @@ def draft(response: Response):
     """Andamento do draft de campeonato. Sem cache: a página consulta de poucos em poucos segundos."""
     response.headers["Cache-Control"] = "no-store"
     return draft_ops.view(get_service())
+
+
+@router.post("/draft")
+def draft_create(body: DraftCreate, request: Request):
+    auth.check_origin(request)
+    return draft_ops.create(get_service(), body.model_dump())
+
+
+@router.post("/draft/pick")
+def draft_pick(body: DraftPick, request: Request):
+    auth.check_origin(request)
+    return draft_ops.pick(get_service(), body.player_id)
+
+
+@router.post("/draft/undo")
+def draft_undo(request: Request):
+    auth.check_origin(request)
+    return draft_ops.undo(get_service())
+
+
+@router.delete("/draft")
+def draft_reset(request: Request):
+    auth.check_origin(request)
+    return draft_ops.reset(get_service())

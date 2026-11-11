@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { DraftBoard } from "@/components/draft/DraftBoard";
+import { useMemo, useState } from "react";
+import { Feedback, useAction } from "@/components/admin/useAction";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { CheckboxField, SelectField, TextField } from "@/components/ui/Field";
-import { Notice } from "@/components/ui/Notice";
-import { getJson, sendJson } from "@/lib/client";
-import type { AdminPlayer, DraftView } from "@/lib/types";
-import { Feedback, useAction } from "./useAction";
+import { sendJson } from "@/lib/client";
+import type { DraftView, PlayerListItem } from "@/lib/types";
 
 const DEFAULT_NAMES = ["Time 1", "Time 2", "Time 3", "Time 4", "Time 5", "Time 6", "Time 7", "Time 8"];
 
-function SetupForm({ players, onCreated }: { players: AdminPlayer[]; onCreated: (view: DraftView) => void }) {
+export function DraftSetup({ players, onCreated }: { players: PlayerListItem[]; onCreated: (view: DraftView) => void }) {
   const active = useMemo(() => players.filter((p) => p.is_active), [players]);
   const [name, setName] = useState("");
   const [teamCount, setTeamCount] = useState(4);
@@ -50,7 +48,7 @@ function SetupForm({ players, onCreated }: { players: AdminPlayer[]; onCreated: 
           event.preventDefault();
           const view = await action.run(
             () =>
-              sendJson<DraftView>("POST", "/admin/draft", {
+              sendJson<DraftView>("POST", "/draft", {
                 name: name.trim(),
                 team_size: teamSize,
                 teams: Array.from({ length: teamCount }, (_, i) => ({ name: (teamNames[i] ?? "").trim(), captain_id: captains[i] ?? "" })),
@@ -134,78 +132,5 @@ function SetupForm({ players, onCreated }: { players: AdminPlayer[]; onCreated: 
         <Feedback error={action.error} ok={action.ok} />
       </form>
     </Card>
-  );
-}
-
-/** Administração do draft: cria, registra cada escolha na vez do capitão, desfaz e reinicia. */
-export function DraftTab({ players }: { players: AdminPlayer[] }) {
-  const [view, setView] = useState<DraftView | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const action = useAction();
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const current = await getJson<DraftView>("/draft");
-        if (!cancelled) setView(current);
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Não foi possível carregar o draft.");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loadError) return <Notice tone="error">{loadError}</Notice>;
-  if (!view) return <p role="status" className="text-base text-muted">Carregando draft...</p>;
-  if (!view.exists) return <SetupForm players={players} onCreated={setView} />;
-
-  async function change(run: () => Promise<DraftView>, success?: string) {
-    const next = await action.run(run, success);
-    if (next) setView(next);
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <Card aria-labelledby="draft-acoes" className="flex flex-col gap-3">
-        <h3 id="draft-acoes" className="text-xl font-bold">Controle do draft</h3>
-        <p className="text-base text-muted">
-          Quando um capitão disser quem escolheu, toque em &quot;Escolher&quot; ao lado do jogador. A página pública atualiza sozinha.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="secondary" disabled={action.busy || view.picks_made === 0} onClick={() => change(() => sendJson<DraftView>("POST", "/admin/draft/undo"), "Última escolha desfeita.")}>
-            Desfazer última escolha
-          </Button>
-          {confirmReset ? (
-            <>
-              <Button
-                variant="danger"
-                disabled={action.busy}
-                onClick={async () => {
-                  setConfirmReset(false);
-                  await change(() => sendJson<DraftView>("DELETE", "/admin/draft"), "Draft reiniciado.");
-                }}
-              >
-                Confirmar: apagar o draft
-              </Button>
-              <Button variant="ghost" onClick={() => setConfirmReset(false)}>Cancelar</Button>
-            </>
-          ) : (
-            <Button variant="danger" disabled={action.busy} onClick={() => setConfirmReset(true)}>
-              Reiniciar draft
-            </Button>
-          )}
-        </div>
-        <Feedback error={action.error} ok={action.ok} />
-      </Card>
-      <DraftBoard
-        view={view}
-        busy={action.busy}
-        onPick={(playerId) => change(() => sendJson<DraftView>("POST", "/admin/draft/pick", { player_id: playerId }))}
-      />
-    </div>
   );
 }
