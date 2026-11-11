@@ -63,9 +63,13 @@ def test_errors(client):
 
 def test_draft_is_public_but_rejects_foreign_origin_and_unknown_players(client):
     foreign = {"Origin": "https://outro-site.example"}
-    for method, path in (("post", "/api/draft"), ("post", "/api/draft/pick"),
-                         ("post", "/api/draft/undo"), ("delete", "/api/draft")):
-        assert getattr(client, method)(path, headers=foreign).status_code == 403
+    valid = {"name": "Copa", "team_size": 2, "teams": [{"name": "A", "captain_id": "a"}, {"name": "B", "captain_id": "b"}],
+             "pool_ids": ["c", "d"]}
+    attempts = (client.post("/api/draft", headers=foreign, json=valid),
+                client.post("/api/draft/pick", headers=foreign, json={"player_id": "x"}),
+                client.post("/api/draft/undo", headers=foreign),
+                client.delete("/api/draft", headers=foreign))
+    assert [r.status_code for r in attempts] == [403, 403, 403, 403]
     bad = post(client, "/api/draft", json={"name": "Copa", "team_size": 2,
                "teams": [{"name": "A", "captain_id": "nao-existe"}, {"name": "B", "captain_id": "tambem-nao"}],
                "pool_ids": ["a", "b"]})
