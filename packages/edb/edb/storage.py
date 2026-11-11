@@ -3,6 +3,7 @@
 Chaves Supabase são usadas APENAS pelo servidor, nunca no navegador.
 """
 from __future__ import annotations
+import json
 import os
 import sqlite3
 from pathlib import Path
@@ -71,6 +72,10 @@ class Store:
                 observed_nickname TEXT,
                 PRIMARY KEY (match_id, player_id)
             );
+            CREATE TABLE IF NOT EXISTS league_drafts (
+                id TEXT PRIMARY KEY, data TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             ''')
             player_cols = [r[1] for r in con.execute('PRAGMA table_info(players)')]
             if 'skill_level' not in player_cols:
@@ -111,6 +116,34 @@ class Store:
     def match_details(self):
         """Métricas detalhadas vindas da demo (somente online; tabela player_match_detail)."""
         return self._list('player_match_detail') if self.cloud else []
+
+    def draft_get(self, draft_id='main'):
+        """Estado do draft de campeonato (dicionário) ou None quando ainda não existe."""
+        if self.cloud:
+            rows=self._api('GET','league_drafts',params={'id':'eq.'+draft_id,'select':'data'})
+            data=rows[0]['data'] if rows else None
+        else:
+            with self._connect() as con:
+                row=con.execute('SELECT data FROM league_drafts WHERE id=?',(draft_id,)).fetchone()
+            data=row['data'] if row else None
+        if isinstance(data,str): data=json.loads(data)
+        return data or None
+
+    def draft_put(self, state, draft_id='main'):
+        if self.cloud:
+            self._api('POST','league_drafts',params={'on_conflict':'id'},payload={'id':draft_id,'data':state,'updated_at':state.get('updated_at')})
+        else:
+            with self._connect() as con:
+                con.execute('INSERT INTO league_drafts (id,data,updated_at) VALUES (?,?,?) '
+                            'ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at',
+                            (draft_id,json.dumps(state,ensure_ascii=False),state.get('updated_at') or ''))
+
+    def draft_delete(self, draft_id='main'):
+        if self.cloud:
+            self._api('DELETE','league_drafts',params={'id':'eq.'+draft_id})
+        else:
+            with self._connect() as con:
+                con.execute('DELETE FROM league_drafts WHERE id=?',(draft_id,))
 
     def _upsert(self,table,row,conflict=None):
         if self.cloud:

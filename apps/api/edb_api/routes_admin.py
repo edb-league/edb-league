@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field, field_validator
 
-from . import admin_ops, auth, identity, series_import, settings
+from . import admin_ops, auth, draft_ops, identity, series_import, settings
 from .service import get_service
 
 router = APIRouter(prefix="/api/admin")
@@ -85,6 +85,23 @@ class SeriesCommitBody(BaseModel):
     team_b: str = Field(default="PL", max_length=30)
     swap: bool = False
     choices: dict[str, SeriesChoice] = {}
+
+
+class DraftTeam(BaseModel):
+    name: str = Field(max_length=30)
+    captain_id: str
+
+
+class DraftCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+    team_size: int = Field(default=5, ge=2, le=10)
+    snake: bool = True
+    teams: list[DraftTeam] = Field(min_length=2, max_length=8)
+    pool_ids: list[str]
+
+
+class DraftPick(BaseModel):
+    player_id: str
 
 
 # Sessão ----------------------------------------------------------------------------
@@ -188,3 +205,24 @@ def export(kind: str):
     content, filename = admin_ops.export_csv(get_service(), kind)
     return Response(content, media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+# Draft de campeonato ---------------------------------------------------------------
+@router.post("/draft", dependencies=protected)
+def draft_create(body: DraftCreate):
+    return draft_ops.create(get_service(), body.model_dump())
+
+
+@router.post("/draft/pick", dependencies=protected)
+def draft_pick(body: DraftPick):
+    return draft_ops.pick(get_service(), body.player_id)
+
+
+@router.post("/draft/undo", dependencies=protected)
+def draft_undo():
+    return draft_ops.undo(get_service())
+
+
+@router.delete("/draft", dependencies=protected)
+def draft_reset():
+    return draft_ops.reset(get_service())

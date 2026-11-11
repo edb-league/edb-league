@@ -678,3 +678,31 @@ export type ConfrontRequest = {
   team_a_name: string;
   team_b_name: string;
 };
+
+/** Draft de campeonato (capitães escolhendo em turnos). */
+export type DraftPlayer = { id: string; name: string; level: number };
+
+export type DraftTeam = {
+  id: number;
+  name: string;
+  captain: DraftPlayer;
+  /** Escolhas do time, na ordem em que foram feitas. `number` é a posição geral da escolha. */
+  picks: { number: number; player: DraftPlayer }[];
+  level_sum: number;
+};
+
+export type DraftView =
+  | { exists: false }
+  | {
+      exists: true;
+      name: string;
+      status: "drafting" | "done";
+      team_size: number;
+      teams: DraftTeam[];
+      /** Jogadores ainda sem time, do maior nível para o menor. */
+      available: DraftPlayer[];
+      /** Vez atual; `null` quando o draft terminou. */
+      next: { number: number; total: number; team_id: number; team_name: string } | null;
+      picks_made: number;
+      updated_at: string;
+    };
