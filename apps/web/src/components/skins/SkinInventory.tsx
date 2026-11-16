@@ -4,9 +4,10 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { controlClass } from "@/components/ui/Field";
 import { Notice } from "@/components/ui/Notice";
-import { CATEGORIES, INVENTORY, RARITY_BORDER, type Category, type InventoryItem } from "./inventory-data";
+import { skinImageUrl, type CatalogSkin } from "@/lib/skins";
+import { CATEGORIES, INVENTORY, RARITY_BORDER, categoryOf, type Category, type InventoryItem } from "./inventory-data";
 
-const FIRST_PAGE = 11;
+const PAGE = 48;
 
 /** Silhueta simples para quem ainda não tem skin (não é arte de nenhuma arma real). */
 function Silhouette({ category }: { category: Category }) {
@@ -34,13 +35,19 @@ function Card({ item, selected, onSelect }: { item: InventoryItem; selected: boo
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
+        style={item.color ? { borderBottomColor: item.color } : undefined}
         className={clsx(
           "flex h-full min-h-40 w-full flex-col items-center justify-between gap-2 rounded-xl border border-b-4 bg-surface-2 p-3 text-center transition hover:bg-surface-3",
           selected ? "border-accent" : "border-line-soft",
-          owned && item.rarity ? RARITY_BORDER[item.rarity] : "border-b-transparent",
+          !item.color && (owned && item.rarity ? RARITY_BORDER[item.rarity] : "border-b-transparent"),
         )}
       >
-        <Silhouette category={item.category} />
+        {item.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.image} alt="" loading="lazy" width={160} height={120} className="h-24 w-auto max-w-full object-contain" />
+        ) : (
+          <Silhouette category={item.category} />
+        )}
         <span className="flex flex-col">
           <span className={clsx("text-sm", owned ? "text-muted" : "text-lg font-bold text-muted")}>
             {item.category === "knife" || item.category === "gloves" ? "★ " : ""}{item.weapon}
@@ -53,25 +60,38 @@ function Card({ item, selected, onSelect }: { item: InventoryItem; selected: boo
 }
 
 /** Inventário de skins: abas por tipo de arma, busca e grade. Layout pronto; os itens são de exemplo até ligarmos ao seletor. */
-export function SkinInventory() {
+export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
   const [category, setCategory] = useState<Category | "all">("all");
   const [query, setQuery] = useState("");
-  const [showAll, setShowAll] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
   const [selected, setSelected] = useState<string | null>(null);
+
+  const source = useMemo<InventoryItem[]>(() => {
+    if (catalog.length === 0) return INVENTORY;
+    return catalog.flatMap((skin) => {
+      const cat = categoryOf(skin.category);
+      return cat
+        ? [{ id: skin.id, category: cat, weapon: skin.weapon, skin: skin.name, image: skinImageUrl(skin.image), color: skin.rarity_color || undefined }]
+        : [];
+    });
+  }, [catalog]);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return INVENTORY.filter((i) => (category === "all" || i.category === category)
+    return source.filter((i) => (category === "all" || i.category === category)
       && (!q || i.weapon.toLowerCase().includes(q) || (i.skin ?? "").toLowerCase().includes(q)));
-  }, [category, query]);
+  }, [source, category, query]);
 
-  const limited = category === "all" && !query && !showAll;
-  const visible = limited ? items.slice(0, FIRST_PAGE) : items;
+  const visible = items.slice(0, limit);
 
   return (
     <section aria-labelledby="inventario" className="flex flex-col gap-4">
       <h2 id="inventario" className="text-3xl">Inventário</h2>
-      <Notice tone="info">Prévia do layout com itens de exemplo. As suas skins aparecem aqui quando o seletor for conectado.</Notice>
+      <Notice tone="info">
+        {catalog.length > 0
+          ? "Catálogo de skins do CS2. A ligação com as skins de cada jogador (WeaponPaints) vem em seguida."
+          : "Prévia do layout com itens de exemplo. O catálogo de skins ainda não foi carregado."}
+      </Notice>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div role="group" aria-label="Tipo de arma" className="flex flex-wrap gap-2">
@@ -80,7 +100,7 @@ export function SkinInventory() {
               key={c.id}
               type="button"
               aria-pressed={category === c.id}
-              onClick={() => { setCategory(c.id); setShowAll(false); }}
+              onClick={() => { setCategory(c.id); setLimit(PAGE); }}
               className={clsx("min-h-11 rounded-lg border px-3 text-base font-bold transition", category === c.id ? "border-gold bg-surface-3 text-gold" : "border-line-soft bg-surface-2 text-muted hover:border-accent")}
             >
               {c.label}
@@ -89,7 +109,7 @@ export function SkinInventory() {
         </div>
         <label className="w-full sm:w-64">
           <span className="sr-only">Pesquisar por nome</span>
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Pesquisar por nome" className={controlClass} />
+          <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setLimit(PAGE); }} placeholder="Pesquisar por nome" className={controlClass} />
         </label>
       </div>
 
@@ -100,10 +120,10 @@ export function SkinInventory() {
           {visible.map((item) => (
             <Card key={item.id} item={item} selected={selected === item.id} onSelect={() => setSelected(selected === item.id ? null : item.id)} />
           ))}
-          {limited && items.length > FIRST_PAGE && (
+          {items.length > visible.length && (
             <li>
-              <button type="button" onClick={() => setShowAll(true)} className="flex h-full min-h-40 w-full items-center justify-center rounded-xl border border-line-soft bg-surface-2 p-3 text-lg font-bold text-muted transition hover:border-accent hover:bg-surface-3">
-                Mostrar todas ({items.length})
+              <button type="button" onClick={() => setLimit((n) => n + PAGE)} className="flex h-full min-h-40 w-full items-center justify-center rounded-xl border border-line-soft bg-surface-2 p-3 text-lg font-bold text-muted transition hover:border-accent hover:bg-surface-3">
+                Mostrar mais ({items.length - visible.length})
               </button>
             </li>
           )}

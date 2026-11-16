@@ -2,7 +2,16 @@
 export type Category = "knife" | "gloves" | "rifle" | "sniper" | "pistol" | "smg" | "shotgun" | "mg";
 export type Rarity = "consumer" | "industrial" | "milspec" | "restricted" | "classified" | "covert" | "gold";
 
-export type InventoryItem = { id: string; category: Category; weapon: string; skin?: string; rarity?: Rarity };
+export type InventoryItem = {
+  id: string;
+  category: Category;
+  weapon: string;
+  skin?: string;
+  rarity?: Rarity;
+  /** Imagem (catálogo) e cor da raridade vindas do catálogo. */
+  image?: string;
+  color?: string;
+};
 
 export const CATEGORIES: { id: Category; label: string }[] = [
   { id: "knife", label: "Facas" },
@@ -72,3 +81,17 @@ export const RARITY_BORDER: Record<Rarity, string> = {
   covert: "border-b-[#eb4b4b]",
   gold: "border-b-[#e4ae39]",
 };
+
+/** Tipo de arma a partir do nome da categoria do catálogo (em inglês). A ordem importa: "sniper rifles" antes de "rifles". */
+export function categoryOf(name: string): Category | null {
+  const n = name.toLowerCase();
+  if (n.includes("knife") || n.includes("knives")) return "knife";
+  if (n.includes("glove")) return "gloves";
+  if (n.includes("sniper")) return "sniper";
+  if (n.includes("rifle")) return "rifle";
+  if (n.includes("pistol")) return "pistol";
+  if (n.includes("smg") || n.includes("submachine")) return "smg";
+  if (n.includes("shotgun")) return "shotgun";
+  if (n.includes("machine")) return "mg";
+  return null;
+}

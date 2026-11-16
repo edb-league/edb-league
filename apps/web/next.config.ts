@@ -6,11 +6,16 @@ const API_URL = process.env.API_URL ?? "http://127.0.0.1:8000";
 
 const dev = process.env.NODE_ENV !== "production";
 
+// Imagens das skins ficam no nosso Supabase Storage (bucket público "skins").
+const SKINS_ORIGIN = new URL(
+  process.env.SKINS_STORAGE_URL ?? "https://cgopqcbgxpzurejtjmbu.supabase.co/storage/v1/object/public/skins",
+).origin;
+
 // Política de conteúdo: o site só carrega o que é dele. As exceções são as fotos da Steam (imagens) e os
 // scripts em linha que o Next usa para hidratar e que aplicam o tema antes da pintura.
 const csp = [
   "default-src 'self'",
-  "img-src 'self' data: https://*.steamstatic.com https://*.akamaihd.net",
+  `img-src 'self' data: https://*.steamstatic.com https://*.akamaihd.net ${SKINS_ORIGIN}`,
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
   "font-src 'self' data:",
