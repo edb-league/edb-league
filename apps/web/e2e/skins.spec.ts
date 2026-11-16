@@ -1,5 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { expectNoViolations } from "./helpers";
+import { expect, test, type Page } from "@playwright/test";
+import { expectNoViolations as checkA11y } from "./helpers";
+
+// O clique em uma skin rola a página e o cabeçalho fixo passa a cobrir parte dos filtros; o axe mede a página
+// como está, então volta ao topo antes de verificar.
+async function expectNoViolations(page: Page, label: string) {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await checkA11y(page, label);
+}
 
 test.describe("Skins: inventário por arma", () => {
   test("lado TR/CT mostra só as armas de cada lado e a escolha vira prévia", async ({ page }) => {
