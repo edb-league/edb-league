@@ -111,6 +111,9 @@ test("grupos do menu abrem com clique, listam os itens e fecham com Esc", async 
   await expect(tools).toHaveAttribute("aria-expanded", "true");
   await expect(nav.getByRole("link", { name: "Sorteador de times" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Comparar jogadores" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Servidor" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Skins" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Draft" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(tools).toHaveAttribute("aria-expanded", "false");
   await expect(tools).toBeFocused();

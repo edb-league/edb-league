@@ -9,6 +9,8 @@ const STATIC_ROUTES = [
   "/rankings/bagres",
   "/missoes-xp",
   "/sorteador",
+  "/servidor",
+  "/skins",
   "/regulamento",
   "/partidas",
   "/jogadores",
