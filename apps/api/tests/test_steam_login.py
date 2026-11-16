@@ -217,3 +217,10 @@ def test_secret_with_stray_spaces_still_counts_only_real_characters(demo, monkey
     assert settings.steam_login_enabled() is False
     monkeypatch.setenv("EDB_SESSION_SECRET", "\n" + "a" * 16 + " ")
     assert settings.steam_login_enabled() is True
+
+
+def test_more_than_one_admin_steamid_is_accepted(monkeypatch):
+    from edb_api import settings
+    monkeypatch.setenv("EDB_ADMIN_STEAMID", f"{ADMIN}, {PLAYER} ,lixo")
+    assert settings.admin_steamids() == [ADMIN, PLAYER]
+    assert settings.admin_steamid() == ADMIN

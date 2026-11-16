@@ -67,7 +67,7 @@ def steam_callback(request: Request):
         return fail("erro")
 
     player = views.player_for_steamid(get_service().snap(), steamid)
-    is_admin = settings.admin_steamid() == steamid
+    is_admin = steamid in settings.admin_steamids()
     if player is None and not is_admin:
         out = _redirect("/?login=desconhecido")
         identity.clear_state(out)

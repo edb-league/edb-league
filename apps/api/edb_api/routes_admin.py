@@ -91,7 +91,7 @@ class SeriesCommitBody(BaseModel):
 @router.get("/session")
 def session(request: Request):
     return {"authenticated": auth.is_admin(request), "configured": settings.admin_configured(),
-            "steam": settings.steam_login_enabled() and bool(settings.admin_steamid()),
+            "steam": settings.steam_login_enabled() and bool(settings.admin_steamids()),
             "password": settings.password_login_enabled()}
 
 

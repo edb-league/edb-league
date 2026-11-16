@@ -49,11 +49,18 @@ def steam_login_enabled() -> bool:
     return len(env("EDB_SESSION_SECRET").strip()) >= 16
 
 
-def admin_steamid() -> str:
-    """SteamID64 da única conta com acesso à administração pela Steam (EDB_ADMIN_STEAMID)."""
+def admin_steamids() -> list[str]:
+    """SteamID64 das contas com acesso à administração pela Steam (EDB_ADMIN_STEAMID, separados por vírgula)."""
     from edb.steam_profile import normalize_steamid64
 
-    return normalize_steamid64(env("EDB_ADMIN_STEAMID")) or ""
+    found = (normalize_steamid64(part.strip()) for part in env("EDB_ADMIN_STEAMID").split(",") if part.strip())
+    return [sid for sid in found if sid]
+
+
+def admin_steamid() -> str:
+    """Primeira conta de administração pela Steam, ou vazio."""
+    ids = admin_steamids()
+    return ids[0] if ids else ""
 
 
 def admin_configured() -> bool:
@@ -70,8 +77,9 @@ def steam_login_problems() -> list[str]:
             "sem isso o login com a Steam fica desligado."
         )
     raw_admin = env("EDB_ADMIN_STEAMID").strip()
-    if raw_admin and not admin_steamid():
-        problems.append("EDB_ADMIN_STEAMID não é um SteamID64 válido (17 dígitos, começando por 7656119).")
+    parts = [p for p in raw_admin.split(",") if p.strip()]
+    if parts and len(admin_steamids()) != len(parts):
+        problems.append("EDB_ADMIN_STEAMID tem item que não é SteamID64 válido (17 dígitos, começando por 7656119).")
     if not raw_admin:
         problems.append("EDB_ADMIN_STEAMID não está definido: ninguém acessa a Administração pela Steam.")
     return problems
