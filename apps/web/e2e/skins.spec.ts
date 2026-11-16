@@ -40,10 +40,17 @@ test.describe("Skins: inventário por arma", () => {
     await expect(page.getByRole("button", { name: /AK-47.*Bloodsport/ })).toBeVisible();
   });
 
-  test("a busca acha a arma pelo nome da skin", async ({ page }) => {
+  test("a busca acha a arma pelo nome da arma e da skin, e avisa quando não há resultado", async ({ page }) => {
+    // O catálogo pode ser o de exemplo ou o real (no CI), então só se afirma o que vale nos dois:
+    // a AWP existe e tem uma Asiimov; uma busca sem sentido não acha nada.
     await page.goto("/skins");
-    await page.getByRole("searchbox", { name: "Pesquisar arma ou skin" }).fill("asiimov");
+    const busca = page.getByRole("searchbox", { name: "Pesquisar arma ou skin" });
+    await busca.fill("awp");
     await expect(page.getByRole("button", { name: /AWP/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /AK-47/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Glock-18/ })).toHaveCount(0);
+    await busca.fill("asiimov");
+    await expect(page.getByRole("button", { name: /AWP/ })).toBeVisible();
+    await busca.fill("zzzz-sem-resultado");
+    await expect(page.getByText("Nenhum item encontrado.")).toBeVisible();
   });
 });
