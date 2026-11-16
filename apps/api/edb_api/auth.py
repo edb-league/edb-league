@@ -121,9 +121,8 @@ def steam_admin(request: Request) -> bool:
     """True quando quem fez a requisição entrou com a Steam na conta do administrador."""
     from . import identity
 
-    admin = settings.admin_steamid()
     steamid = identity.session_steamid(request)
-    return bool(admin) and steamid is not None and hmac.compare_digest(steamid, admin)
+    return steamid is not None and any(hmac.compare_digest(steamid, admin) for admin in settings.admin_steamids())
 
 
 def is_admin(request: Request) -> bool:
