@@ -35,10 +35,11 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const first = window.setTimeout(refresh, 0);
     const timer = window.setInterval(refresh, POLL_MS);
     document.addEventListener("visibilitychange", refresh);
     return () => {
+      window.clearTimeout(first);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refresh);
     };
