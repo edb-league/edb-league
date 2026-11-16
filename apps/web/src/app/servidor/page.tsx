@@ -45,7 +45,7 @@ export default async function ServerPage() {
           <>
             <ol className="mt-3 max-w-prose list-decimal space-y-1.5 pl-6 text-lg text-muted">
               <li>No CS2, ative o console em Configurações, Jogo, &quot;Ativar console do desenvolvedor&quot;.</li>
-              <li>Abra o console (tecla ' ou ~) e cole o comando abaixo.</li>
+              <li>Abra o console (tecla &apos; ou ~) e cole o comando abaixo.</li>
             </ol>
             <div className="mt-4">
               <CopyCommand command={command} label="Copiar comando" />
