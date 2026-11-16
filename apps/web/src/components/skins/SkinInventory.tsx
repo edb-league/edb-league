@@ -26,6 +26,7 @@ type SkinsMe = {
   authenticated: boolean;
   equipped: { weapon_id: number; paint_id: number }[];
   knife: string | null;
+  gloves: number | null;
 };
 
 /** Classe da faca que o plugin guarda em wp_player_knife -> número da arma. */
@@ -176,7 +177,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
     const knife = server.knife ? KNIFE_BY_CLASS[server.knife] : undefined;
     for (const e of server.equipped) {
       const item = byPair.get(`${e.weapon_id}:${e.paint_id}`);
-      if (!item || (item.category === "knife" && item.weaponId !== knife)) continue;
+      if (!item || (item.category === "knife" && item.weaponId !== knife) || (item.category === "gloves" && item.weaponId !== server.gloves)) continue;
       for (const s of ["t", "ct"]) out[`${s}:${weaponKeyOf(item)}`] = item.id;
     }
     return out;
@@ -211,7 +212,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
   }
 
   function choose(weapon: Weapon, skinId: string | null) {
-    if (serverMode && weapon.category !== "gloves" && chooseOnServer(weapon, skinId)) return;
+    if (serverMode && chooseOnServer(weapon, skinId)) return;
     const key = `${side}:${weapon.key}`;
     const merged = { ...parseChoices(readStored()), ...session, [key]: skinId ?? "" };
     setSession((prev) => ({ ...prev, [key]: skinId ?? "" }));
@@ -297,7 +298,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
       <h2 id="inventario" className="text-3xl">Inventário</h2>
       <Notice tone="info">
         {serverMode
-          ? "Suas escolhas são salvas no servidor para TR e CT. Dentro do jogo, digite !wp no chat para a skin aparecer na hora. Luvas ainda são só prévia."
+          ? "Suas escolhas são salvas no servidor para TR e CT. Dentro do jogo, digite !wp no chat para a skin aparecer na hora."
           : catalog.length > 0
             ? "Catálogo de skins do CS2. A skin que você marca aqui é uma prévia, salva só neste navegador."
             : "Prévia do layout com itens de exemplo. O catálogo de skins ainda não foi carregado."}
