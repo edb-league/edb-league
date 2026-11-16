@@ -20,10 +20,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
-CATALOG_URL = os.environ.get(
-    "SKINS_CATALOG_URL",
-    "https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/pt-BR/skins.json",
-)
+BASE = "ByMykel/CSGO-API"
+# Tenta em ordem (o endereço do catálogo já mudou antes); SKINS_CATALOG_URL força um endereço só.
+CATALOG_URLS = [os.environ["SKINS_CATALOG_URL"]] if os.environ.get("SKINS_CATALOG_URL") else [
+    f"https://bymykel.github.io/CSGO-API/api/{lang}/skins.json" for lang in ("pt-BR", "en")
+] + [f"https://raw.githubusercontent.com/{BASE}/main/public/api/{lang}/skins.json" for lang in ("pt-BR", "en")]
 BUCKET = "skins"
 
 
@@ -99,8 +100,16 @@ def main() -> int:
         print("Defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.", file=sys.stderr)
         return 2
 
-    raw = requests.get(CATALOG_URL, timeout=120)
-    raw.raise_for_status()
+    raw = None
+    for catalog_url in CATALOG_URLS:
+        response = requests.get(catalog_url, timeout=120)
+        print(f"{response.status_code} {catalog_url}")
+        if response.ok:
+            raw = response
+            break
+    if raw is None:
+        print("Nenhum endereço do catálogo respondeu.", file=sys.stderr)
+        return 1
     catalog = build_catalog(raw.json())
     if args.limite:
         catalog = catalog[: args.limite]
