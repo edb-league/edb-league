@@ -2,6 +2,7 @@ import { Card, EmptyState } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/Icon";
+import { SkinInventory } from "@/components/skins/SkinInventory";
 
 export const metadata = { title: "Skins" };
 
@@ -34,6 +35,8 @@ export default function SkinsPage() {
         title="Skins"
         subtitle="Escolha as skins das suas armas e da faca. Elas valem no servidor da liga."
       />
+
+      <SkinInventory />
 
       <Card aria-labelledby="site">
         <h2 id="site" className="text-3xl">Escolher no site</h2>
