@@ -14,6 +14,7 @@ from .views import Conflict, NotFound, player_for_steamid
 _lock = RLock()
 
 TEAM_SIZE = 5
+SPECTATOR_SLOTS = 5
 FORMATS = {"md1": 1, "md3": 3, "md5": 5}
 MAPS = {
     "de_mirage": "Mirage", "de_inferno": "Inferno", "de_nuke": "Nuke", "de_ancient": "Ancient",
@@ -28,11 +29,13 @@ def _now() -> str:
 
 
 def _new() -> dict:
-    return {"map": DEFAULT_MAP, "format": DEFAULT_FORMAT, "team1": [], "team2": [], "updated_at": _now()}
+    return {"map": DEFAULT_MAP, "format": DEFAULT_FORMAT, "team1": [], "team2": [], "spectators": [], "updated_at": _now()}
 
 
 def _state(service: LeagueService) -> dict:
-    return service.store.lobby_get() or _new()
+    state = service.store.lobby_get() or _new()
+    state.setdefault("spectators", [])
+    return state
 
 
 def _save(service: LeagueService, state: dict) -> None:
@@ -55,7 +58,8 @@ def view(service: LeagueService, viewer_id: str | None = None, is_admin: bool = 
     snap = service.snap()
     team1, team2 = state["team1"], state["team2"]
     full = len(team1) == TEAM_SIZE and len(team2) == TEAM_SIZE
-    mine = 1 if viewer_id in team1 else 2 if viewer_id in team2 else None
+    spectators = state["spectators"]
+    mine = 1 if viewer_id in team1 else 2 if viewer_id in team2 else 0 if viewer_id in spectators else None
     captain_ids = [t[0] for t in (team1, team2) if t]
     can_configure = is_admin or (viewer_id is not None and viewer_id in captain_ids)
     return {
@@ -63,6 +67,7 @@ def view(service: LeagueService, viewer_id: str | None = None, is_admin: bool = 
         "maps": [{"id": k, "name": v} for k, v in MAPS.items()],
         "formats": [{"id": k, "maps": v} for k, v in FORMATS.items()],
         "teams": [{"id": 1, "players": _team_view(snap, team1)}, {"id": 2, "players": _team_view(snap, team2)}],
+        "spectators": {"slots": SPECTATOR_SLOTS, "players": _team_view(snap, spectators)},
         "count": len(team1) + len(team2), "ready": full,
         "me": {"player_id": viewer_id, "team": mine, "can_configure": can_configure, "is_admin": is_admin,
                "can_get_json": full and (is_admin or mine is not None)},
@@ -83,17 +88,17 @@ def _check_player(service: LeagueService, steamid: str | None) -> dict:
 
 def join(service: LeagueService, steamid: str | None, team: int) -> str:
     """Entra no time. Quem entra primeiro vira capitão. Devolve o id do jogador."""
-    if team not in (1, 2):
+    if team not in (0, 1, 2):
         raise ValueError("Time inválido.")
     player = _check_player(service, steamid)
     pid = str(player["id"])
     with _lock:
         state = _state(service)
-        if pid in state["team1"] or pid in state["team2"]:
+        if pid in state["team1"] or pid in state["team2"] or pid in state["spectators"]:
             raise Conflict("Você já está no lobby. Saia do time atual antes de trocar.")
-        target = state[f"team{team}"]
-        if len(target) >= TEAM_SIZE:
-            raise Conflict("Esse time já está completo.")
+        target = state["spectators"] if team == 0 else state[f"team{team}"]
+        if len(target) >= (SPECTATOR_SLOTS if team == 0 else TEAM_SIZE):
+            raise Conflict("Esse time já está completo." if team else "Os slots de espectador estão cheios.")
         target.append(pid)
         _save(service, state)
     return pid
@@ -104,7 +109,7 @@ def leave(service: LeagueService, steamid: str | None) -> str:
     pid = str(player["id"])
     with _lock:
         state = _state(service)
-        for key in ("team1", "team2"):
+        for key in ("team1", "team2", "spectators"):
             if pid in state[key]:
                 state[key].remove(pid)  # o próximo da fila passa a ser o capitão
                 _save(service, state)
@@ -116,7 +121,7 @@ def remove(service: LeagueService, player_id: str) -> None:
     """Admin: tira alguém do lobby."""
     with _lock:
         state = _state(service)
-        for key in ("team1", "team2"):
+        for key in ("team1", "team2", "spectators"):
             if str(player_id) in state[key]:
                 state[key].remove(str(player_id))
                 _save(service, state)
@@ -155,7 +160,7 @@ def matchzy_config(service: LeagueService, steamid: str | None, is_admin: bool) 
     pid = None
     if not is_admin:
         pid = str(_check_player(service, steamid)["id"])
-        if pid not in state["team1"] and pid not in state["team2"]:
+        if pid not in state["team1"] and pid not in state["team2"] and pid not in state["spectators"]:
             raise HTTPException(403, "Só quem está no lobby recebe o JSON da partida.")
     if len(state["team1"]) != TEAM_SIZE or len(state["team2"]) != TEAM_SIZE:
         raise Conflict("O lobby precisa estar completo (5 contra 5).")
@@ -170,6 +175,14 @@ def matchzy_config(service: LeagueService, steamid: str | None, is_admin: bool) 
                 raise ValueError(f"{snap.name_of(member)} não tem SteamID válido no cadastro.")
             players[sid] = snap.name_of(member)
         return {"name": f"team_{snap.name_of(ids[0])}", "players": players}
+
+    def _spectators(snap_: Snap, ids: list[str]) -> dict:
+        out = {}
+        for member in ids:
+            sid = normalize_steamid64(snap_.players_by_id[str(member)].get("steamid"))
+            if sid:
+                out[sid] = snap_.name_of(member)
+        return out
 
     count = FORMATS[state["format"]]
     pool = [state["map"]] if count == 1 else list(MAPS)
@@ -187,6 +200,7 @@ def matchzy_config(service: LeagueService, steamid: str | None, is_admin: bool) 
         "maplist": pool,
         "team1": team_block(state["team1"]),
         "team2": team_block(state["team2"]),
+        "spectators": {"players": _spectators(snap, state["spectators"])},
         "cvars": {"hostname": "EDB League"},
     }
 
