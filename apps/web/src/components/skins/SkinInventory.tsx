@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { controlClass } from "@/components/ui/Field";
 import { Notice } from "@/components/ui/Notice";
 import { skinImageUrl, type CatalogSkin } from "@/lib/skins";
+import { Silhouette } from "./Silhouette";
 import {
   CATEGORIES, INVENTORY, RARITY_BORDER, SIDE_LABEL, categoryOf, compareWeapons, sidesOf,
   type Category, type InventoryItem, type Side,
@@ -14,24 +15,6 @@ const PAGE = 48;
 const STORAGE_KEY = "edb-skins-previa-v1";
 const STORAGE_EVENT = "edb-skins-previa";
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])) as Record<Category, string>;
-
-/** Silhueta simples para arma sem skin escolhida (não é arte de nenhuma arma real). */
-function Silhouette({ category }: { category: Category }) {
-  const long = category === "rifle" || category === "sniper" || category === "smg" || category === "shotgun" || category === "mg";
-  return (
-    <svg aria-hidden="true" viewBox="0 0 120 48" className="h-12 w-28 fill-current text-surface-3">
-      {category === "knife" ? (
-        <path d="M14 30 78 12c10-3 22 1 28 10l-60 12-28 4z" />
-      ) : category === "gloves" ? (
-        <path d="M34 40V20l8-10 8 8 8-8 8 8 8-8 8 10v20c0 4-4 6-8 6H42c-4 0-8-2-8-6z" />
-      ) : long ? (
-        <path d="M4 22h70l8-8h18l6 6v6l-6 4H80l-6 12H60l4-12H44l-8 10H24l6-14H4z" />
-      ) : (
-        <path d="M30 14h56l6 8v8H70l-4 14H52l4-14H30z" />
-      )}
-    </svg>
-  );
-}
 
 /** `models` só existe nos slots de faca e luvas: cada lado usa uma faca (e um par de luvas) e o modelo é escolhido dentro dele. */
 type Weapon = { key: string; name: string; category: Category; sides: Side[]; skins: InventoryItem[]; models?: Weapon[] };
