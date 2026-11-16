@@ -341,6 +341,9 @@ def run_once(args, store) -> int:
             continue
         for steam, pid in extra.items():
             directory.by_steam[steam] = pid
+        # jogador novo ou vinculado agora: a próxima série da rodada já o reconhece pelo SteamID
+        for pid, steam in bind.items():
+            directory.register(pid, steam, new_players.get(pid))
         reserved[key] = reserved.get(key, 0) + 1
         taken.update(match_ids)
         written += 1
