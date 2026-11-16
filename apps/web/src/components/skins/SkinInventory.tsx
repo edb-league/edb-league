@@ -3,7 +3,9 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { controlClass } from "@/components/ui/Field";
+import { SteamLogin } from "@/components/layout/UserMenu";
 import { Notice } from "@/components/ui/Notice";
+import { getJson, sendJson } from "@/lib/client";
 import { skinImageUrl, type CatalogSkin } from "@/lib/skins";
 import { Silhouette } from "./Silhouette";
 import {
@@ -18,6 +20,26 @@ const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label])
 
 /** `models` só existe nos slots de faca e luvas: cada lado usa uma faca (e um par de luvas) e o modelo é escolhido dentro dele. */
 type Weapon = { key: string; name: string; category: Category; sides: Side[]; skins: InventoryItem[]; models?: Weapon[] };
+
+type SkinsMe = {
+  enabled: boolean;
+  authenticated: boolean;
+  equipped: { weapon_id: number; paint_id: number }[];
+  knife: string | null;
+};
+
+/** Classe da faca que o plugin guarda em wp_player_knife -> número da arma. */
+const KNIFE_BY_CLASS: Record<string, number> = {
+  weapon_bayonet: 500, weapon_knife_css: 503, weapon_knife_flip: 505, weapon_knife_gut: 506, weapon_knife_karambit: 507,
+  weapon_knife_m9_bayonet: 508, weapon_knife_tactical: 509, weapon_knife_falchion: 512, weapon_knife_survival_bowie: 514,
+  weapon_knife_butterfly: 515, weapon_knife_push: 516, weapon_knife_cord: 517, weapon_knife_canis: 518, weapon_knife_ursus: 519,
+  weapon_knife_gypsy_jackknife: 520, weapon_knife_outdoor: 521, weapon_knife_stiletto: 522, weapon_knife_widowmaker: 523,
+  weapon_knife_skeleton: 525, weapon_knife_kukri: 526,
+};
+
+function weaponKeyOf(item: InventoryItem): string {
+  return item.category === "knife" || item.category === "gloves" ? `slot|${item.category}` : `${item.category}|${item.weapon}`;
+}
 
 const SLOT_NAME: Partial<Record<Category, string>> = { knife: "Faca", gloves: "Luvas" };
 
@@ -87,6 +109,8 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
   const [skinQuery, setSkinQuery] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [session, setSession] = useState<Record<string, string>>({});
+  const [server, setServer] = useState<SkinsMe | null>(null);
+  const [error, setError] = useState("");
   const stored = useSyncExternalStore(subscribe, readStored, () => "");
   const returnTo = useRef<string | null>(null);
   const returnModel = useRef<string | null>(null);
@@ -98,7 +122,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
     return catalog.flatMap((skin) => {
       const cat = categoryOf(skin.category);
       return cat
-        ? [{ id: skin.id, category: cat, weapon: skin.weapon, skin: skin.name, image: skinImageUrl(skin.image), color: skin.rarity_color || undefined, rarityName: skin.rarity }]
+        ? [{ id: skin.id, category: cat, weaponId: skin.weapon_id ?? undefined, paintId: Number(skin.paint_index), weapon: skin.weapon, skin: skin.name, image: skinImageUrl(skin.image), color: skin.rarity_color || undefined, rarityName: skin.rarity }]
         : [];
     });
   }, [catalog]);
@@ -138,12 +162,56 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
     return out;
   }, [source]);
 
-  const choices = useMemo(() => {
-    const merged = { ...parseChoices(stored), ...session };
-    return merged;
-  }, [stored, session]);
+  useEffect(() => {
+    getJson<SkinsMe>("/skins/me").then(setServer).catch(() => setServer(null));
+  }, []);
+
+  const serverMode = Boolean(server?.enabled && server.authenticated);
+
+  // Skins equipadas no banco do servidor, por casa do inventário (o site grava TR e CT juntos).
+  const serverChoices = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (!server || !serverMode) return out;
+    const byPair = new Map(source.flatMap((i) => (i.weaponId !== undefined && i.paintId !== undefined ? [[`${i.weaponId}:${i.paintId}`, i] as const] : [])));
+    const knife = server.knife ? KNIFE_BY_CLASS[server.knife] : undefined;
+    for (const e of server.equipped) {
+      const item = byPair.get(`${e.weapon_id}:${e.paint_id}`);
+      if (!item || (item.category === "knife" && item.weaponId !== knife)) continue;
+      for (const s of ["t", "ct"]) out[`${s}:${weaponKeyOf(item)}`] = item.id;
+    }
+    return out;
+  }, [server, serverMode, source]);
+
+  const choices = useMemo(
+    () => (serverMode ? { ...serverChoices, ...session } : { ...parseChoices(stored), ...session }),
+    [serverMode, serverChoices, stored, session],
+  );
+
+  function chooseOnServer(weapon: Weapon, skinId: string | null) {
+    const current = choices[`${side}:${weapon.key}`];
+    const item = weapon.skins.find((s) => s.id === (skinId ?? current));
+    if (!item || item.weaponId === undefined || item.paintId === undefined || Number.isNaN(item.paintId)) return false;
+    const keys = [`t:${weapon.key}`, `ct:${weapon.key}`];
+    const before = Object.fromEntries(keys.map((k) => [k, choices[k] ?? ""]));
+    setError("");
+    setSession((prev) => ({ ...prev, ...Object.fromEntries(keys.map((k) => [k, skinId ?? ""])) }));
+    const request = skinId
+      ? sendJson<SkinsMe>("POST", "/skins/equip", { weapon_id: item.weaponId, paint_id: item.paintId, wear: 0.01, seed: 0 })
+      : sendJson<SkinsMe>("DELETE", `/skins/equip/${item.weaponId}`);
+    request
+      .then((data) => {
+        setServer(data);
+        setSession((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !keys.includes(k))));
+      })
+      .catch((e: unknown) => {
+        setSession((prev) => ({ ...prev, ...before }));
+        setError(e instanceof Error ? e.message : "Não foi possível salvar a skin.");
+      });
+    return true;
+  }
 
   function choose(weapon: Weapon, skinId: string | null) {
+    if (serverMode && weapon.category !== "gloves" && chooseOnServer(weapon, skinId)) return;
     const key = `${side}:${weapon.key}`;
     const merged = { ...parseChoices(readStored()), ...session, [key]: skinId ?? "" };
     setSession((prev) => ({ ...prev, [key]: skinId ?? "" }));
@@ -228,10 +296,19 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
     <section aria-labelledby="inventario" className="flex flex-col gap-4">
       <h2 id="inventario" className="text-3xl">Inventário</h2>
       <Notice tone="info">
-        {catalog.length > 0
-          ? "Catálogo de skins do CS2. A skin que você marca aqui é uma prévia, salva só neste navegador. Para valer no servidor, escolha no jogo com !skins."
-          : "Prévia do layout com itens de exemplo. O catálogo de skins ainda não foi carregado."}
+        {serverMode
+          ? "Suas escolhas são salvas no servidor para TR e CT. Dentro do jogo, digite !wp no chat para a skin aparecer na hora. Luvas ainda são só prévia."
+          : catalog.length > 0
+            ? "Catálogo de skins do CS2. A skin que você marca aqui é uma prévia, salva só neste navegador."
+            : "Prévia do layout com itens de exemplo. O catálogo de skins ainda não foi carregado."}
       </Notice>
+      {server?.enabled && !server.authenticated && (
+        <div className="flex flex-wrap items-center gap-3">
+          <SteamLogin />
+          <span className="text-base text-muted">Entre com a Steam para as skins valerem no servidor.</span>
+        </div>
+      )}
+      {error && <Notice tone="error">{error}</Notice>}
 
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Lado" className="flex gap-2">
