@@ -20,7 +20,7 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   const [failed, setFailed] = useState(false);
   const [match, setMatch] = useState<LobbyMatchzy | null>(null);
   const [copied, setCopied] = useState(false);
-  const [copiedConnect, setCopiedConnect] = useState(false);
+  const [copiedConnect, setCopiedConnect] = useState<"connect" | "address" | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
   const action = useAction();
@@ -69,11 +69,11 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
     }
   }
 
-  async function copyConnect(text: string) {
+  async function copyConnect(text: string, which: "connect" | "address") {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedConnect(true);
-      window.setTimeout(() => setCopiedConnect(false), 2000);
+      setCopiedConnect(which);
+      window.setTimeout(() => setCopiedConnect(null), 2000);
     } catch {
       /* sem permissão: o comando continua selecionável na tela */
     }
@@ -177,7 +177,10 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
             {view.ready && !me.can_get_json && <p className="text-sm text-muted">Só quem está no lobby recebe o arquivo da partida.</p>}
             {me.connect ? (
               <div className="flex w-full flex-col items-center gap-2 border-t border-line-soft pt-3">
-                <Button variant="secondary" onClick={() => copyConnect(me.connect)}>{copiedConnect ? "Copiado" : "Connect"}</Button>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button variant="secondary" onClick={() => copyConnect(me.connect, "connect")}>{copiedConnect === "connect" ? "Copiado" : "Connect"}</Button>
+                  <Button variant="secondary" onClick={() => copyConnect(me.address, "address")}>{copiedConnect === "address" ? "Copiado" : "Copiar IP"}</Button>
+                </div>
                 <code className="break-all rounded-md bg-surface-3 px-2 py-1 text-sm">{me.connect}</code>
                 <p className="text-sm text-muted">Cole no console do CS2 (tecla ' ou ~).</p>
               </div>

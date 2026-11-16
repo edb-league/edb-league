@@ -149,6 +149,8 @@ def test_connect_only_for_people_in_the_lobby(lobby, monkeypatch):
     member = as_player(0)
     act(member, "POST", "/join", json={"team": 1})
     assert member.get("/api/lobby").json()["me"]["connect"] == "password segredo; connect 1.2.3.4:27015"
+    assert member.get("/api/lobby").json()["me"]["address"] == "1.2.3.4:27015"
+    assert outsider.get("/api/lobby").json()["me"]["address"] == ""
     monkeypatch.delenv("SERVER_PASSWORD")
     assert member.get("/api/lobby").json()["me"]["connect"] == "connect 1.2.3.4:27015"
     monkeypatch.delenv("SERVER_CONNECT")

@@ -73,7 +73,8 @@ def view(service: LeagueService, viewer_id: str | None = None, is_admin: bool = 
         "me": {"player_id": viewer_id, "team": mine, "can_configure": can_configure, "is_admin": is_admin,
                "can_get_json": full and (is_admin or mine is not None),
                # Com senha, o comando não é público: só quem está no lobby (ou o admin) recebe.
-               "connect": settings.server_connect() if (is_admin or mine is not None) else ""},
+               "connect": settings.server_connect() if (is_admin or mine is not None) else "",
+               "address": settings.server_address() if (is_admin or mine is not None) else ""},
         "updated_at": state["updated_at"],
     }
 

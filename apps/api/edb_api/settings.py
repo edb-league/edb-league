@@ -150,3 +150,8 @@ def server_connect() -> str:
         return ""
     password = env("SERVER_PASSWORD").strip()
     return f"password {password}; connect {address}" if password else f"connect {address}"
+
+
+def server_address() -> str:
+    """Só ip:porta do servidor (SERVER_CONNECT), sem senha."""
+    return env("SERVER_CONNECT").strip()
