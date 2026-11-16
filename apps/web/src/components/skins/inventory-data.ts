@@ -13,6 +13,9 @@ export type InventoryItem = {
   color?: string;
   /** Nome da raridade no catálogo (ex.: "Covert"), usado no filtro. */
   rarityName?: string;
+  /** Números do WeaponPaints (arma e pintura), usados para gravar a skin no servidor. */
+  weaponId?: number;
+  paintId?: number;
 };
 
 export const CATEGORIES: { id: Category; label: string }[] = [
