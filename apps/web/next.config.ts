@@ -35,8 +35,13 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+// Em desenvolvimento o Next só entrega os scripts do navegador para localhost. Para abrir o site pelo IP da rede
+// (ex.: 192.168.1.33, necessário no login com a Steam), liste o endereço em DEV_ORIGINS, separado por vírgula.
+const devOrigins = (process.env.DEV_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  ...(devOrigins.length > 0 ? { allowedDevOrigins: devOrigins } : {}),
   reactStrictMode: true,
   images: {
     // Avatares da Steam (a API só devolve URLs https desses domínios).
