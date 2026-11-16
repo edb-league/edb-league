@@ -182,7 +182,7 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
                   <Button variant="secondary" onClick={() => copyConnect(me.address, "address")}>{copiedConnect === "address" ? "Copiado" : "Copiar IP"}</Button>
                 </div>
                 <code className="break-all rounded-md bg-surface-3 px-2 py-1 text-sm">{me.connect}</code>
-                <p className="text-sm text-muted">Cole no console do CS2 (tecla ' ou ~).</p>
+                <p className="text-sm text-muted">Cole no console do CS2 (tecla &apos; ou ~).</p>
               </div>
             ) : (
               me.player_id !== null && me.team === null && <p className="border-t border-line-soft pt-3 text-sm text-muted">Entre em um time ou nos espectadores para ver o connect do servidor.</p>
