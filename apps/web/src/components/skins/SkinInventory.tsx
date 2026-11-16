@@ -33,7 +33,10 @@ function Silhouette({ category }: { category: Category }) {
   );
 }
 
-type Weapon = { key: string; name: string; category: Category; sides: Side[]; skins: InventoryItem[] };
+/** `models` só existe nos slots de faca e luvas: cada lado usa uma faca (e um par de luvas) e o modelo é escolhido dentro dele. */
+type Weapon = { key: string; name: string; category: Category; sides: Side[]; skins: InventoryItem[]; models?: Weapon[] };
+
+const SLOT_NAME: Partial<Record<Category, string>> = { knife: "Faca", gloves: "Luvas" };
 
 /* A escolha de skin é uma prévia: fica só neste navegador. Guardada fora do React para sobreviver a recarregamentos. */
 function subscribe(callback: () => void) {
@@ -96,12 +99,14 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
   const [category, setCategory] = useState<Category | "all">("all");
   const [query, setQuery] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [modelKey, setModelKey] = useState<string | null>(null);
   const [rarity, setRarity] = useState("");
   const [skinQuery, setSkinQuery] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [session, setSession] = useState<Record<string, string>>({});
   const stored = useSyncExternalStore(subscribe, readStored, () => "");
   const returnTo = useRef<string | null>(null);
+  const returnModel = useRef<string | null>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const gridRef = useRef<HTMLUListElement>(null);
 
@@ -127,9 +132,27 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
       if (item.skin) weapon.skins.push(item);
     }
     const order = new Map(CATEGORIES.map((c, i) => [c.id, i]));
-    return [...map.values()]
+    const sorted = [...map.values()]
       .map((w) => ({ ...w, skins: [...w.skins].sort((a, b) => (a.skin ?? "").localeCompare(b.skin ?? "", "en")) }))
       .sort((a, b) => (order.get(a.category)! - order.get(b.category)!) || compareWeapons(a.name, b.name));
+    // Faca e luvas viram um slot único por lado; os modelos (Karambit, Talon...) ficam dentro dele.
+    const out: Weapon[] = [];
+    for (const w of sorted) {
+      const slotName = SLOT_NAME[w.category];
+      if (!slotName) {
+        out.push(w);
+        continue;
+      }
+      const slotKey = `slot|${w.category}`;
+      let slot = out.find((x) => x.key === slotKey);
+      if (!slot) {
+        slot = { key: slotKey, name: slotName, category: w.category, sides: ["t", "ct"], skins: [], models: [] };
+        out.push(slot);
+      }
+      slot.models!.push(w);
+      slot.skins.push(...w.skins);
+    }
+    return out;
   }, [source]);
 
   const choices = useMemo(() => {
@@ -153,40 +176,67 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
   const visibleWeapons = useMemo(
     () => weapons.filter((w) => w.sides.includes(side)
       && (category === "all" || w.category === category)
-      && (!q || w.name.toLowerCase().includes(q) || w.skins.some((s) => (s.skin ?? "").toLowerCase().includes(q)))),
+      && (!q || w.name.toLowerCase().includes(q)
+        || w.models?.some((m) => m.name.toLowerCase().includes(q))
+        || w.skins.some((s) => (s.skin ?? "").toLowerCase().includes(q)))),
     [weapons, side, category, q],
   );
 
   const open = openKey ? weapons.find((w) => w.key === openKey) ?? null : null;
+  const model = open?.models && modelKey ? open.models.find((m) => m.key === modelKey) ?? null : null;
+  // Lista de skins na tela: a do modelo aberto (faca/luvas) ou a da própria arma.
+  const viewSkins = useMemo(() => (open ? (open.models ? model?.skins ?? [] : open.skins) : []), [open, model]);
+  const pickingModel = Boolean(open?.models && !model);
   const rarities = useMemo(
-    () => (open ? [...new Set(open.skins.map((s) => s.rarityName).filter((r): r is string => Boolean(r)))].sort() : []),
-    [open],
+    () => [...new Set(viewSkins.map((s) => s.rarityName).filter((r): r is string => Boolean(r)))].sort(),
+    [viewSkins],
   );
   const skins = useMemo(() => {
-    if (!open) return [];
     const sq = skinQuery.trim().toLowerCase();
-    return open.skins.filter((s) => (!rarity || s.rarityName === rarity) && (!sq || (s.skin ?? "").toLowerCase().includes(sq)));
-  }, [open, rarity, skinQuery]);
+    return viewSkins.filter((s) => (!rarity || s.rarityName === rarity) && (!sq || (s.skin ?? "").toLowerCase().includes(sq)));
+  }, [viewSkins, rarity, skinQuery]);
   const shownSkins = skins.slice(0, limit);
   const chosenId = open ? choices[`${side}:${open.key}`] : undefined;
+  const chosenSkin = chosenId && open ? open.skins.find((s) => s.id === chosenId) : undefined;
+  const models = useMemo(() => {
+    if (!open?.models) return [];
+    const sq = skinQuery.trim().toLowerCase();
+    return open.models.filter((m) => !sq || m.name.toLowerCase().includes(sq) || m.skins.some((s) => (s.skin ?? "").toLowerCase().includes(sq)));
+  }, [open, skinQuery]);
 
-  // Ao abrir uma arma o foco vai para o título dela; ao voltar, para a casa que estava aberta.
+  // Ao abrir uma arma ou modelo o foco vai para o título; ao voltar, para a casa que estava aberta.
   useEffect(() => {
-    if (open) titleRef.current?.focus();
+    if (open && !model && returnModel.current) {
+      gridRef.current?.querySelector<HTMLElement>(`[data-model="${CSS.escape(returnModel.current)}"]`)?.focus();
+      returnModel.current = null;
+    } else if (open) titleRef.current?.focus();
     else if (returnTo.current) {
       const target = gridRef.current?.querySelector<HTMLElement>(`[data-weapon="${CSS.escape(returnTo.current)}"]`);
       target?.focus();
       returnTo.current = null;
     }
-  }, [open]);
+  }, [open, model]);
 
   function openWeapon(weapon: Weapon) {
     setRarity("");
     setSkinQuery("");
     setLimit(PAGE);
+    setModelKey(null);
     setOpenKey(weapon.key);
   }
+  function openModel(m: Weapon) {
+    setRarity("");
+    setSkinQuery("");
+    setLimit(PAGE);
+    setModelKey(m.key);
+  }
   function closeWeapon() {
+    if (model) {
+      returnModel.current = model.key;
+      setSkinQuery("");
+      setModelKey(null);
+      return;
+    }
     returnTo.current = openKey;
     setOpenKey(null);
   }
@@ -223,7 +273,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
               key={c.id}
               type="button"
               aria-pressed={category === c.id}
-              onClick={() => { setCategory(c.id); setOpenKey(null); }}
+              onClick={() => { setCategory(c.id); setOpenKey(null); setModelKey(null); }}
               className={clsx("min-h-11 rounded-lg border px-3 text-base font-bold transition", category === c.id ? "border-gold bg-surface-3 text-gold" : "border-line-soft bg-surface-2 text-muted hover:border-accent")}
             >
               {c.label}
@@ -242,10 +292,10 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={closeWeapon} className="min-h-11 rounded-lg border border-line-soft bg-surface-2 px-3 text-base font-bold text-muted transition hover:border-accent hover:text-fg">
-              ← Armas
+              {model ? "← Modelos" : "← Armas"}
             </button>
             <h3 ref={titleRef} tabIndex={-1} className="text-2xl font-bold focus-visible:outline-offset-4">
-              {open.name} <span className="text-lg font-normal text-muted">({SIDE_LABEL[side]} · {CATEGORY_LABEL[open.category]})</span>
+              {model ? model.name : open.name} <span className="text-lg font-normal text-muted">({SIDE_LABEL[side]} · {model ? open.name : CATEGORY_LABEL[open.category]})</span>
             </h3>
             {chosenId && (
               <button type="button" onClick={() => choose(open, null)} className="min-h-11 rounded-lg border border-line-soft bg-surface-2 px-3 text-base font-bold text-muted transition hover:border-accent hover:text-fg sm:ml-auto">
@@ -253,7 +303,54 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
               </button>
             )}
           </div>
-          {open.skins.length > 0 && (
+          {pickingModel && (
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="w-full sm:w-64">
+                  <span className="sr-only">Pesquisar modelo ou skin</span>
+                  <input type="search" value={skinQuery} onChange={(e) => setSkinQuery(e.target.value)} placeholder="Pesquisar modelo ou skin" className={controlClass} />
+                </label>
+                <p role="status" className="text-base text-muted">{models.length} {models.length === 1 ? "modelo" : "modelos"}</p>
+              </div>
+              <p className="text-base text-muted">Cada lado usa um só item de {open.name.toLowerCase()}. Escolha o modelo e depois a skin; a escolha troca a anterior.</p>
+              {models.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-line p-6 text-center text-muted" role="status">Nenhum modelo encontrado.</p>
+              ) : (
+                <ul ref={gridRef} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                  {models.map((m) => {
+                    const current = chosenSkin && m.skins.some((s) => s.id === chosenSkin.id) ? chosenSkin : undefined;
+                    return (
+                      <li key={m.key}>
+                        <button
+                          type="button"
+                          data-model={m.key}
+                          onClick={() => openModel(m)}
+                          style={current?.color ? { borderBottomColor: current.color } : undefined}
+                          className={clsx(
+                            "relative flex h-full min-h-44 w-full flex-col items-center justify-between gap-2 rounded-xl border border-b-4 bg-surface-2 p-3 text-center transition hover:border-accent hover:bg-surface-3",
+                            current ? "border-accent" : "border-line-soft border-b-transparent",
+                          )}
+                        >
+                          {current && <span className="absolute right-2 top-2 rounded-md bg-accent-bg px-2 py-0.5 text-sm font-bold text-on-accent">Em uso</span>}
+                          {current?.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={current.image} alt="" loading="lazy" width={160} height={120} className="mt-4 h-24 w-auto max-w-full object-contain" />
+                          ) : (
+                            <Silhouette category={m.category} />
+                          )}
+                          <span className="flex flex-col">
+                            <span className="text-lg font-bold">{m.name}</span>
+                            <span className="text-sm text-muted">{current ? current.skin : `${m.skins.length} ${m.skins.length === 1 ? "skin" : "skins"}`}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </>
+          )}
+          {!pickingModel && viewSkins.length > 0 && (
             <div className="flex flex-wrap items-center gap-3">
               <label className="w-full sm:w-64">
                 <span className="sr-only">Pesquisar skin</span>
@@ -271,8 +368,8 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
               <p role="status" className="text-base text-muted">{skins.length} {skins.length === 1 ? "skin" : "skins"}</p>
             </div>
           )}
-          {open.skins.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-line p-6 text-center text-muted" role="status">Esta arma ainda não tem skins no catálogo.</p>
+          {pickingModel ? null : viewSkins.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-line p-6 text-center text-muted" role="status">{model ? "Este modelo" : "Esta arma"} ainda não tem skins no catálogo.</p>
           ) : shownSkins.length === 0 ? (
             <p className="rounded-xl border border-dashed border-line p-6 text-center text-muted" role="status">Nenhuma skin encontrada.</p>
           ) : (
@@ -292,7 +389,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
         </div>
       ) : (
         <>
-          <p role="status" className="text-base text-muted">{visibleWeapons.length} {visibleWeapons.length === 1 ? "arma" : "armas"} no lado {SIDE_LABEL[side]}</p>
+          <p role="status" className="text-base text-muted">{visibleWeapons.length} {visibleWeapons.length === 1 ? "item" : "itens"} no lado {SIDE_LABEL[side]}</p>
           {visibleWeapons.length === 0 ? (
             <p className="rounded-xl border border-dashed border-line p-6 text-center text-muted">Nenhum item encontrado.</p>
           ) : (
@@ -300,6 +397,7 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
               {visibleWeapons.map((weapon) => {
                 const skinId = choices[`${side}:${weapon.key}`];
                 const skin = skinId ? weapon.skins.find((s) => s.id === skinId) : undefined;
+                const skinModel = skin ? weapon.models?.find((m) => m.skins.some((s) => s.id === skin.id)) : undefined;
                 return (
                   <li key={weapon.key}>
                     <button
@@ -319,9 +417,13 @@ export function SkinInventory({ catalog = [] }: { catalog?: CatalogSkin[] }) {
                         <Silhouette category={weapon.category} />
                       )}
                       <span className="flex flex-col">
-                        <span className="text-sm text-muted">{weapon.category === "knife" || weapon.category === "gloves" ? "★ " : ""}{weapon.name}</span>
-                        <span className="text-lg font-bold">{skin?.skin ?? "Skin padrão"}</span>
-                        <span className="text-sm text-muted">{weapon.skins.length} {weapon.skins.length === 1 ? "skin" : "skins"}</span>
+                        <span className="text-sm text-muted">{weapon.models ? "★ " : ""}{weapon.name}{skinModel ? ` · ${skinModel.name}` : ""}</span>
+                        <span className="text-lg font-bold">{skin?.skin ?? (weapon.models ? `${weapon.name} padrão` : "Skin padrão")}</span>
+                        <span className="text-sm text-muted">
+                          {weapon.models
+                            ? `${weapon.models.length} ${weapon.models.length === 1 ? "modelo" : "modelos"}`
+                            : `${weapon.skins.length} ${weapon.skins.length === 1 ? "skin" : "skins"}`}
+                        </span>
                       </span>
                     </button>
                   </li>

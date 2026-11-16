@@ -21,7 +21,7 @@ export async function expectNoViolations(page: Page, label: string) {
   const summary = results.violations.map((v) => ({
     rule: v.id,
     impact: v.impact,
-    nodes: v.nodes.slice(0, 4).map((n) => n.target.join(" ")),
+    nodes: v.nodes.slice(0, 4).map((n) => `${n.target.join(" ")} ${JSON.stringify(n.any.map((c) => c.data))}`),
   }));
   expect(summary, `${label}: violações de acessibilidade`).toEqual([]);
 }
