@@ -14,6 +14,7 @@ class FakeDB:
     def __init__(self):
         self.skins: dict = {}
         self.knives: dict = {}
+        self.gloves: dict = {}
         self.last = None
 
     def cursor(self):
@@ -27,6 +28,15 @@ class FakeDB:
         elif s.startswith("INSERT INTO wp_player_knife"):
             steam, team, knife = params
             self.knives[(steam, team)] = knife
+        elif s.startswith("INSERT INTO wp_player_gloves"):
+            steam, team, defindex = params
+            self.gloves[(steam, team)] = defindex
+        elif s.startswith("DELETE FROM wp_player_gloves"):
+            steam, defindex = params
+            self.gloves = {k: v for k, v in self.gloves.items() if not (k[0] == steam and v == defindex)}
+        elif s.startswith("SELECT weapon_defindex FROM wp_player_gloves"):
+            glove = self.gloves.get((params[0], 2))
+            self.last = [(glove,)] if glove else []
         elif s.startswith("DELETE FROM wp_player_skins"):
             steam, weapon = params
             self.skins = {k: v for k, v in self.skins.items() if not (k[0] == steam and k[2] == weapon)}
@@ -57,7 +67,7 @@ def wp(monkeypatch):
     db = FakeDB()
     monkeypatch.setenv("WP_DB_HOST", "127.0.0.1")
     monkeypatch.setattr(skins_ops, "_connect", lambda: db)
-    monkeypatch.setattr(skins_ops, "_pairs", lambda: {(7, 490), (507, 413)})
+    monkeypatch.setattr(skins_ops, "_pairs", lambda: {(7, 490), (507, 413), (5030, 10037)})
     return db
 
 
@@ -101,6 +111,14 @@ def test_knife_sets_model_and_unequip(logged, wp):
     assert data["equipped"] == [] and data["knife"] is None
 
 
+def test_gloves_set_model_and_unequip(logged, wp):
+    data = logged.post("/api/skins/equip", json={"weapon_id": 5030, "paint_id": 10037}, headers=ORIGIN).json()
+    assert data["gloves"] == 5030
+    assert {k[1] for k in wp.gloves} == {2, 3}
+    data = logged.delete("/api/skins/equip/5030", headers=ORIGIN).json()
+    assert data["gloves"] is None and wp.gloves == {}
+
+
 def test_write_blocked_from_other_origin(logged, wp):
     response = logged.post("/api/skins/equip", json={"weapon_id": 7, "paint_id": 490}, headers={"Origin": "http://evil.example"})
     assert response.status_code == 403
@@ -120,7 +138,7 @@ def bridge(local, monkeypatch):
     monkeypatch.setenv("BRIDGE_TOKEN", TOKEN)
     monkeypatch.setenv("EDB_SESSION_SECRET", "x" * 40)
     monkeypatch.setenv("EDB_PUBLIC_URL", "http://localhost:3000")
-    monkeypatch.setattr(skins_ops, "_pairs", lambda: {(7, 490), (9, 344), (507, 413), (500, 12)})
+    monkeypatch.setattr(skins_ops, "_pairs", lambda: {(7, 490), (9, 344), (507, 413), (500, 12), (5030, 10037)})
     client = TestClient(create_app())
     client.cookies.set("edb_session", identity._pack("session", STEAMID, 3600))
     return client
@@ -180,3 +198,9 @@ def test_apply_change_writes_both_teams():
     assert {k[1] for k in db.skins} == {2, 3} and db.knives[(STEAMID, 2)] == "weapon_knife_karambit"
     weaponpaints.apply_change(db, {"steamid": STEAMID, "weapon_id": 507, "paint_id": 0, "deleted": True})
     assert db.skins == {} and db.knives == {}
+
+
+def test_bridge_gloves_view(bridge):
+    data = bridge.post("/api/skins/equip", json={"weapon_id": 5030, "paint_id": 10037}, headers=ORIGIN).json()
+    assert data["gloves"] == 5030
+    assert bridge.delete("/api/skins/equip/5030", headers=ORIGIN).json()["gloves"] is None

@@ -14,6 +14,8 @@ KNIVES = {
     520: "weapon_knife_gypsy_jackknife", 521: "weapon_knife_outdoor", 522: "weapon_knife_stiletto",
     523: "weapon_knife_widowmaker", 525: "weapon_knife_skeleton", 526: "weapon_knife_kukri",
 }
+# Luvas: o número do modelo vai em wp_player_gloves e a pintura em wp_player_skins, como nas facas.
+GLOVES = {4725, *range(5027, 5036)}
 
 
 def clamp(wear: float, seed: int) -> tuple[float, int]:
@@ -32,6 +34,10 @@ def equip(cur, steamid: str, weapon_id: int, paint_id: int, wear: float, seed: i
             cur.execute(
                 "INSERT INTO wp_player_knife (steamid, weapon_team, knife) VALUES (%s, %s, %s) "
                 "ON DUPLICATE KEY UPDATE knife = VALUES(knife)", (steamid, team, KNIVES[weapon_id]))
+        if weapon_id in GLOVES:
+            cur.execute(
+                "INSERT INTO wp_player_gloves (steamid, weapon_team, weapon_defindex) VALUES (%s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE weapon_defindex = VALUES(weapon_defindex)", (steamid, team, weapon_id))
 
 
 def unequip(cur, steamid: str, weapon_id: int) -> None:
@@ -39,6 +45,8 @@ def unequip(cur, steamid: str, weapon_id: int) -> None:
                 (steamid, weapon_id))
     if weapon_id in KNIVES:
         cur.execute("DELETE FROM wp_player_knife WHERE steamid = %s AND knife = %s", (steamid, KNIVES[weapon_id]))
+    if weapon_id in GLOVES:
+        cur.execute("DELETE FROM wp_player_gloves WHERE steamid = %s AND weapon_defindex = %s", (steamid, weapon_id))
 
 
 def apply_change(cur, change: dict) -> None:
@@ -50,9 +58,11 @@ def apply_change(cur, change: dict) -> None:
         equip(cur, steamid, weapon_id, int(change["paint_id"]), change.get("wear", 0.01), change.get("seed", 0))
 
 
-def read(cur, steamid: str) -> tuple[list[tuple], tuple | None]:
+def read(cur, steamid: str) -> tuple[list[tuple], tuple | None, tuple | None]:
     cur.execute("SELECT weapon_defindex, weapon_paint_id, weapon_wear, weapon_seed FROM wp_player_skins "
                 "WHERE steamid = %s AND weapon_team = 2", (steamid,))
     skins = cur.fetchall()
     cur.execute("SELECT knife FROM wp_player_knife WHERE steamid = %s AND weapon_team = 2", (steamid,))
-    return skins, cur.fetchone()
+    knife = cur.fetchone()
+    cur.execute("SELECT weapon_defindex FROM wp_player_gloves WHERE steamid = %s AND weapon_team = 2", (steamid,))
+    return skins, knife, cur.fetchone()

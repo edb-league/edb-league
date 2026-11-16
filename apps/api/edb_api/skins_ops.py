@@ -94,24 +94,26 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
-def _shape(equipped: list[dict], knife: str | None) -> dict:
-    return {"enabled": True, "authenticated": True, "equipped": equipped, "knife": knife}
+def _shape(equipped: list[dict], knife: str | None, gloves: int | None = None) -> dict:
+    return {"enabled": True, "authenticated": True, "equipped": equipped, "knife": knife, "gloves": gloves}
 
 
 def view(steamid: str | None) -> dict:
     if not enabled():
-        return {"enabled": False, "authenticated": bool(steamid), "equipped": [], "knife": None}
+        return {"enabled": False, "authenticated": bool(steamid), "equipped": [], "knife": None, "gloves": None}
     if not steamid:
-        return {"enabled": True, "authenticated": False, "equipped": [], "knife": None}
+        return {"enabled": True, "authenticated": False, "equipped": [], "knife": None, "gloves": None}
     if mode() == "bridge":
         rows = [r for r in get_service().store.skin_list(steamid) if not r["deleted"]]
         knives = [r for r in rows if int(r["weapon_id"]) in KNIVES]
         knife = KNIVES[int(max(knives, key=lambda r: str(r["updated_at"]))["weapon_id"])] if knives else None
+        gloves = [r for r in rows if int(r["weapon_id"]) in wp.GLOVES]
+        glove = int(max(gloves, key=lambda r: str(r["updated_at"]))["weapon_id"]) if gloves else None
         return _shape([{"weapon_id": int(r["weapon_id"]), "paint_id": int(r["paint_id"]),
-                        "wear": float(r["wear"]), "seed": int(r["seed"])} for r in rows], knife)
-    skins, knife = _db_call(lambda cur: wp.read(cur, steamid))
+                        "wear": float(r["wear"]), "seed": int(r["seed"])} for r in rows], knife, glove)
+    skins, knife, gloves = _db_call(lambda cur: wp.read(cur, steamid))
     return _shape([{"weapon_id": int(w), "paint_id": int(p), "wear": float(wear), "seed": int(seed)}
-                   for w, p, wear, seed in skins], knife[0] if knife else None)
+                   for w, p, wear, seed in skins], knife[0] if knife else None, int(gloves[0]) if gloves else None)
 
 
 def _save(steamid: str, weapon_id: int, paint_id: int, wear: float, seed: int, deleted: bool) -> None:

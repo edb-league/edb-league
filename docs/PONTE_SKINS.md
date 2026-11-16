@@ -15,4 +15,4 @@ O site e a API ficam na nuvem; o MariaDB do WeaponPaints fica no PC do servidor.
 ## Limites desta versão
 - O fluxo é do site para o jogo. Skin trocada dentro do jogo (`!wp`/`!skins`) não aparece no site.
 - A ponte guarda até onde já aplicou em `ponte_skins.cursor`; apagar o arquivo reaplica todas as escolhas do site.
-- Luvas continuam só como prévia.
+- As luvas gravam em `wp_player_gloves` (modelo) e `wp_player_skins` (pintura), como as facas.
