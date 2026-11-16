@@ -236,3 +236,10 @@ def skins_equip(body: SkinEquip, request: Request):
 def skins_unequip(weapon_id: int, request: Request):
     auth.check_origin(request)
     return skins_ops.unequip(identity.session_steamid(request), weapon_id)
+
+
+@router.get("/skins/bridge/changes")
+def skins_bridge_changes(request: Request, response: Response, since: str = "", limit: int = 200):
+    """Usado só pelo script do servidor de CS2 (token no cabeçalho Authorization). Nunca em cache."""
+    response.headers["Cache-Control"] = "no-store"
+    return skins_ops.bridge_changes(request.headers.get("authorization", ""), since, limit)

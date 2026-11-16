@@ -104,3 +104,79 @@ def test_knife_sets_model_and_unequip(logged, wp):
 def test_write_blocked_from_other_origin(logged, wp):
     response = logged.post("/api/skins/equip", json={"weapon_id": 7, "paint_id": 490}, headers={"Origin": "http://evil.example"})
     assert response.status_code == 403
+
+
+# ---- modo ponte: a API guarda na tabela skin_selections e o script do servidor busca as mudanças ----
+
+TOKEN = "token-da-ponte-de-teste"
+
+
+@pytest.fixture
+def bridge(local, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from edb_api.main import create_app
+
+    monkeypatch.setenv("BRIDGE_TOKEN", TOKEN)
+    monkeypatch.setenv("EDB_SESSION_SECRET", "x" * 40)
+    monkeypatch.setenv("EDB_PUBLIC_URL", "http://localhost:3000")
+    monkeypatch.setattr(skins_ops, "_pairs", lambda: {(7, 490), (9, 344), (507, 413), (500, 12)})
+    client = TestClient(create_app())
+    client.cookies.set("edb_session", identity._pack("session", STEAMID, 3600))
+    return client
+
+
+AUTH = {"Authorization": f"Bearer {TOKEN}"}
+
+
+def test_bridge_equip_and_view(bridge):
+    assert bridge.get("/api/skins/me").json()["enabled"] is True
+    data = bridge.post("/api/skins/equip", json={"weapon_id": 7, "paint_id": 490, "wear": 0.3, "seed": 5}, headers=ORIGIN).json()
+    assert data["equipped"] == [{"weapon_id": 7, "paint_id": 490, "wear": pytest.approx(0.3), "seed": 5}]
+    data = bridge.delete("/api/skins/equip/7", headers=ORIGIN).json()
+    assert data["equipped"] == []
+
+
+def test_bridge_knife_is_latest(bridge):
+    bridge.post("/api/skins/equip", json={"weapon_id": 507, "paint_id": 413}, headers=ORIGIN)
+    data = bridge.post("/api/skins/equip", json={"weapon_id": 500, "paint_id": 12}, headers=ORIGIN).json()
+    assert data["knife"] == "weapon_bayonet"
+    assert bridge.delete("/api/skins/equip/500", headers=ORIGIN).json()["knife"] == "weapon_knife_karambit"
+
+
+def test_bridge_changes_requires_token(bridge):
+    assert bridge.get("/api/skins/bridge/changes").status_code == 401
+    assert bridge.get("/api/skins/bridge/changes", headers={"Authorization": "Bearer errado"}).status_code == 401
+
+
+def test_bridge_changes_disabled_without_token(local):
+    from fastapi.testclient import TestClient
+
+    from edb_api.main import create_app
+
+    assert TestClient(create_app()).get("/api/skins/bridge/changes", headers=AUTH).status_code == 503
+
+
+def test_bridge_changes_cursor_and_removals(bridge):
+    bridge.post("/api/skins/equip", json={"weapon_id": 7, "paint_id": 490}, headers=ORIGIN)
+    first = bridge.get("/api/skins/bridge/changes", headers=AUTH)
+    assert first.headers["cache-control"] == "no-store"
+    body = first.json()
+    assert [(c["steamid"], c["weapon_id"], c["deleted"]) for c in body["changes"]] == [(STEAMID, 7, False)]
+    cursor = body["cursor"]
+    assert bridge.get("/api/skins/bridge/changes", params={"since": cursor}, headers=AUTH).json()["changes"] == []
+    bridge.post("/api/skins/equip", json={"weapon_id": 9, "paint_id": 344}, headers=ORIGIN)
+    bridge.delete("/api/skins/equip/7", headers=ORIGIN)
+    later = bridge.get("/api/skins/bridge/changes", params={"since": cursor}, headers=AUTH).json()["changes"]
+    assert [(c["weapon_id"], c["deleted"]) for c in later] == [(9, False), (7, True)]
+    assert bridge.get("/api/skins/bridge/changes", params={"since": "ontem"}, headers=AUTH).status_code == 400
+
+
+def test_apply_change_writes_both_teams():
+    from edb import weaponpaints
+
+    db = FakeDB()
+    weaponpaints.apply_change(db, {"steamid": STEAMID, "weapon_id": 507, "paint_id": 413, "wear": 0.2, "seed": 3, "deleted": False})
+    assert {k[1] for k in db.skins} == {2, 3} and db.knives[(STEAMID, 2)] == "weapon_knife_karambit"
+    weaponpaints.apply_change(db, {"steamid": STEAMID, "weapon_id": 507, "paint_id": 0, "deleted": True})
+    assert db.skins == {} and db.knives == {}

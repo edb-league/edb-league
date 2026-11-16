@@ -80,6 +80,12 @@ class Store:
                 id TEXT PRIMARY KEY, data TEXT NOT NULL,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS skin_selections (
+                steamid TEXT NOT NULL, weapon_id INTEGER NOT NULL, paint_id INTEGER NOT NULL DEFAULT 0,
+                wear REAL NOT NULL DEFAULT 0.01, seed INTEGER NOT NULL DEFAULT 0,
+                deleted INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL,
+                PRIMARY KEY (steamid, weapon_id)
+            );
             ''')
             player_cols = [r[1] for r in con.execute('PRAGMA table_info(players)')]
             if 'skill_level' not in player_cols:
@@ -176,6 +182,36 @@ class Store:
         else:
             with self._connect() as con:
                 con.execute('DELETE FROM league_lobbies WHERE id=?',(lobby_id,))
+
+    SKIN_COLS='steamid,weapon_id,paint_id,wear,seed,deleted,updated_at'
+
+    def skin_list(self, steamid=None, since=None, limit=500):
+        """Escolhas de skin do site (inclui as removidas), da mais antiga para a mais nova."""
+        if self.cloud:
+            params={'select':self.SKIN_COLS,'order':'updated_at.asc','limit':str(limit)}
+            if steamid: params['steamid']='eq.'+steamid
+            if since: params['updated_at']='gt.'+since
+            return self._api('GET','skin_selections',params=params)
+        sql='SELECT '+self.SKIN_COLS+' FROM skin_selections WHERE 1=1'
+        args=[]
+        if steamid: sql+=' AND steamid=?'; args.append(steamid)
+        if since: sql+=' AND updated_at>?'; args.append(since)
+        sql+=' ORDER BY updated_at ASC LIMIT ?'; args.append(int(limit))
+        with self._connect() as con:
+            rows=[dict(r) for r in con.execute(sql,args).fetchall()]
+        for r in rows: r['deleted']=bool(r['deleted'])
+        return rows
+
+    def skin_put(self, row):
+        """Grava (ou substitui) a escolha de uma arma: row com steamid, weapon_id, paint_id, wear, seed, deleted, updated_at."""
+        if self.cloud:
+            self._api('POST','skin_selections',params={'on_conflict':'steamid,weapon_id'},payload=row)
+        else:
+            with self._connect() as con:
+                con.execute('INSERT INTO skin_selections (steamid,weapon_id,paint_id,wear,seed,deleted,updated_at) '
+                            'VALUES (?,?,?,?,?,?,?) ON CONFLICT(steamid,weapon_id) DO UPDATE SET paint_id=excluded.paint_id,'
+                            'wear=excluded.wear,seed=excluded.seed,deleted=excluded.deleted,updated_at=excluded.updated_at',
+                            (row['steamid'],row['weapon_id'],row['paint_id'],row['wear'],row['seed'],int(bool(row['deleted'])),row['updated_at']))
 
     def _upsert(self,table,row,conflict=None):
         if self.cloud:
