@@ -20,6 +20,7 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   const [failed, setFailed] = useState(false);
   const [match, setMatch] = useState<LobbyMatchzy | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedConnect, setCopiedConnect] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [showMaps, setShowMaps] = useState(false);
   const action = useAction();
@@ -65,6 +66,16 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* sem permissão: o texto continua selecionável */
+    }
+  }
+
+  async function copyConnect(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedConnect(true);
+      window.setTimeout(() => setCopiedConnect(false), 2000);
+    } catch {
+      /* sem permissão: o comando continua selecionável na tela */
     }
   }
 
@@ -164,6 +175,15 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
             <Button variant="gold" disabled={!view.ready || !me.can_get_json || action.busy} onClick={start}>Iniciar partida</Button>
             {!view.ready && <p className="text-sm text-muted">Libera com 5 contra 5.</p>}
             {view.ready && !me.can_get_json && <p className="text-sm text-muted">Só quem está no lobby recebe o arquivo da partida.</p>}
+            {me.connect ? (
+              <div className="flex w-full flex-col items-center gap-2 border-t border-line-soft pt-3">
+                <Button variant="secondary" onClick={() => copyConnect(me.connect)}>{copiedConnect ? "Copiado" : "Connect"}</Button>
+                <code className="break-all rounded-md bg-surface-3 px-2 py-1 text-sm">{me.connect}</code>
+                <p className="text-sm text-muted">Cole no console do CS2 (tecla ' ou ~).</p>
+              </div>
+            ) : (
+              me.player_id !== null && me.team === null && <p className="border-t border-line-soft pt-3 text-sm text-muted">Entre em um time ou nos espectadores para ver o connect do servidor.</p>
+            )}
           </div>
 
           <div className="rounded-xl border border-line-soft bg-surface-2 p-4">

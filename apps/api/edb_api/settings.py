@@ -141,3 +141,12 @@ def wp_config() -> dict | None:
 def skins_catalog_url() -> str:
     base = env("SKINS_STORAGE_URL", "https://cgopqcbgxpzurejtjmbu.supabase.co/storage/v1/object/public/skins").rstrip("/")
     return f"{base}/catalog.json" if base else ""
+
+
+def server_connect() -> str:
+    """Comando de console para entrar no servidor de CS2 (SERVER_CONNECT = ip:porta; SERVER_PASSWORD opcional)."""
+    address = env("SERVER_CONNECT").strip()
+    if not address:
+        return ""
+    password = env("SERVER_PASSWORD").strip()
+    return f"password {password}; connect {address}" if password else f"connect {address}"

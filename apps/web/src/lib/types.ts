@@ -732,6 +732,8 @@ export type LobbyView = {
     is_admin: boolean;
     /** Lobby completo e a pessoa está nele (ou é admin). */
     can_get_json: boolean;
+    /** Comando para colar no console do CS2; vazio para quem não está no lobby ou se o servidor não foi configurado. */
+    connect: string;
   };
   updated_at: string;
 };
