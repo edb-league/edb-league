@@ -1,0 +1,32 @@
+name: Publicar a API no Render
+# A API de produção roda no Render do Santa (conta dele). Quem não tem acesso ao Render publica por aqui:
+# todo merge na main que mexe na API dispara o Deploy Hook dele. Veja o passo a passo em apps/api/README.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/edb/**'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar o deploy no Render
+        env:
+          # Secret do repositório: Settings > Secrets and variables > Actions > RENDER_DEPLOY_HOOK_URL.
+          # É a URL do Deploy Hook do serviço da API (Render > serviço > Settings > Deploy Hook). Não coloque no código.
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL não está configurado: nada foi publicado. Veja apps/api/README.md."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 30 -X POST "$HOOK" >/dev/null
+          echo "Deploy disparado no Render."

@@ -87,6 +87,23 @@ docker run --rm -p 8000:8000 -e EDB_DEMO=1 -e XINXAS_ADMIN_PASSWORD=demo-senha-1
    `EDB_TRUST_PROXY=1` e, se quiser, `STEAM_API_KEY`.
 5. No plano gratuito o serviço hiberna; a primeira requisição depois disso demora. O workflow `.github/workflows/keepalive.yml` faz um ping a cada 10 min (use a variável de repositório `SITE_URL` se o domínio do site mudar).
 
+### Produção: deploy automático para o Render do Santa
+
+A API de produção roda no Render da conta do Santa (plano pago, com a conta dele). Quem trabalha no projeto sem ter acesso a esse Render **não precisa dele para publicar**: o workflow `.github/workflows/deploy-api.yml` dispara o *Deploy Hook* do serviço a cada merge na `main` que altera `apps/api/`, `packages/edb/` ou o próprio workflow. Também dá para rodar na mão em **Actions > Publicar a API no Render > Run workflow**.
+
+Configuração, uma única vez, feita por quem tem acesso ao Render (o Santa):
+
+1. No Render, abra o serviço da API, depois **Settings** e **Deploy Hook**. Copie a URL. Ela funciona como uma senha: quem a tem consegue disparar deploys.
+2. No GitHub, em **Settings > Secrets and variables > Actions > New repository secret**, crie `RENDER_DEPLOY_HOOK_URL` com essa URL.
+3. Desligue o **Auto-Deploy** do serviço no Render, para não publicar duas vezes por merge (ou deixe ligado e ignore o workflow: um dos dois basta).
+
+Sem o secret, o workflow não falha: só avisa que nada foi publicado. O deploy leva alguns minutos; confira `https://<url-da-api>/api/health` e, para o lobby, `/api/lobby`.
+
+Variáveis do serviço que mudam com novas funções (confira no Render):
+
+- `EDB_ADMIN_STEAMID`: um ou mais SteamID64 separados por vírgula.
+- `EDB_SESSION_SECRET`: obrigatório para o login pela Steam.
+
 ### Fly.io
 
 ```bash
