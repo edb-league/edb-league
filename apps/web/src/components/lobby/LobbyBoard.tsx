@@ -35,10 +35,11 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const first = window.setTimeout(refresh, 0);
     const timer = window.setInterval(refresh, POLL_MS);
     document.addEventListener("visibilitychange", refresh);
     return () => {
+      window.clearTimeout(first);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refresh);
     };
@@ -127,7 +128,8 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   }
 
   function teamColumn(id: 1 | 2) {
-    const team = v.teams[id - 1];
+    const team = v.teams.find((t) => t.id === id);
+    if (!team) return null;
     return (
       <section aria-labelledby={`time-${id}`} className={clsx("flex flex-col gap-2", id === 1 ? "lg:order-1" : "lg:order-3")}>
         <div className={clsx("flex items-center justify-between rounded-xl border border-line-soft border-t-4 bg-surface-2 px-4 py-3", id === 1 ? "border-t-pt" : "border-t-pl")}>
