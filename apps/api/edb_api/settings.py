@@ -127,3 +127,17 @@ def today() -> date:
     if demo_mode():
         return DEMO_TODAY
     return datetime.now(TZ).date()
+
+
+def wp_config() -> dict | None:
+    """Conexão com o MariaDB do plugin WeaponPaints; None quando não configurada (recurso desligado)."""
+    host = env("WP_DB_HOST")
+    if not host:
+        return None
+    return {"host": host, "port": int(env("WP_DB_PORT", "3306") or 3306), "database": env("WP_DB_NAME", "weaponpaints"),
+            "user": env("WP_DB_USER", "wp"), "password": env("WP_DB_PASS")}
+
+
+def skins_catalog_url() -> str:
+    base = env("SKINS_STORAGE_URL", "https://cgopqcbgxpzurejtjmbu.supabase.co/storage/v1/object/public/skins").rstrip("/")
+    return f"{base}/catalog.json" if base else ""

@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
-from . import auth, draft_ops, identity, lobby_ops, views
+from . import auth, draft_ops, identity, lobby_ops, skins_ops, views
 from .service import get_service
 
 router = APIRouter(prefix="/api")
@@ -25,6 +25,13 @@ class DraftCreate(BaseModel):
     snake: bool = True
     teams: list[DraftTeam] = Field(min_length=2, max_length=8)
     pool_ids: list[str]
+
+
+class SkinEquip(BaseModel):
+    weapon_id: int = Field(ge=1, le=100000)
+    paint_id: int = Field(ge=0, le=100000)
+    wear: float = 0.01
+    seed: int = 0
 
 
 class LobbyJoin(BaseModel):
@@ -210,3 +217,22 @@ def lobby_matchzy(request: Request, response: Response):
     steamid, admin = _viewer(request)
     config = lobby_ops.matchzy_config(get_service(), steamid, admin)
     return {"config": config, "json": lobby_ops.matchzy_json(config)}
+
+
+@router.get("/skins/me")
+def skins_me(request: Request, response: Response):
+    """Skins equipadas de quem está logado (lidas do banco do WeaponPaints). Nunca em cache."""
+    response.headers["Cache-Control"] = "no-store"
+    return skins_ops.view(identity.session_steamid(request))
+
+
+@router.post("/skins/equip")
+def skins_equip(body: SkinEquip, request: Request):
+    auth.check_origin(request)
+    return skins_ops.equip(identity.session_steamid(request), body.weapon_id, body.paint_id, body.wear, body.seed)
+
+
+@router.delete("/skins/equip/{weapon_id}")
+def skins_unequip(weapon_id: int, request: Request):
+    auth.check_origin(request)
+    return skins_ops.unequip(identity.session_steamid(request), weapon_id)
