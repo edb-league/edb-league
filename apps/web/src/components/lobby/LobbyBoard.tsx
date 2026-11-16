@@ -71,6 +71,56 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
   }
 
   const { me } = view;
+  function renderSlots(title: string, id: string, team: 0 | 1 | 2, players: LobbyView["spectators"]["players"], size: number) {
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <h2 id={id} className="text-2xl font-bold">{title}</h2>
+          <span className="num text-lg text-muted">{players.length}/{size}</span>
+        </div>
+        <ul className="mt-3 flex flex-col gap-2">
+          {Array.from({ length: size }, (_, slot) => {
+            const player = players[slot];
+            if (player) {
+              const mine = player.id === me.player_id;
+              return (
+                <li key={slot} className={clsx("flex min-h-14 items-center gap-3 rounded-lg border px-3 py-1.5", mine ? "border-accent bg-surface-3" : "border-line-soft bg-surface-2")}>
+                  <Avatar name={player.name} src={avatars[player.id]} size={40} level={player.level} decorative />
+                  <span className="min-w-0 flex-1 text-lg font-bold break-words">{player.name}</span>
+                  {team !== 0 && player.captain && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-0.5 text-sm font-bold text-gold">
+                      <Icon name="star" /> Capitão
+                    </span>
+                  )}
+                  {mine && (
+                    <Button variant="ghost" disabled={action.busy} onClick={() => change(() => sendJson<LobbyView>("POST", "/lobby/leave"))}>
+                      Sair
+                    </Button>
+                  )}
+                  {me.is_admin && !mine && (
+                    <Button variant="danger" disabled={action.busy} aria-label={`Remover ${player.name}`} onClick={() => change(() => sendJson<LobbyView>("DELETE", `/lobby/players/${player.id}`))}>
+                      <Icon name="x" />
+                    </Button>
+                  )}
+                </li>
+              );
+            }
+            const canJoin = me.player_id !== null && me.team === null;
+            return (
+              <li key={slot} className="flex min-h-14 items-center justify-between gap-3 rounded-lg border border-dashed border-line px-3 py-1.5 text-muted">
+                <span>{team === 0 ? "Vaga de espectador" : slot === 0 ? "Vaga de capitão" : "Vaga livre"}</span>
+                {canJoin && (
+                  <Button variant="secondary" disabled={action.busy} onClick={() => change(() => sendJson<LobbyView>("POST", "/lobby/join", { team }))}>
+                    Entrar
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }
   const loggedIn = me.player_id !== null || me.is_admin;
   const mapName = view.maps.find((m) => m.id === view.map)?.name ?? view.map;
 
@@ -86,53 +136,14 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
       <div className="grid gap-4 md:grid-cols-2">
         {view.teams.map((team) => (
           <Card key={team.id} aria-labelledby={`time-${team.id}`} className={clsx("border-t-4", team.id === 1 ? "border-t-pt" : "border-t-pl")}>
-            <div className="flex items-center justify-between">
-              <h2 id={`time-${team.id}`} className="text-2xl font-bold">Time {team.id}</h2>
-              <span className="num text-lg text-muted">{team.players.length}/{view.team_size}</span>
-            </div>
-            <ul className="mt-3 flex flex-col gap-2">
-              {Array.from({ length: view.team_size }, (_, slot) => {
-                const player = team.players[slot];
-                if (player) {
-                  const mine = player.id === me.player_id;
-                  return (
-                    <li key={slot} className={clsx("flex min-h-14 items-center gap-3 rounded-lg border px-3 py-1.5", mine ? "border-accent bg-surface-3" : "border-line-soft bg-surface-2")}>
-                      <Avatar name={player.name} src={avatars[player.id]} size={40} level={player.level} decorative />
-                      <span className="min-w-0 flex-1 text-lg font-bold break-words">{player.name}</span>
-                      {player.captain && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-0.5 text-sm font-bold text-gold">
-                          <Icon name="star" /> Capitão
-                        </span>
-                      )}
-                      {mine && (
-                        <Button variant="ghost" disabled={action.busy} onClick={() => change(() => sendJson<LobbyView>("POST", "/lobby/leave"))}>
-                          Sair
-                        </Button>
-                      )}
-                      {me.is_admin && !mine && (
-                        <Button variant="danger" disabled={action.busy} aria-label={`Remover ${player.name}`} onClick={() => change(() => sendJson<LobbyView>("DELETE", `/lobby/players/${player.id}`))}>
-                          <Icon name="x" />
-                        </Button>
-                      )}
-                    </li>
-                  );
-                }
-                const canJoin = me.player_id !== null && me.team === null;
-                return (
-                  <li key={slot} className="flex min-h-14 items-center justify-between gap-3 rounded-lg border border-dashed border-line px-3 py-1.5 text-muted">
-                    <span>{slot === 0 ? "Vaga de capitão" : "Vaga livre"}</span>
-                    {canJoin && (
-                      <Button variant="secondary" disabled={action.busy} onClick={() => change(() => sendJson<LobbyView>("POST", "/lobby/join", { team: team.id }))}>
-                        Entrar
-                      </Button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            {renderSlots(`Time ${team.id}`, `time-${team.id}`, team.id, team.players, view.team_size)}
           </Card>
         ))}
       </div>
+
+      <Card aria-labelledby="espectadores">
+        {renderSlots("Espectadores", "espectadores", 0, view.spectators.players, view.spectators.slots)}
+      </Card>
 
       <Card aria-labelledby="lobby-config" className="flex flex-col gap-4">
         <h2 id="lobby-config" className="text-2xl font-bold">Configurar lobby</h2>
@@ -198,7 +209,7 @@ export function LobbyBoard({ avatars }: { avatars: Record<string, string> }) {
             <ol className="max-w-prose list-decimal space-y-1.5 pl-6 text-base text-muted">
               <li>Salve o texto abaixo como <code>edb.json</code> na pasta <code>cfg</code> do servidor.</li>
               <li>No console do servidor (ou como admin), digite <code>matchzy_loadmatch edb.json</code>.</li>
-              <li>Todos entram no servidor e usam <code>.ready</code>.</li>
+              <li>Todos entram no servidor: o MatchZy leva cada jogador direto para o seu time (espectadores vão para o espectador). Depois é só usar <code>.ready</code>.</li>
             </ol>
             <pre className="max-h-72 overflow-auto rounded-lg border border-line bg-surface p-3 text-sm">{match.json}</pre>
             <div><Button variant="secondary" onClick={() => copy(match.json)}>{copied ? "Copiado" : "Copiar JSON"}</Button></div>

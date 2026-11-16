@@ -125,3 +125,16 @@ def test_admin_can_remove_and_reset(lobby):
     assert removed.status_code == 200 and removed.json()["count"] == 3
     assert act(admin, "PATCH", "", json={"map": "de_ancient"}).json()["map"] == "de_ancient"
     assert act(admin, "DELETE", "").json()["count"] == 0
+
+
+def test_spectators_join_limit_and_go_into_matchzy_json(lobby):
+    fill()
+    for i in (10, 11):
+        assert act(as_player(i), "POST", "/join", json={"team": 0}).status_code == 200
+    view = act(as_player(10), "GET", "").json()
+    assert [p["name"] for p in view["spectators"]["players"]] == ["Jogador11", "Jogador12"]
+    assert view["spectators"]["slots"] == 5 and view["me"]["team"] == 0 and view["count"] == 10
+    assert act(as_player(10), "GET", "/matchzy").status_code == 200  # espectador também recebe o JSON
+    config = act(as_player(0), "GET", "/matchzy").json()["config"]
+    assert list(config["spectators"]["players"]) == STEAMS[10:12]
+    assert act(as_player(10), "POST", "/leave").status_code == 200

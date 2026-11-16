@@ -76,7 +76,7 @@ Dois times de 5; o primeiro de cada time é o capitão (ao sair, o próximo da f
 | Rota | Quem | O que faz |
 | --- | --- | --- |
 | `GET /api/lobby` | público | `LobbyView` (sem cache); `me` depende da sessão Steam |
-| `POST /api/lobby/join` `{team: 1\|2}` | jogador logado | entra no time (401 sem login, 403 fora do elenco, 409 time cheio ou já no lobby) |
+| `POST /api/lobby/join` `{team: 0\|1\|2}` | jogador logado | entra no time (0 = espectador, até 5) (401 sem login, 403 fora do elenco, 409 time cheio ou já no lobby) |
 | `POST /api/lobby/leave` | jogador logado | sai do time (404 se não está) |
 | `PATCH /api/lobby` `{map?, format?}` | capitão ou admin | mapa (`de_*` da lista) e formato `md1`/`md3`/`md5` |
 | `DELETE /api/lobby/players/{id}` | admin | remove um jogador |
