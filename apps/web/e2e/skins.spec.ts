@@ -40,6 +40,42 @@ test.describe("Skins: inventário por arma", () => {
     await expect(page.getByRole("button", { name: /AK-47.*Bloodsport/ })).toBeVisible();
   });
 
+  test("cada lado usa uma faca só: o slot Faca lista os modelos e escolher outra skin troca a anterior", async ({ page }) => {
+    // Vale para o catálogo de exemplo e para o real: Karambit e M9 Bayonet existem nos dois.
+    await page.goto("/skins");
+    const slot = page.locator('[data-weapon="slot|knife"]');
+    await expect(slot).toContainText("Faca padrão");
+    // Os modelos não aparecem soltos na lista de armas.
+    await expect(page.getByRole("button", { name: /^Karambit/ })).toHaveCount(0);
+
+    await slot.click();
+    await expect(page.getByRole("heading", { level: 3, name: /Faca/ })).toBeFocused();
+    await page.getByRole("button", { name: /Karambit/ }).click();
+    await expect(page.getByRole("heading", { level: 3, name: /Karambit/ })).toBeFocused();
+    await page.locator("ul button[aria-pressed]").first().click();
+    await expect(page.getByText("Em uso")).toHaveCount(1);
+    await expectNoViolations(page, "/skins com modelo de faca aberto e skin em uso");
+
+    // Volta para os modelos: o Karambit marca "Em uso" e recebe o foco.
+    await page.getByRole("button", { name: "← Modelos" }).click();
+    await expect(page.getByRole("button", { name: /Karambit/ })).toBeFocused();
+    await expect(page.getByText("Em uso")).toHaveCount(1);
+    await expectNoViolations(page, "/skins com a lista de modelos de faca");
+
+    // Escolher uma skin de outro modelo troca a faca: só o novo modelo fica em uso.
+    await page.getByRole("button", { name: /M9 Bayonet/ }).click();
+    await page.locator("ul button[aria-pressed]").first().click();
+    await page.getByRole("button", { name: "← Modelos" }).click();
+    await expect(page.getByText("Em uso")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /M9 Bayonet.*Em uso|Em uso.*M9 Bayonet/ })).toBeVisible();
+
+    // No TR a faca aparece com o modelo; no CT o slot é outro e segue no padrão.
+    await page.getByRole("button", { name: "← Armas" }).click();
+    await expect(slot).toContainText("M9 Bayonet");
+    await page.getByRole("button", { name: "CT", exact: true }).click();
+    await expect(slot).toContainText("Faca padrão");
+  });
+
   test("a busca acha a arma pelo nome da arma e da skin, e avisa quando não há resultado", async ({ page }) => {
     // O catálogo pode ser o de exemplo ou o real (no CI), então só se afirma o que vale nos dois:
     // a AWP existe e tem uma Asiimov; uma busca sem sentido não acha nada.
