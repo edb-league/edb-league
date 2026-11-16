@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkinInventory } from "@/components/skins/SkinInventory";
+import { getSkinCatalog } from "@/lib/skins";
 
 export const metadata = { title: "Skins" };
 
@@ -11,7 +12,8 @@ const IN_GAME = [
   ["!wp", "Atualiza as suas escolhas e aplica no jogo."],
 ] as const;
 
-export default function SkinsPage() {
+export default async function SkinsPage() {
+  const catalog = await getSkinCatalog();
   return (
     <>
       <PageHeader
@@ -19,7 +21,7 @@ export default function SkinsPage() {
         subtitle="Escolha as skins das suas armas e da faca. Elas valem no servidor da liga."
       />
 
-      <SkinInventory />
+      <SkinInventory catalog={catalog} />
 
       <Card aria-labelledby="no-jogo">
         <h2 id="no-jogo" className="text-3xl">Escolher no jogo</h2>
