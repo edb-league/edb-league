@@ -706,3 +706,31 @@ export type DraftView =
       picks_made: number;
       updated_at: string;
     };
+
+/** Lobby de partida do servidor (dois times de 5; o primeiro de cada time é o capitão). Nunca traz SteamID. */
+export type LobbyPlayer = { id: string; name: string; level: number; captain: boolean };
+
+export type LobbyView = {
+  team_size: number;
+  map: string;
+  format: "md1" | "md3" | "md5";
+  maps: { id: string; name: string }[];
+  formats: { id: "md1" | "md3" | "md5"; maps: number }[];
+  teams: { id: 1 | 2; players: LobbyPlayer[] }[];
+  /** Jogadores no lobby (0 a 10). */
+  count: number;
+  /** true com 5 contra 5. */
+  ready: boolean;
+  me: {
+    player_id: string | null;
+    team: 1 | 2 | null;
+    /** Capitão de algum time ou admin. */
+    can_configure: boolean;
+    is_admin: boolean;
+    /** Lobby completo e a pessoa está nele (ou é admin). */
+    can_get_json: boolean;
+  };
+  updated_at: string;
+};
+
+export type LobbyMatchzy = { config: Record<string, unknown>; json: string };

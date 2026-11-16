@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 
-from . import auth, draft_ops, views
+from . import auth, draft_ops, identity, lobby_ops, views
 from .service import get_service
 
 router = APIRouter(prefix="/api")
@@ -25,6 +25,15 @@ class DraftCreate(BaseModel):
     snake: bool = True
     teams: list[DraftTeam] = Field(min_length=2, max_length=8)
     pool_ids: list[str]
+
+
+class LobbyJoin(BaseModel):
+    team: int
+
+
+class LobbyConfig(BaseModel):
+    map: str | None = None
+    format: str | None = None
 
 
 class DraftPick(BaseModel):
@@ -136,3 +145,68 @@ def draft_undo(request: Request):
 def draft_reset(request: Request):
     auth.check_origin(request)
     return draft_ops.reset(get_service())
+
+
+def _viewer(request: Request) -> tuple[str | None, bool]:
+    return identity.session_steamid(request), auth.is_admin(request)
+
+
+def _lobby_view(request: Request, pid: str | None = None):
+    steamid, admin = _viewer(request)
+    service = get_service()
+    if pid is None and steamid:
+        player = views.player_for_steamid(service.snap(), steamid)
+        pid = str(player["id"]) if player else None
+    return lobby_ops.view(service, pid, admin)
+
+
+@router.get("/lobby")
+def lobby(request: Request, response: Response):
+    """Lobby da partida. Sem cache: a página consulta de poucos em poucos segundos."""
+    response.headers["Cache-Control"] = "no-store"
+    return _lobby_view(request)
+
+
+@router.post("/lobby/join")
+def lobby_join(body: LobbyJoin, request: Request):
+    auth.check_origin(request)
+    pid = lobby_ops.join(get_service(), identity.session_steamid(request), body.team)
+    return _lobby_view(request, pid)
+
+
+@router.post("/lobby/leave")
+def lobby_leave(request: Request):
+    auth.check_origin(request)
+    lobby_ops.leave(get_service(), identity.session_steamid(request))
+    return _lobby_view(request)
+
+
+@router.patch("/lobby")
+def lobby_config(body: LobbyConfig, request: Request):
+    auth.check_origin(request)
+    steamid, admin = _viewer(request)
+    lobby_ops.configure(get_service(), steamid, admin, body.map, body.format)
+    return _lobby_view(request)
+
+
+@router.delete("/lobby/players/{player_id}")
+def lobby_remove(player_id: str, request: Request):
+    auth.require_admin(request)
+    lobby_ops.remove(get_service(), player_id)
+    return _lobby_view(request)
+
+
+@router.delete("/lobby")
+def lobby_reset(request: Request):
+    auth.require_admin(request)
+    lobby_ops.reset(get_service())
+    return _lobby_view(request)
+
+
+@router.get("/lobby/matchzy")
+def lobby_matchzy(request: Request, response: Response):
+    """JSON de partida do MatchZy; só para quem está no lobby (ou admin). Contém SteamIDs, por isso não é público."""
+    response.headers["Cache-Control"] = "no-store"
+    steamid, admin = _viewer(request)
+    config = lobby_ops.matchzy_config(get_service(), steamid, admin)
+    return {"config": config, "json": lobby_ops.matchzy_json(config)}

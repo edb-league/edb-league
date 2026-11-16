@@ -1,6 +1,8 @@
+import { LobbyBoard } from "@/components/lobby/LobbyBoard";
 import { CopyCommand } from "@/components/tools/CopyCommand";
 import { Card, EmptyState } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { steamAvatars } from "@/lib/api";
 
 export const metadata = { title: "Servidor" };
 
@@ -16,7 +18,8 @@ const MATCH_COMMANDS = [
   [".map nome_do_mapa", "Admin: troca o mapa. Exemplo: .map de_mirage"],
 ] as const;
 
-export default function ServerPage() {
+export default async function ServerPage() {
+  const avatars = await steamAvatars();
   const address = process.env.CS2_SERVER_ADDRESS?.trim();
   const password = process.env.CS2_SERVER_PASSWORD?.trim();
   const command = address ? `connect ${address}${password ? `; password ${password}` : ""}` : null;
@@ -27,6 +30,14 @@ export default function ServerPage() {
         title="Servidor"
         subtitle="Como entrar no servidor de CS2 da liga e quais comandos usar durante a partida."
       />
+
+      <section aria-labelledby="lobby-titulo" className="flex flex-col gap-3">
+        <h2 id="lobby-titulo" className="text-3xl">Lobby da partida</h2>
+        <p className="max-w-prose text-lg text-muted">
+          Entre em um dos times. Quem chega primeiro em cada lado é o capitão e escolhe o mapa e o formato.
+        </p>
+        <LobbyBoard avatars={avatars} />
+      </section>
 
       <Card aria-labelledby="entrar">
         <h2 id="entrar" className="text-3xl">Como entrar</h2>

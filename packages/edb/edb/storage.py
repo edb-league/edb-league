@@ -76,6 +76,10 @@ class Store:
                 id TEXT PRIMARY KEY, data TEXT NOT NULL,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE TABLE IF NOT EXISTS league_lobbies (
+                id TEXT PRIMARY KEY, data TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             ''')
             player_cols = [r[1] for r in con.execute('PRAGMA table_info(players)')]
             if 'skill_level' not in player_cols:
@@ -144,6 +148,34 @@ class Store:
         else:
             with self._connect() as con:
                 con.execute('DELETE FROM league_drafts WHERE id=?',(draft_id,))
+
+    def lobby_get(self, lobby_id='main'):
+        """Estado do lobby (dicionário) ou None quando ainda não existe."""
+        if self.cloud:
+            rows=self._api('GET','league_lobbies',params={'id':'eq.'+lobby_id,'select':'data'})
+            data=rows[0]['data'] if rows else None
+        else:
+            with self._connect() as con:
+                row=con.execute('SELECT data FROM league_lobbies WHERE id=?',(lobby_id,)).fetchone()
+            data=row['data'] if row else None
+        if isinstance(data,str): data=json.loads(data)
+        return data or None
+
+    def lobby_put(self, state, lobby_id='main'):
+        if self.cloud:
+            self._api('POST','league_lobbies',params={'on_conflict':'id'},payload={'id':lobby_id,'data':state,'updated_at':state.get('updated_at')})
+        else:
+            with self._connect() as con:
+                con.execute('INSERT INTO league_lobbies (id,data,updated_at) VALUES (?,?,?) '
+                            'ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at',
+                            (lobby_id,json.dumps(state,ensure_ascii=False),state.get('updated_at') or ''))
+
+    def lobby_delete(self, lobby_id='main'):
+        if self.cloud:
+            self._api('DELETE','league_lobbies',params={'id':'eq.'+lobby_id})
+        else:
+            with self._connect() as con:
+                con.execute('DELETE FROM league_lobbies WHERE id=?',(lobby_id,))
 
     def _upsert(self,table,row,conflict=None):
         if self.cloud:
