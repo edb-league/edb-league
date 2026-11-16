@@ -68,3 +68,19 @@ Todas as rotas começam com `/api`. Erros: `{ "detail": "mensagem em português"
 Snapshot sintético em memória (jogadores fictícios, BO1/BO3, estrelas congeladas, títulos), usado
 nos testes e no desenvolvimento do frontend. `Meta.demo` fica `true`. Escritas administrativas
 funcionam sobre o snapshot em memória.
+
+## Lobby do servidor
+
+Dois times de 5; o primeiro de cada time é o capitão (ao sair, o próximo da fila assume). Documento único (`league_lobbies`, id `main`). Nenhuma resposta traz SteamID, exceto o JSON do MatchZy.
+
+| Rota | Quem | O que faz |
+| --- | --- | --- |
+| `GET /api/lobby` | público | `LobbyView` (sem cache); `me` depende da sessão Steam |
+| `POST /api/lobby/join` `{team: 1\|2}` | jogador logado | entra no time (401 sem login, 403 fora do elenco, 409 time cheio ou já no lobby) |
+| `POST /api/lobby/leave` | jogador logado | sai do time (404 se não está) |
+| `PATCH /api/lobby` `{map?, format?}` | capitão ou admin | mapa (`de_*` da lista) e formato `md1`/`md3`/`md5` |
+| `DELETE /api/lobby/players/{id}` | admin | remove um jogador |
+| `DELETE /api/lobby` | admin | esvazia o lobby |
+| `GET /api/lobby/matchzy` | quem está no lobby ou admin | `{config, json}` do MatchZy; 409 antes de 5×5 |
+
+Escritas exigem Origin permitido. Tipos em `apps/web/src/lib/types.ts` (`LobbyView`, `LobbyMatchzy`).
