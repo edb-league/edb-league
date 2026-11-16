@@ -21,10 +21,10 @@ export function skinImageUrl(path: string): string {
   return `${SKINS_STORAGE_URL}/${path}`;
 }
 
-/** Lê o catálogo no servidor (cache de 1 hora). Qualquer falha devolve lista vazia e a página usa o layout de exemplo. */
+/** Lê o catálogo no servidor (cache de 5 minutos). Qualquer falha devolve lista vazia e a página usa o layout de exemplo. */
 export async function getSkinCatalog(): Promise<CatalogSkin[]> {
   try {
-    const response = await fetch(`${SKINS_STORAGE_URL}/catalog.json`, { next: { revalidate: 3600 } });
+    const response = await fetch(`${SKINS_STORAGE_URL}/catalog.json`, { next: { revalidate: 300 } });
     if (!response.ok) return [];
     const data: unknown = await response.json();
     return Array.isArray(data) ? (data as CatalogSkin[]).filter((s) => s && typeof s.id === "string" && typeof s.image === "string") : [];
