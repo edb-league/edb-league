@@ -5,6 +5,8 @@ As regras foram calibradas contra o SCOPE.GG em três partidas do servidor XPLAY
 
 Regras que importam:
 - A partida começa no ÚLTIMO ``begin_new_match``. O round faca e o warmup ficam de fora.
+- Se a demo não marca o fim do round faca (sem ``begin_new_match`` depois dele), o primeiro round é
+  descartado quando todas as mortes dele foram de faca.
 - Dano efetivo: ``min(dmg_health, vida restante da vítima)`` por (round, vítima).
 - Assistência não inclui flash assist, que é contada à parte.
 - Trade: o autor da morte é morto por um companheiro da vítima em até 5 s (320 ticks).
@@ -20,7 +22,7 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-PARSER_VERSION = 3  # 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
+PARSER_VERSION = 4  # 4: descarta o round faca; 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
 TRADE_TICKS = 320
 TICKRATE = 64
 MIN_ABSENT_ROUNDS = 4   # rounds seguidos sem nenhum evento do jogador para considerá-lo fora da partida
@@ -127,6 +129,27 @@ def _finished(score: dict[int, int], n_rounds: int) -> bool:
     return top >= 16 and top != other
 
 
+def _knife_round_end(deaths: pd.DataFrame, ends: pd.DataFrame, start: int) -> int | None:
+    """Tick final do round faca, se a demo abre com um (primeiro round só com mortes de faca)."""
+    if deaths is None or ends is None or deaths.empty or ends.empty:
+        return None
+    ends = ends[ends.tick > start]
+    if "is_warmup_period" in ends:
+        ends = ends[~ends.is_warmup_period.fillna(False).astype(bool)]
+    if len(ends) < 2:
+        return None
+    first = int(ends.tick.min())
+    first_deaths = deaths[(deaths.tick > start) & (deaths.tick <= first)]
+    if "is_warmup_period" in first_deaths:
+        first_deaths = first_deaths[~first_deaths.is_warmup_period.fillna(False).astype(bool)]
+    if first_deaths.empty:
+        return None
+    weapons = first_deaths.weapon.astype(str).str.removeprefix("weapon_")
+    if weapons.str.startswith("knife").all() or weapons.eq("bayonet").all():
+        return first
+    return None
+
+
 def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE) -> dict:
     """Lê a demo e devolve o resumo da partida e as contagens de cada jogador."""
     from demoparser2 import DemoParser
@@ -142,6 +165,11 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
     if len(begins) > 1:
         notes.append(f"A partida reiniciou {len(begins) - 1} vez(es); só a última foi lida. "
                      "Confira se rounds anteriores não ficaram de fora.")
+
+    knife_end = _knife_round_end(ev["player_death"], ev["round_end"], start)
+    if knife_end is not None:
+        start = knife_end
+        notes.append("Round faca no início da demo descartado; a partida começa no round seguinte.")
 
     def live(df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.empty:
