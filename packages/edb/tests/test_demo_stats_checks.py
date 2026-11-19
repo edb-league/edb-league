@@ -105,6 +105,36 @@ def test_restarted_round_does_not_shift_the_following_rounds(monkeypatch):
     assert any("reinício" in w for w in result["warnings"])
 
 
+def _add_knife_round(monkeypatch, weapon="knife", winner="CT"):
+    demo = Demo()
+    ev = demo.events
+    ev["round_start"] = pd.concat([pd.DataFrame({"tick": [150]}), ev["round_start"]], ignore_index=True)
+    ev["round_end"] = pd.concat(
+        [pd.DataFrame([{"tick": 600, "winner": winner, "is_warmup_period": False}]), ev["round_end"]],
+        ignore_index=True)
+    ev["player_death"] = pd.concat([pd.DataFrame([{
+        "tick": 400, "attacker_steamid": B[0], "user_steamid": A[0], "assister_steamid": "0",
+        "attacker_team_num": 3, "user_team_num": 2, "attacker_name": NICK[B[0]], "user_name": NICK[A[0]],
+        "weapon": weapon, "headshot": False, "thrusmoke": False, "noscope": False, "penetrated": False,
+        "attackerblind": False, "assistedflash": False, "is_warmup_period": False}]), ev["player_death"]],
+        ignore_index=True)
+    demo.install(monkeypatch)
+    return demo_stats.analyze("fake.dem")
+
+
+def test_knife_round_without_begin_new_match_is_dropped(monkeypatch):
+    result = _add_knife_round(monkeypatch)
+    assert result["rounds"] == 13 and result["score"] == {"team_t_first": 13, "team_ct_first": 0}
+    assert sum(p["kills"] for p in result["players"]) == 13
+    assert any("faca" in w for w in result["warnings"])
+
+
+def test_first_round_with_normal_weapon_is_kept(monkeypatch):
+    result = _add_knife_round(monkeypatch, weapon="ak47")
+    assert result["rounds"] == 14 and result["score"]["team_ct_first"] == 1
+    assert not any("faca" in w for w in result["warnings"])
+
+
 def test_player_who_left_keeps_only_the_rounds_he_played(monkeypatch):
     result = run(monkeypatch, leaver=(B[4], 3))
     gone = player(result, B[4])
