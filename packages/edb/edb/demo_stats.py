@@ -22,7 +22,7 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-PARSER_VERSION = 4  # 4: descarta o round faca; 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
+PARSER_VERSION = 5  # 5: ignora round_end sem vencedor; 4: descarta o round faca; 3: reinícios de round e jogadores ausentes; 2: ordenação estável por tick
 TRADE_TICKS = 320
 TICKRATE = 64
 MIN_ABSENT_ROUNDS = 4   # rounds seguidos sem nenhum evento do jogador para considerá-lo fora da partida
@@ -158,10 +158,17 @@ def analyze(path: str, trade_ticks: int = TRADE_TICKS, tickrate: int = TICKRATE)
     header = parser.parse_header()
     raw = dict(parser.parse_events(EVENTS, player=["team_num"], other=["total_rounds_played", "is_warmup_period"]))
     ev = {name: raw.get(name, _empty()) for name in EVENTS}
+    round_ends = ev["round_end"]
+    notes: list[str] = []
+    if len(round_ends) and "winner" in round_ends:
+        # Algumas demos abrem com um round_end sem vencedor (tick 1, total_rounds_played 0): não é um round.
+        real = round_ends[round_ends.winner.isin(["T", "CT"])]
+        if len(real) < len(round_ends):
+            notes.append(f"{len(round_ends) - len(real)} round_end sem vencedor ignorado(s) (evento de abertura da demo).")
+            ev["round_end"] = real
 
     begins = ev["begin_new_match"]
     start = int(begins.tick.max()) if len(begins) else 0
-    notes: list[str] = []
     if len(begins) > 1:
         notes.append(f"A partida reiniciou {len(begins) - 1} vez(es); só a última foi lida. "
                      "Confira se rounds anteriores não ficaram de fora.")
