@@ -135,6 +135,21 @@ def test_first_round_with_normal_weapon_is_kept(monkeypatch):
     assert not any("faca" in w for w in result["warnings"])
 
 
+def test_round_end_without_winner_is_not_a_round(monkeypatch):
+    # Demo real do MatchZy: abre com um round_end no tick 1, sem vencedor, antes do round 1.
+    demo = Demo(begins=())
+    ev = demo.events
+    ev["round_start"] = pd.concat([pd.DataFrame({"tick": [1]}), ev["round_start"]], ignore_index=True)
+    ev["round_end"] = pd.concat(
+        [pd.DataFrame([{"tick": 1, "winner": None, "is_warmup_period": False}]), ev["round_end"]],
+        ignore_index=True)
+    demo.install(monkeypatch)
+    result = demo_stats.analyze("fake.dem")
+    assert result["rounds"] == 13 and result["score"] == {"team_t_first": 13, "team_ct_first": 0}
+    assert any("sem vencedor" in w for w in result["warnings"])
+    assert not any("sem round_start" in w for w in result["warnings"])
+
+
 def test_player_who_left_keeps_only_the_rounds_he_played(monkeypatch):
     result = run(monkeypatch, leaver=(B[4], 3))
     gone = player(result, B[4])
